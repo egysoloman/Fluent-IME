@@ -52,7 +52,7 @@
 
 Transformer 也可单独下载 `Fluent-IME-Transformer.zip`，解压后在 **输入法 → 语言模型** 导入；该页也可替换 `.gram` 语法模型。
 
-打开分发镜像 `dist/Fluent-IME-0.6.1-Setup.dmg`，双击运行 **Fluent IME Setup**：
+打开分发镜像 `dist/Fluent-IME-<version>-Setup.dmg`，双击运行 **Fluent IME Setup**：
 1. **无需管理员权限**：仅安装至当前用户的 `~/Library/Input Methods/Fluent IME.app`。
 2. **向导式配置**：自动引导完成输入源启用、既有个人词库合并或归档备份，以及输入语言偏好设置。
 3. **自动清理安装包**：完成向导后，安装器会自动移入废纸篓；若从 DMG 磁盘映像启动，将自动推出映像并将 DMG 文件移入废纸篓。

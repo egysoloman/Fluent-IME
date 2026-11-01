@@ -52,7 +52,7 @@ The standard edition includes the Wanxiang dictionary and grammar model. Files m
 
 The Transformer is also available as `Fluent-IME-Transformer.zip`. Extract it, then import it in **Input method → Language models**. The same page accepts replacement `.gram` grammar models.
 
-Open `dist/Fluent-IME-0.6.1-Setup.dmg` and double-click **Fluent IME Setup**:
+Open `dist/Fluent-IME-<version>-Setup.dmg` and double-click **Fluent IME Setup**:
 1. **No Administrator Privileges Required**: Installs directly into `~/Library/Input Methods/Fluent IME.app` for the current user.
 2. **Guided Setup**: Walks you through enabling the input source, keeping/merging or archiving an existing user dictionary, and selecting your preferred input languages.
 3. **Automatic Installer Cleanup**: Once setup finishes, the installer automatically moves itself to the Trash (and ejects and trashes the DMG if launched from a disk image).
