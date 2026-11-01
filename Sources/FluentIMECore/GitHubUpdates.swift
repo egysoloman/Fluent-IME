@@ -67,24 +67,84 @@ public final class GitHubUpdateService {
     public static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
     private let transport = UpdateTransport()
     private let edition: ReleaseEdition
+    private let configuration: URLSessionConfiguration
     private lazy var session: URLSession = {
+        URLSession(configuration: configuration, delegate: transport, delegateQueue: nil)
+    }()
+    public convenience init(edition: ReleaseEdition = .current) {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 30; config.timeoutIntervalForResource = 1800
         config.httpAdditionalHeaders = ["User-Agent": "Fluent-IME-Updater", "Accept": "application/vnd.github+json"]
-        return URLSession(configuration: config, delegate: transport, delegateQueue: nil)
-    }()
-    public init(edition: ReleaseEdition = .current) { self.edition = edition }
+        self.init(edition: edition, configuration: config)
+    }
+    init(edition: ReleaseEdition, configuration: URLSessionConfiguration) {
+        self.edition = edition; self.configuration = configuration
+    }
     public static func trustedAsset(_ url: URL) -> Bool {
         url.scheme == "https" && url.host == "github.com" && url.user == nil && url.password == nil && url.port == nil && url.path.hasPrefix("/\(repository)/releases/download/")
     }
     public func latest() async throws -> GitHubRelease? {
         let url = URL(string: "https://api.github.com/repos/\(Self.repository)/releases/latest")!
-        let (data, response) = try await session.data(from: url)
-        if (response as? HTTPURLResponse)?.statusCode == 404 { return nil }
-        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 2_000_000 else { throw UpdateError.unavailable }
+        let result: (Data, URLResponse)
+        do { result = try await session.data(from: url) }
+        catch {
+            try Task.checkCancellation()
+            if (error as? URLError)?.code == .cancelled { throw error }
+            return try await latestFromWebsite()
+        }
+        try Task.checkCancellation()
+        let (data, response) = result
+        let status = (response as? HTTPURLResponse)?.statusCode
+        if status == 404 { return nil }
+        // Anonymous API quotas are shared by everyone behind the same network.
+        // The public release redirect and assets do not consume that quota.
+        if status == 403 || status == 429 || status.map({ (500...599).contains($0) }) == true {
+            return try await latestFromWebsite()
+        }
+        guard status == 200, data.count < 2_000_000 else { throw UpdateError.unavailable }
         let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
         guard ReleaseVersion(release.version) != nil, !release.draft, !release.prerelease else { throw UpdateError.invalidRelease }
         return release
+    }
+    private func latestFromWebsite() async throws -> GitHubRelease? {
+        var request = URLRequest(url: Self.releasesURL.appendingPathComponent("latest"))
+        request.httpMethod = "HEAD"
+        request.setValue("text/html", forHTTPHeaderField: "Accept")
+        let (_, response) = try await session.data(for: request)
+        try Task.checkCancellation()
+        if (response as? HTTPURLResponse)?.statusCode == 404 { return nil }
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let url = response.url, let tag = Self.releaseTag(from: url) else { throw UpdateError.unavailable }
+        let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        let base = Self.releasesURL.appendingPathComponent("download").appendingPathComponent(tag)
+        let manifestName = edition == .full ? "release-full.json" : "release.json"
+        let manifestURL = base.appendingPathComponent(manifestName)
+        let (data, manifestResponse) = try await session.data(from: manifestURL)
+        guard (manifestResponse as? HTTPURLResponse)?.statusCode == 200, data.count < 100_000 else { throw UpdateError.invalidRelease }
+        let manifest = try JSONDecoder().decode(UpdateManifest.self, from: data)
+        guard manifest.version == version, manifest.edition == edition,
+              manifest.installer.dmg_sha256.count == 64,
+              manifest.installer.dmg_sha256.allSatisfy(\.isHexDigit) else { throw UpdateError.invalidRelease }
+        let installerName = "Fluent-IME-\(version)\(edition == .full ? "-Full" : "")-Setup.dmg"
+        let installerURL = base.appendingPathComponent(installerName)
+        request = URLRequest(url: installerURL); request.httpMethod = "HEAD"
+        let (_, installerResponse) = try await session.data(for: request)
+        try Task.checkCancellation()
+        let size = installerResponse.expectedContentLength
+        guard (installerResponse as? HTTPURLResponse)?.statusCode == 200,
+              (1...2_000_000_000).contains(size) else { throw UpdateError.invalidRelease }
+        return GitHubRelease(tag_name: tag, draft: false, prerelease: false, assets: [
+            .init(name: manifestName, size: Int64(data.count), browser_download_url: manifestURL, digest: nil),
+            .init(name: installerName, size: size, browser_download_url: installerURL, digest: "sha256:" + manifest.installer.dmg_sha256)
+        ])
+    }
+    static func releaseTag(from url: URL) -> String? {
+        guard url.scheme == "https", url.host == "github.com", url.user == nil, url.password == nil,
+              url.port == nil, url.query == nil, url.fragment == nil else { return nil }
+        let prefix = "/\(repository)/releases/tag/"
+        guard url.path.hasPrefix(prefix) else { return nil }
+        let tag = String(url.path.dropFirst(prefix.count))
+        return ReleaseVersion(tag) == nil ? nil : tag
     }
     public func download(_ release: GitHubRelease, to directory: URL) async throws -> URL {
         guard let asset = release.installer(for: edition), let manifest = release.manifest(for: edition),

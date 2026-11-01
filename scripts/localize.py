@@ -76,9 +76,13 @@ def main():
     else: TARGET.write_text(generated)
     if args.bundle:
         resources=args.bundle/'Contents/Resources'
-        module=resources/'FluentIME_FluentIMECore.bundle/Contents/Resources'
+        bundle=resources/'FluentIME_FluentIMECore.bundle'
+        # Xcode builds use a macOS bundle; SwiftPM's native build system uses
+        # a flat resource bundle and normalizes locale directory names.
+        module=bundle/'Contents/Resources' if (bundle/'Contents/Resources').is_dir() else bundle
+        localized={folder.name.lower(): folder for folder in module.glob('*.lproj')}
         for locale,catalog in catalogs.items():
-            if read_catalog(module/f'{locale}.lproj/Localizable.strings')!=catalog:
+            if read_catalog(localized[f'{locale}.lproj'.lower()]/'Localizable.strings')!=catalog:
                 raise ValueError(f'Bundled {locale} strings differ from source')
             if read_catalog(resources/f'{locale}.lproj/InfoPlist.strings')!=read_catalog(ROOT/f'Resources/{locale}.lproj/InfoPlist.strings'):
                 raise ValueError(f'Bundled {locale} application name differs from source')

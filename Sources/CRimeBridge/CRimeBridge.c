@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define FIM_DISTRIBUTION_VERSION "0.6.1"
+#define FIM_DISTRIBUTION_VERSION "0.6.2"
 
 static RimeApi *api;
 static char *shared_path;
