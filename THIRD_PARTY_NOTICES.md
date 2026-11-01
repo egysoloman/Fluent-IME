@@ -1,0 +1,27 @@
+# Third-party components
+
+Fluent IME's original Swift/C code is MIT licensed. Bundled components retain their own licenses.
+
+- **FluentKit / WinUI-macOS** — MIT. Pinned local snapshot `f2b79e2f6d7555252e6c0c978604184316830b07`; https://github.com/egysoloman/FluentKit.
+- **librime** — BSD-3-Clause. https://github.com/rime/librime. Linked through its public C API.
+- **rime-pinyin-simp** — Apache-2.0. https://github.com/rime/rime-pinyin-simp, pinned to `0c6861ef7420ee780270ca6d993d18d4101049d0`. Its upstream license, author list and dictionary notices are retained with the bundle.
+- **Microsoft Fluent Emoji** — MIT. https://github.com/microsoft/fluentui-emoji, pinned to `1ffb34c752ecf5d402f04cfb4b392c77f57c54bc`. The selected Color SVG and 3D PNG images, original license, source paths and SHA-256 hashes are bundled in `Contents/Resources/FluentEmoji`.
+- **Runtime dependencies of librime** — glog, gflags, yaml-cpp, leveldb, marisa, OpenCC, and any transitive libraries. Their installed license files are collected in `Contents/Resources/Licenses` by the bundle script.
+
+Squirrel (https://github.com/rime/squirrel) was consulted for macOS input-source registration conventions. Its GPL application source is not copied or linked.
+
+The UI is implemented using FluentKit and AppKit, with the licensed Fluent Emoji images listed above. Windows, WinUI and Microsoft Pinyin are Microsoft product names; this project is not affiliated with Microsoft and does not include Microsoft IME code, fonts or dictionaries.
+
+- **HFL Chinese RoBERTa-wwm-ext** — Apache-2.0. https://huggingface.co/hfl/chinese-roberta-wwm-ext, pinned to `5c58d0b8ec1d9014354d691c538661bf00bfdb44`. Converted to a float16 Core ML masked-token scorer; upstream model card, license and conversion manifest are included in `Contents/Resources/Models`.
+- **万象 / Wanxiang grammar model** — CC-BY-4.0, AMZ / amzxyz and contributors. https://github.com/amzxyz/rime-wanxiang-data. The `wanxiang-lts-zh-hans.gram` LTS asset is used unmodified, SHA-256 `e34500ab44626dc039a0641792ecba98ab63307646eb3d29186be56608ffe094`. Grammar configuration is adapted for Fluent IME. License: https://creativecommons.org/licenses/by/4.0/. The upstream license and source manifest are bundled. This is a third-party integration, not an official Wanxiang distribution.
+
+- **Wanxiang word data** — CC-BY-4.0, amzxyz and Wanxiang contributors. https://github.com/amzxyz/rime-wanxiang/tree/60e7efdd2d63dca3f44d26c38e76b9bc3c1314f9. License: https://creativecommons.org/licenses/by/4.0/. Seven dictionaries are adapted: tone marks are removed for ordinary full pinyin, duplicate spellings use the maximum original weight, and malformed weights use zero. The conversion record, original attribution and license are included. No endorsement by the upstream authors is implied.
+- **librime-octagram** — BSD-3-Clause, RIME Developers. https://github.com/lotem/librime-octagram/tree/57d18b9f58e5284bd891d559f6bdd16cf60341e9. Compiled from the pinned BSD revision. The older GPL-licensed Homebrew plugin is not distributed.
+- **Unicode CLDR 48 annotations** — Unicode-3.0, Copyright © 2004–2025 Unicode, Inc. https://github.com/unicode-org/cldr/tree/acd6d88ae493633240e19a87a721076a8a75c310. Chinese and English annotations are extracted into local emoji search data. Chinese names and keywords also generate OpenCC candidate alternatives, with a small set of original aliases; the original word is retained, ambiguous keywords are excluded and alternatives are capped at three per word. No Unicode emoji artwork or font files are copied.
+- **Header dependencies** — Rime/Octagram Darts-clone (BSD-3-Clause), OpenCC Darts-clone (BSD-2-Clause), RapidJSON library headers (MIT), Boost and UTF8-CPP (BSL-1.0), X11 key definitions (original permissive notices). Full notices are retained in `Contents/Resources/Licenses`.
+
+`Contents/Resources/Licenses/components.json` identifies versions, selected licenses, sources, changes and notice locations. MARISA uses its BSD-2-Clause alternative; no LGPL election is needed. `distribution-audit.json` records packaged dylib hashes, the main executable build UUID and notice checks. The final signed executable hash is recorded separately in the release manifest.
+
+The default is the macOS system font. Users may select an installed font separately for Simplified Chinese, Traditional Chinese and English. Unavailable fonts fall back to the system font. No Microsoft, Apple or other font file is bundled. A font installed by the user remains subject to its original license; naming a font does not grant redistribution rights.
+
+Model/dictionary licenses cover the upstream grants stated above. This inventory is not an independent clearance of all training corpora, trademarks, design rights or model output. Do not describe every bundled component as MIT or imply affiliation with Microsoft, Apple, Rime or Wanxiang.

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Fluent IME</title>
+  <desc>Original Fluent-inspired language mark. Vector paths only; no font or Microsoft product artwork.</desc>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0.9" y2="1"><stop stop-color="#18B6EF"/><stop offset=".5" stop-color="#087CE5"/><stop offset="1" stop-color="#3549BD"/></linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#FFF" stop-opacity=".24"/><stop offset="1" stop-color="#FFF" stop-opacity=".025"/></linearGradient>
+    <linearGradient id="key" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2A70DB"/><stop offset="1" stop-color="#18368F"/></linearGradient>
+  </defs>
+  <rect x="80" y="92" width="864" height="864" rx="194" fill="#132C67" opacity=".12"/>
+  <rect x="80" y="80" width="864" height="864" rx="194" fill="url(#tile)"/>
+  <g id="detail"><rect x="179" y="168" width="594" height="594" rx="110" fill="url(#sheet)" transform="rotate(-8 476 465)"/>
+    <rect x="80" y="80" width="864" height="864" rx="194" fill="none" stroke="#FFF" stroke-opacity=".19" stroke-width="3"/></g>
+  <g fill="none" stroke="#FFF" stroke-width="49" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M480 260 514 312 M304 358H704 M628 396C593 525 452 631 302 676 M396 401C452 525 539 606 704 668"/>
+  </g>
+  <g id="latin-key">
+    <rect x="594" y="636" width="240" height="220" rx="55" fill="#15378F" opacity=".25"/>
+    <rect x="594" y="626" width="240" height="220" rx="55" fill="url(#key)" stroke="#FFF" stroke-opacity=".26" stroke-width="2"/>
+    <path d="M651 798 713 677 777 798 M678 752H749" fill="none" stroke="#FFF" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -1,0 +1,11 @@
+{
+  "name": "Fluent IME emoji alternatives (Unicode CLDR)",
+  "conversion_chain": [
+    {
+      "dict": {
+        "type": "text",
+        "file": "fluent_emoji.txt"
+      }
+    }
+  ]
+}

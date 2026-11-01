@@ -1,0 +1,26 @@
+# Original emoji additions. Imported Wanxiang word data retains CC-BY-4.0.
+---
+name: fluent_pinyin
+version: '1.4'
+sort: by_weight
+import_tables:
+  - wanxiang_fluent
+...
+🐍	she	1900
+🆒	ku	3000
+/(ㄒoㄒ)/~~	ku	2600
+😊	wei xiao	100
+😂	da xiao	100
+🤣	xiao si	100
+❤️	ai xin	100
+😍	xi huan	80
+🥰	kai xin	100
+👍	zan	100
+🎉	qing zhu	100
+🌹	mei gui	100
+🙏	xie xie	100
+🐱	mao	200
+🐶	gou	200
+🐉	long	100
+🍎	ping guo	100
+☕	ka fei	100

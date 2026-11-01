@@ -1,0 +1,9 @@
+{
+  "name": "wanxiang-lts-zh-hans",
+  "source": "https://github.com/amzxyz/rime-wanxiang-data/releases/tag/LTS",
+  "sha256": "e34500ab44626dc039a0641792ecba98ab63307646eb3d29186be56608ffe094",
+  "bytes": 418078764,
+  "license": "CC-BY-4.0",
+  "author": "AMZ / amzxyz",
+  "retrieved": "2026-11-01"
+}

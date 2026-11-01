@@ -1,0 +1,356 @@
+/* Fluent IME interface strings. Keep keys and positional argument types in sync. */
+
+/* advanced */
+"advanced.about" = "關於";
+"advanced.addInputHint" = "前往「系統設定 → 鍵盤」將「Fluent 拼音」加入輸入法列表。";
+"advanced.components" = "基於 InputMethodKit · Rime %1$@ · FluentKit 建置";
+"advanced.development" = "開發版";
+"advanced.licenses" = "開放原始碼授權條款";
+"advanced.offlineHint" = "所有輸入與詞庫轉換均在本機完成";
+"advanced.openKeyboard" = "打開系統鍵盤設定";
+"advanced.systemInput" = "系統輸入來源";
+"advanced.version" = "%1$@ %2$@";
+
+/* app */
+"app.name" = "Fluent 拼音";
+
+/* appearance */
+"appearance.candidateCount" = "每頁顯示 %1$ld 個候選字詞";
+"appearance.candidates" = "候選字視窗";
+"appearance.dark" = "深色";
+"appearance.expansionAnimation" = "展開更多候選動畫";
+"appearance.light" = "淺色";
+"appearance.pageAnimation" = "翻頁過渡動畫";
+"appearance.popupAnimation" = "候選視窗淡入動畫";
+"appearance.symbolsHint" = "快速輸入表情符號、GIF、顏文字、特殊符號及剪貼簿記錄";
+"appearance.system" = "跟隨系統外觀";
+"appearance.theme" = "主題";
+"appearance.themeChoice" = "外觀模式";
+
+/* candidate */
+"candidate.accessibility" = "拼音候選字詞";
+"candidate.collapse" = "收合候選面板";
+"candidate.expand" = "展開候選面板";
+"candidate.item" = "%1$ld，%2$@";
+"candidate.next" = "下一頁";
+"candidate.previous" = "上一頁";
+"candidate.selected" = "已選取";
+
+/* clipboard */
+"clipboard.clear" = "全部清除";
+"clipboard.deleteEntry" = "刪除此筆記錄";
+"clipboard.disabled" = "剪貼簿記錄已關閉，開啟後將自動記錄新拷貝的內容。";
+"clipboard.empty" = "尚無記錄，拷貝的內容會顯示在這裡。";
+"clipboard.pause" = "暫停記錄";
+"clipboard.privacyHint" = "自動略過密碼欄位、私密內容與通用剪貼簿，所有資料僅儲存在本機。";
+"clipboard.retentionHint" = "未釘選的記錄將在到期後自動清除。";
+"clipboard.start" = "開啟記錄";
+"clipboard.title" = "剪貼簿記錄";
+
+/* common */
+"common.add" = "新增";
+
+/* dictionary */
+"dictionary.contents" = "涵蓋常用詞庫、破音字、人名及地名";
+"dictionary.contextHint" = "僅結合目前輸入框的近期上文進行預測，切換視窗或關閉時自動重置。";
+"dictionary.grammar" = "萬象長句語法模型";
+"dictionary.grammarHint" = "提升整句連續輸入的組字準確度";
+"dictionary.languageModel" = "智慧語言模型";
+"dictionary.learning" = "自動學習輸入習慣與詞頻";
+"dictionary.learningHint" = "關閉後將暫停記錄新詞與動態調頻，已累積的個人詞庫仍會保留。";
+"dictionary.local" = "本機詞庫";
+"dictionary.modelHint" = "透過本機語言模型最佳化候選排序，不影響打字反應速度。";
+"dictionary.modelMissing" = "尚未安裝本機語言模型。";
+"dictionary.openFolder" = "打開使用者詞庫資料夾";
+"dictionary.transformer" = "上下文智慧重排（實驗性）";
+"dictionary.wanxiang" = "萬象綜合詞庫";
+
+/* error */
+"error.gifInvalid" = "所選檔案不是有效的 GIF 動圖。";
+"error.gifTooLarge" = "GIF 檔案過大（上限為 20 MB、4096 × 4096 像素、300 影格）。";
+"error.gifTooMany" = "最多只能加入 100 個 GIF 動圖。";
+"error.missingData" = "詞庫檔案遺失（%1$@），請重新安裝輸入法。";
+"error.sessionUnavailable" = "拼音引擎初始化失敗，請檢查詞庫檔案是否完整。";
+"error.startup" = "Fluent 拼音無法啟動";
+
+/* general */
+"general.abbreviation" = "啟用簡拼";
+"general.characterSet" = "字元集";
+"general.correction" = "按鍵糾錯";
+"general.defaultMode.choice" = "預設輸入狀態";
+"general.defaultMode.title" = "預設狀態";
+"general.englishPunctuation" = "中文模式下使用英文標點符號";
+"general.fuzzy" = "模糊音設定";
+"general.halfWidth" = "使用半形字元";
+"general.pinyin.choice" = "輸入方案";
+"general.pinyin.full" = "全拼";
+"general.pinyin.title" = "拼音";
+"general.simplifiedChinese" = "簡體中文";
+
+/* gif */
+"gif.add" = "新增 GIF";
+"gif.added" = "已新增 %1$ld 個 GIF。";
+"gif.copied" = "已拷貝 GIF，可按 ⌘V 貼上。";
+"gif.copyAccessibility" = "拷貝 GIF：%1$@";
+"gif.empty" = "尚無收藏的本機 GIF。";
+"gif.noResults" = "找不到相符的 GIF。";
+"gif.pasteHint" = "點一下即可拷貝，返回對話或文件視窗後按 ⌘V 貼上。";
+"gif.pickerTitle" = "選擇本機 GIF 檔案";
+"gif.removeAccessibility" = "移除 %1$@";
+
+/* keys */
+"keys.arrows" = "移動候選焦點 / 調整拼音游標";
+"keys.cancel" = "清除目前輸入的拼音";
+"keys.candidates" = "候選字詞選取";
+"keys.capsLockHint" = "中/英（Caps Lock）鍵：短按切換系統輸入法，長按鎖定大寫。";
+"keys.commitCodeHint" = "輸入拼音中途按 Shift 切為英文時，直接送出已輸入的英文字母。";
+"keys.commitRaw" = "直接送出原始拼音字母";
+"keys.confirm" = "送出目前反白的候選字詞";
+"keys.expansionHint" = "輸入時按「】」展開更多候選；展開後用「【 / 】」翻頁，在首列按「【」收合。";
+"keys.keepSelection" = "翻頁時保留候選字選取位置";
+"keys.keepSelectionHint" = "關閉後，每次翻頁都會預設選取該頁的第一個候選字詞。";
+"keys.modeSwitch" = "中英文切換";
+"keys.number" = "選取對應編號的候選字詞";
+"keys.paging" = "候選字詞上一頁 / 下一頁";
+"keys.shift" = "單按 Shift 鍵切換中英文";
+
+/* menu */
+"menu.copy" = "拷貝";
+"menu.cut" = "剪下";
+"menu.edit" = "編輯";
+"menu.paste" = "貼上";
+"menu.quit" = "結束 Fluent 拼音";
+"menu.redo" = "重做";
+"menu.selectAll" = "全選";
+"menu.settings" = "Fluent 拼音設定…";
+"menu.symbols" = "表情與符號面板…";
+"menu.undo" = "還原";
+
+/* mode */
+"mode.chinese" = "中文";
+"mode.english" = "英文";
+"mode.switchToChinese" = "切換為中文";
+"mode.switchToEnglish" = "切換為英文";
+
+/* navigation */
+"navigation.item" = "%1$@，%2$@";
+
+/* preview */
+"preview.editor.accessibility" = "輸入測試區";
+"preview.open" = "試一試  →";
+"preview.title" = "輸入預覽";
+
+/* registration */
+"registration.reloginHint" = "請先登出並重新登入 macOS，接著前往「系統設定 → 鍵盤 → 輸入來源」新增 Fluent 拼音。";
+
+/* settings */
+"settings.advanced.detail" = "系統輸入來源、授權條款與版本資訊";
+"settings.advanced.title" = "進階";
+"settings.appearance.detail" = "主題模式、候選視窗動畫、字型與視覺效果";
+"settings.appearance.title" = "外觀";
+"settings.dictionary.detail" = "個人詞頻學習、本機詞庫與語言模型";
+"settings.dictionary.title" = "詞庫與學習";
+"settings.general.detail" = "簡拼糾錯、預設輸入狀態、標點與模糊音";
+"settings.general.title" = "一般";
+"settings.home.detail" = "簡繁中文 · 全拼輸入法";
+"settings.inputMethod" = "輸入法";
+"settings.keys.detail" = "中英切換、展開候選與選字快速鍵";
+"settings.keys.title" = "按鍵";
+"settings.noResults" = "找不到相符的設定項目";
+"settings.pinyin" = "Fluent 拼音";
+"settings.search.accessibility" = "搜尋設定項目";
+"settings.search.placeholder" = "搜尋設定";
+"settings.title" = "Fluent IME 設定";
+"settings.windowTitle" = "Fluent IME 設定";
+
+/* state */
+"state.off" = "關";
+"state.on" = "開";
+
+/* symbols */
+"symbols.clipboard" = "剪貼簿";
+"symbols.close" = "關閉面板";
+"symbols.emoji" = "表情符號";
+"symbols.favorites" = "最近與常用";
+"symbols.kaomoji" = "顏文字";
+"symbols.moreEmoji" = "查看更多表情符號";
+"symbols.noResults" = "找不到相關結果";
+"symbols.recent" = "最近使用";
+"symbols.results" = "搜尋結果";
+"symbols.search" = "搜尋表情符號或符號";
+"symbols.searchAccessibility" = "搜尋表情符號、顏文字或特殊符號";
+"symbols.searchHint" = "支援以中文、拼音或英文關鍵字搜尋（例如：微笑、weixiao、smile）。";
+"symbols.symbols" = "特殊符號";
+"symbols.title" = "表情與符號";
+
+/* input modes */
+"general.enabledModes" = "啟用的輸入模式";
+"general.traditionalChinese" = "繁體中文";
+"mode.badgeSimplified" = "簡";
+"mode.badgeTraditional" = "繁";
+"mode.switchTo" = "切換為%1$@";
+"mode.indicator" = "切換中英文時顯示狀態提示";
+"mode.indicatorHint" = "狀態切換時在游標旁顯示浮標，點一下也可切換模式。";
+"mode.indicatorAccessibility" = "目前輸入模式：%1$@，點一下可切換";
+"appearance.advancedEffects" = "透明材質效果";
+"appearance.advancedEffectsHint" = "為候選視窗、表情面板及狀態浮標啟用壓克力半透明背景。";
+
+"font.title" = "字型設定";
+
+"font.hint" = "可為不同輸入模式分別指定顯示字型。預設採用系統字型，所選字型無法使用時會自動回復。";
+
+"font.system" = "系統預設字型";
+
+"font.sampleSimplified" = "簡體中文 · 你好，世界";
+
+"font.sampleTraditional" = "繁體中文 · 你好，世界";
+
+"font.sampleEnglish" = "English · Hello, world";
+
+"clipboard.detail" = "歷史記錄開關、保留時間與清除管理";
+
+"clipboard.recording" = "開啟剪貼簿歷史記錄";
+
+"clipboard.retention" = "未釘選記錄保留時間";
+
+"clipboard.session" = "僅本次執行期間";
+
+"clipboard.minutes15" = "15 分鐘";
+
+"clipboard.minutes30" = "30 分鐘";
+
+"clipboard.hour1" = "1 小時";
+
+"clipboard.day1" = "24 小時";
+
+"clipboard.days7" = "7 天";
+
+"clipboard.pin" = "釘選至頂端";
+
+"clipboard.unpin" = "取消釘選";
+
+"clipboard.more" = "更多操作";
+
+"clipboard.copy" = "拷貝";
+
+"clipboard.kindText" = "純文字";
+
+"clipboard.kindImage" = "圖片";
+
+"clipboard.kindFiles" = "檔案";
+
+"clipboard.kindRichText" = "RTF 格式文字";
+
+"clipboard.kindLink" = "網頁連結";
+
+"clipboard.pasteHint" = "點一下文字可直接送出；圖片與檔案點一下拷貝後按 ⌘V 貼上。";
+
+"clipboard.pinnedHint" = "一般記錄僅暫存於記憶體，結束後自動清除；釘選記錄將加密儲存在本機且不會過期。";
+
+"clipboard.clearHint" = "全部清除會移除所有歷史與釘選記錄，但不會影響目前系統剪貼簿。";
+
+"clipboard.cleared" = "剪貼簿歷史記錄已清除。";
+
+"clipboard.storageError" = "無法存取本機加密儲存空間，釘選記錄儲存失敗。請檢查「鑰匙圈存取」權限後重試。";
+
+"clipboard.invalidError" = "無法讀取釘選記錄，已保留原有的加密備份檔案。";
+
+"clipboard.limitError" = "釘選記錄已達上限（最多 50 筆或 50 MB），請先清理舊記錄。";
+
+"clipboard.copied" = "已拷貝至剪貼簿，按 ⌘V 貼上。";
+
+"clipboard.copyError" = "拷貝失敗，請重試。";
+
+"setup.title" = "初始設定輔助程式";
+
+"setup.welcome" = "歡迎使用 Fluent 拼音";
+
+"setup.intro" = "只需幾步即可完成輸入模式、字型與剪貼簿偏好設定，所有選項隨時可在設定中調整。";
+
+"setup.step" = "第 %1$ld / %2$ld 步";
+
+"setup.next" = "下一步";
+
+"setup.previous" = "上一步";
+
+"setup.later" = "略過設定";
+
+"setup.finish" = "完成並試用";
+
+"setup.reopen" = "重新開啟設定輔助程式";
+
+"setup.modes" = "偏好輸入模式";
+
+"setup.privacy" = "剪貼簿與視覺外觀";
+
+"setup.imeHint" = "請前往系統設定「鍵盤 → 文字輸入 → 編輯」中新增「Fluent 拼音」，隨後即可從右上角選單列切換使用。";
+
+"setup.keyboard" = "打開系統鍵盤設定";
+
+"settings.sharedTitle" = "通用設定";
+"settings.languagesTitle" = "輸入語言";
+"settings.modesTitle" = "輸入模式";
+"settings.modesDetail" = "已啟用的語言及預設輸入模式";
+"settings.languageDetail" = "一般偏好、詞庫與字型";
+"settings.englishDetail" = "輸入行為與字型";
+"install.title" = "安裝與設定 Fluent 拼音";
+"install.welcome" = "歡迎使用 Fluent 拼音";
+"install.intro" = "完成安裝並啟用輸入法後，即可設定輸入語言與個人偏好。";
+"install.action" = "安裝至系統";
+"install.enable" = "啟用輸入法";
+"install.installed" = "已安裝至系統";
+"install.notInstalled" = "尚未安裝或需要更新";
+"install.enabled" = "輸入法已啟用";
+"install.notEnabled" = "輸入法尚未啟用";
+"install.enableHint" = "若系統輸入法列表未自動重新整理，請前往「系統設定 → 鍵盤 → 輸入來源」手動新增。";
+"install.locationHint" = "僅安裝至目前使用者的「資源庫/Input Methods」，無需管理者權限。";
+"install.busy" = "正在安裝…";
+"install.failure" = "操作未完成：%1$@";
+"install.dictionaryTitle" = "發現既有使用者詞庫";
+"install.dictionaryFound" = "偵測到本機留存的 Fluent 拼音個人詞庫。";
+"install.dictionaryEmpty" = "未發現歷史詞庫，將開啟全新輸入習慣學習。";
+"install.merge" = "保留並合併";
+"install.mergeHint" = "保留歷史詞庫，與全新內建詞庫合併使用。";
+"install.reset" = "備份並重新學習";
+"install.resetHint" = "將原詞庫封存備份，從頭重新建立個人詞庫。";
+"install.ready" = "輸入法已準備就緒";
+"install.finish" = "完成並打開設定";
+"install.required" = "請先安裝並啟用輸入法。";
+"uninstall.title" = "確定要解除安裝 Fluent 拼音嗎？";
+"uninstall.action" = "解除安裝輸入法";
+"uninstall.keepData" = "保留個人設定、詞庫與剪貼簿釘選內容";
+"uninstall.detail" = "將從系統中移除輸入法並結束背景處理程序。日後如需使用，可重新執行安裝程式。";
+"uninstall.removeHint" = "若不保留資料，將徹底刪除偏好設定、詞頻學習記錄、備份、收藏的 GIF 及剪貼簿內容。";
+"common.cancel" = "取消";
+"common.close" = "關閉";
+"dictionary.manage" = "使用者詞庫管理";
+"dictionary.manageHint" = "可備份並重設個人詞庫；重設操作將重新啟動輸入法處理程序。";
+"dictionary.backupReady" = "已成功備份原使用者詞庫。";
+
+"install.cleanupHint" = "安裝完成後將自動把安裝程式移至垃圾桶；若是從 DMG 開啟，將自動退出磁碟映像檔並清除安裝套件。";
+"install.cleanupWarning" = "輸入法已安裝完成。目前安裝程式所在目錄無法自動清除，請手動刪除安裝套件或 DMG 映像檔。";
+"common.operationFailed" = "操作未完成";
+
+"appearance.interfaceLanguage" = "介面語言";
+"appearance.interfaceLanguageHint" = "僅變更設定與面板的顯示語言，不影響打字輸入模式。";
+
+"language.simplified" = "简体中文";
+"language.traditional" = "繁體中文";
+"language.english" = "English";
+
+"update.title" = "檢查更新";
+"update.checking" = "正在檢查更新…";
+"update.available" = "有新版本 %1$@。";
+"update.install" = "下載並安裝";
+"update.downloading" = "正在下載安裝程式，完成後會開啟安裝引導。";
+"update.current" = "目前已是最新版本（%1$@）。";
+"update.noRelease" = "目前沒有可用的發行版本。";
+"update.unavailable" = "無法取得更新，請稍後再試。";
+"update.invalid" = "發行版本不完整，請稍後再試。";
+"update.incompatible" = "這個版本不支援目前的 Mac 或 macOS 版本。";
+"update.integrity" = "安裝程式驗證失敗，請重新下載。";
+
+"neural.unavailable" = "模型無法載入";
+"neural.waiting" = "等待模型載入";
+"neural.ready" = "模型已就緒，等待前文";
+"neural.scored" = "已評分 %1$ld 次，最近一次 %2$@ 毫秒";

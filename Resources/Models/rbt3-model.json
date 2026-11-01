@@ -1,0 +1,11 @@
+{
+  "model": "hfl/rbt3",
+  "revision": "0aa0527ff4170f29e1dfd3eb6ef60dc67e1bf75c",
+  "license": "Apache-2.0",
+  "parameters": 38499464,
+  "batch": 8,
+  "sequence_length": 32,
+  "precision": "float16",
+  "torch": "2.7.0",
+  "coremltools": "9.0"
+}

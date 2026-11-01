@@ -1,0 +1,616 @@
+{
+  "repository": "https://github.com/microsoft/fluentui-emoji",
+  "revision": "1ffb34c752ecf5d402f04cfb4b392c77f57c54bc",
+  "files": [
+    {
+      "path": "assets/Smiling face with smiling eyes/3D/smiling_face_with_smiling_eyes_3d.png",
+      "file": "1f60a.png",
+      "sha256": "73dce77bd423b2531809763025d20faca40d2391fd12dc1fc88a986872d8214a"
+    },
+    {
+      "path": "assets/Smiling face with smiling eyes/Color/smiling_face_with_smiling_eyes_color.svg",
+      "file": "1f60a.svg",
+      "sha256": "f7db8d4f51409b7556993f1ae032c1a0a1e7028d237100c0af21ba6cc68b765b"
+    },
+    {
+      "path": "assets/Face with tears of joy/3D/face_with_tears_of_joy_3d.png",
+      "file": "1f602.png",
+      "sha256": "8af20fb0c64c44a8d8c8d047c1410c5e529a37c3158d496832b380198ed2e9c3"
+    },
+    {
+      "path": "assets/Face with tears of joy/Color/face_with_tears_of_joy_color.svg",
+      "file": "1f602.svg",
+      "sha256": "6fd545918bf95d6475f4ffddd24ac3070e88e774ea1dbad68845bff08758002f"
+    },
+    {
+      "path": "assets/Rolling on the floor laughing/3D/rolling_on_the_floor_laughing_3d.png",
+      "file": "1f923.png",
+      "sha256": "22ebfd950c4df297e784babe1e31bc1713144615f78cb0262c8dc2ce0da90ca0"
+    },
+    {
+      "path": "assets/Rolling on the floor laughing/Color/rolling_on_the_floor_laughing_color.svg",
+      "file": "1f923.svg",
+      "sha256": "3873fcf3158655db9da4062ecd56abca16772432880f77d40bbaaa8a3aac9aaf"
+    },
+    {
+      "path": "assets/Red heart/3D/red_heart_3d.png",
+      "file": "2764-fe0f.png",
+      "sha256": "7218cb9f08ed1ef38fcd83fe699a1125d07f50725f4c87a68cb7c9f4efb3c32b"
+    },
+    {
+      "path": "assets/Red heart/Color/red_heart_color.svg",
+      "file": "2764-fe0f.svg",
+      "sha256": "3d9acfe76a88d3a235c777953d90a9b2cad01106fcc80af4e79e7f5b4895c0cc"
+    },
+    {
+      "path": "assets/Smiling face with heart-eyes/3D/smiling_face_with_heart-eyes_3d.png",
+      "file": "1f60d.png",
+      "sha256": "2b5ab00dd73673faa86463eac8787b7fc366935c4d82a54451df33443190b9cc"
+    },
+    {
+      "path": "assets/Smiling face with heart-eyes/Color/smiling_face_with_heart-eyes_color.svg",
+      "file": "1f60d.svg",
+      "sha256": "523228d8d1ec0814fd16f6660a50198cdc0dfeca5672ffc9e96c952946bec3f0"
+    },
+    {
+      "path": "assets/Unamused face/3D/unamused_face_3d.png",
+      "file": "1f612.png",
+      "sha256": "039b56c0f5713dd1f80d1bbb3b0c18632992f301334f423719973148d5cc8c2d"
+    },
+    {
+      "path": "assets/Unamused face/Color/unamused_face_color.svg",
+      "file": "1f612.svg",
+      "sha256": "3eb38f390f4ce2ddc9307953799c3538790f25e280b80e104fe73579c6aeecd6"
+    },
+    {
+      "path": "assets/Ok hand/Default/3D/ok_hand_3d_default.png",
+      "file": "1f44c.png",
+      "sha256": "cb506278a6b54b1d60b7a9e513f1513aa1d1cd245f9cf7c14e930b3ee8cc8fa1"
+    },
+    {
+      "path": "assets/Ok hand/Default/Color/ok_hand_color_default.svg",
+      "file": "1f44c.svg",
+      "sha256": "944f7ebed06f8ee535c771061d00396c3c51acddda7adedc3df52fc3d294e249"
+    },
+    {
+      "path": "assets/Face blowing a kiss/3D/face_blowing_a_kiss_3d.png",
+      "file": "1f618.png",
+      "sha256": "5a993350588f243ae13c011b5cb8cc4a5f497d2cc213adfefc5ded40196afe10"
+    },
+    {
+      "path": "assets/Face blowing a kiss/Color/face_blowing_a_kiss_color.svg",
+      "file": "1f618.svg",
+      "sha256": "88409aa28e45487be6336998876373b1ce52137c15397bb2840afb04c651b59d"
+    },
+    {
+      "path": "assets/Two hearts/3D/two_hearts_3d.png",
+      "file": "1f495.png",
+      "sha256": "b882b5354fd3da839dfb0d2dc0481dfbedddd0d4e91eef43a4894580199dbad9"
+    },
+    {
+      "path": "assets/Two hearts/Color/two_hearts_color.svg",
+      "file": "1f495.svg",
+      "sha256": "7b0b85e57754b8c87d71dc934d728135434862617c87297009d6027abd3c7545"
+    },
+    {
+      "path": "assets/Beaming face with smiling eyes/3D/beaming_face_with_smiling_eyes_3d.png",
+      "file": "1f601.png",
+      "sha256": "043c9fced9114368d73af7d1689cfcfc1ed42883456642770912f3d5e978dda3"
+    },
+    {
+      "path": "assets/Beaming face with smiling eyes/Color/beaming_face_with_smiling_eyes_color.svg",
+      "file": "1f601.svg",
+      "sha256": "4c587ba48e8deb2b7886b03982ad66663d49df615fe3aa7f6012802874790957"
+    },
+    {
+      "path": "assets/Thumbs up/Default/3D/thumbs_up_3d_default.png",
+      "file": "1f44d.png",
+      "sha256": "a48dbe89a1a16969593db76f5bec45e9e537e0f090e7609caa8d9a3ff598d1d2"
+    },
+    {
+      "path": "assets/Thumbs up/Default/Color/thumbs_up_color_default.svg",
+      "file": "1f44d.svg",
+      "sha256": "c13afe53c62947039b737ec6f6c150bca447774ea9b057e5707e13259c979932"
+    },
+    {
+      "path": "assets/Raising hands/Default/3D/raising_hands_3d_default.png",
+      "file": "1f64c.png",
+      "sha256": "e645fbc6c7e174cb74ce168e4ad7d360d3aecc56bbadabbcb51a6d80c9375992"
+    },
+    {
+      "path": "assets/Raising hands/Default/Color/raising_hands_color_default.svg",
+      "file": "1f64c.svg",
+      "sha256": "e2b4c1d9bff01100630a8cd79fca47d19fbc02a0b00a5b3fa66ffe3b70cb72c2"
+    },
+    {
+      "path": "assets/Grinning face/3D/grinning_face_3d.png",
+      "file": "1f600.png",
+      "sha256": "175d214df45fe18f6f106a9a094b695689d98abe6f343295fcbd690a7ee4f0ab"
+    },
+    {
+      "path": "assets/Grinning face/Color/grinning_face_color.svg",
+      "file": "1f600.svg",
+      "sha256": "40dbcea85871320747a435415d0cb0cc5c99d6f4f453eb1f785ba74a751464b8"
+    },
+    {
+      "path": "assets/Smiling face with hearts/3D/smiling_face_with_hearts_3d.png",
+      "file": "1f970.png",
+      "sha256": "2b8c4abe57a81fe3805ec0c271f855984e9f4a7a1d10053050a4db7b6def778e"
+    },
+    {
+      "path": "assets/Smiling face with hearts/Color/smiling_face_with_hearts_color.svg",
+      "file": "1f970.svg",
+      "sha256": "49dc70c6d0a191e2fb4f6004c133924a1c98ec0c8e76fd569addd0e9b2f119d4"
+    },
+    {
+      "path": "assets/Smiling face with sunglasses/3D/smiling_face_with_sunglasses_3d.png",
+      "file": "1f60e.png",
+      "sha256": "e98cb43a7a531289c82eb57441eb20cd88cb53b895c212d8e3abf05dd2647da1"
+    },
+    {
+      "path": "assets/Smiling face with sunglasses/Color/smiling_face_with_sunglasses_color.svg",
+      "file": "1f60e.svg",
+      "sha256": "a02137e5f0446bb62f294c66cd5cce75983a1bf2e2c69f953ee5e6ac5ef5c8ce"
+    },
+    {
+      "path": "assets/Thinking face/3D/thinking_face_3d.png",
+      "file": "1f914.png",
+      "sha256": "cd29da5c3886e1e25726d3cf6ff79faa2f0d631b1c0873b115be287d358fc4be"
+    },
+    {
+      "path": "assets/Thinking face/Color/thinking_face_color.svg",
+      "file": "1f914.svg",
+      "sha256": "5f8c875da4fc81d2a5c98d7fea5e356c29388ecfcae06027af2e4a92abe07b2d"
+    },
+    {
+      "path": "assets/Loudly crying face/3D/loudly_crying_face_3d.png",
+      "file": "1f62d.png",
+      "sha256": "9e7b740110d12731e7416c8958b88bfadd75e0e7121ab0245e581e8f70491e02"
+    },
+    {
+      "path": "assets/Loudly crying face/Color/loudly_crying_face_color.svg",
+      "file": "1f62d.svg",
+      "sha256": "c33a9e604c8958186bfe0a29ff09441f9b65041c74b506d77b167d2cb598c65a"
+    },
+    {
+      "path": "assets/Face holding back tears/3D/face_holding_back_tears_3d.png",
+      "file": "1f979.png",
+      "sha256": "5e31e32cd02ce014aa2eae0df46f38b0532dd74ff01224309181d6b75519ec76"
+    },
+    {
+      "path": "assets/Face holding back tears/Color/face_holding_back_tears_color.svg",
+      "file": "1f979.svg",
+      "sha256": "6bac7ac69b4b50485bdda45190e9a64cea5cd066906ddb21720ff4f43dffddc9"
+    },
+    {
+      "path": "assets/Sleeping face/3D/sleeping_face_3d.png",
+      "file": "1f634.png",
+      "sha256": "c7d1cd5d04ae7214b6ae92b9802b6c860729c755da0020ccec22c7c8171f18fa"
+    },
+    {
+      "path": "assets/Sleeping face/Color/sleeping_face_color.svg",
+      "file": "1f634.svg",
+      "sha256": "50b6827f41051fc58e607b0d4bd2c202aa0588d9a62b0d7b42273bbd44b92ef4"
+    },
+    {
+      "path": "assets/Grinning face with sweat/3D/grinning_face_with_sweat_3d.png",
+      "file": "1f605.png",
+      "sha256": "dcac6dc921b77aabc16d524ed5d5067f66b6104d545c5f6396f7bbdba6d4cf2c"
+    },
+    {
+      "path": "assets/Grinning face with sweat/Color/grinning_face_with_sweat_color.svg",
+      "file": "1f605.svg",
+      "sha256": "4eaab71a6edd262744008f573a02e5ee1d18a39e1224b890e3e61aa6ecdc3033"
+    },
+    {
+      "path": "assets/Pouting face/3D/pouting_face_3d.png",
+      "file": "1f621.png",
+      "sha256": "053597c33ff5340a6971eaee06acfde543820375ca77652cc1fff3461f795c06"
+    },
+    {
+      "path": "assets/Pouting face/Color/pouting_face_color.svg",
+      "file": "1f621.svg",
+      "sha256": "859a1d93df5cb7330382bf1168f006a93d138aff583205d75f53234c66b1044c"
+    },
+    {
+      "path": "assets/Hugging face/3D/hugging_face_3d.png",
+      "file": "1f917.png",
+      "sha256": "2f70a465496f45c146253fc933202a38f4f8e1af8b2a0e2555832456c03f1b2e"
+    },
+    {
+      "path": "assets/Hugging face/Color/hugging_face_color.svg",
+      "file": "1f917.svg",
+      "sha256": "79e88cdf04b4d367ff4eb68ff88f81e1249929e9428681b7934da1d05b9be848"
+    },
+    {
+      "path": "assets/Star-struck/3D/star-struck_3d.png",
+      "file": "1f929.png",
+      "sha256": "89a14e242892cbe067095b75eb51cd55692841bceb384a45a90f8f3f8b9b2e9b"
+    },
+    {
+      "path": "assets/Star-struck/Color/star-struck_color.svg",
+      "file": "1f929.svg",
+      "sha256": "5411bd832303ed89db09c98768b65b306c4c62469ef43491b78690bcf3d75165"
+    },
+    {
+      "path": "assets/Saluting face/3D/saluting_face_3d.png",
+      "file": "1fae1.png",
+      "sha256": "3a18f67e9cb6edaa18e9331451f9b93527aca574c52f9e6d896cce691e737b5a"
+    },
+    {
+      "path": "assets/Saluting face/Color/saluting_face_color.svg",
+      "file": "1fae1.svg",
+      "sha256": "1bd18b19535c8dbabf6f9a437c275f938803ea020430c237ca16a1ae86f98e13"
+    },
+    {
+      "path": "assets/Folded hands/Default/3D/folded_hands_3d_default.png",
+      "file": "1f64f.png",
+      "sha256": "69090ea19b7741e691f878fe3f1649a8d18f42fc59e1912ea799bf4e35045039"
+    },
+    {
+      "path": "assets/Folded hands/Default/Color/folded_hands_color_default.svg",
+      "file": "1f64f.svg",
+      "sha256": "7ecb3213aece686cc4a74023898f5313862be65773c6f2bbceaa2ba2261f4247"
+    },
+    {
+      "path": "assets/Clapping hands/Default/3D/clapping_hands_3d_default.png",
+      "file": "1f44f.png",
+      "sha256": "54075bd39fd3e1860ba39898d73e61096c0e0e633ac5e9840beefddaf1d75113"
+    },
+    {
+      "path": "assets/Clapping hands/Default/Color/clapping_hands_color_default.svg",
+      "file": "1f44f.svg",
+      "sha256": "ed9ece6fa378bec16d88780af021a30ecae5509baaa2d79e135b750749f4f5c0"
+    },
+    {
+      "path": "assets/Waving hand/Default/3D/waving_hand_3d_default.png",
+      "file": "1f44b.png",
+      "sha256": "fd8d684a2dd4bca71b53eea530ffa226fdd9a17a50b9bebec2788447477f0d39"
+    },
+    {
+      "path": "assets/Waving hand/Default/Color/waving_hand_color_default.svg",
+      "file": "1f44b.svg",
+      "sha256": "a4264cfcb0807d0e223ff95174321ce4e5bebc9558a7281fc57203d089bf34b6"
+    },
+    {
+      "path": "assets/Victory hand/Default/3D/victory_hand_3d_default.png",
+      "file": "270c-fe0f.png",
+      "sha256": "8b2a28bc1662f54491dec60f2c8ac867aae56784a2cc33e8a7b444942c5c74f1"
+    },
+    {
+      "path": "assets/Victory hand/Default/Color/victory_hand_color_default.svg",
+      "file": "270c-fe0f.svg",
+      "sha256": "43a59df20a7d8dc59331452856da3fe00e012ec4f46ecd118aa57e44a776e77e"
+    },
+    {
+      "path": "assets/Handshake/3D/handshake_3d.png",
+      "file": "1f91d.png",
+      "sha256": "fd0c3ae54cf208f371636263f4c972b54ac929fef0455b9d15ce72c04fee0f2b"
+    },
+    {
+      "path": "assets/Handshake/Color/handshake_color.svg",
+      "file": "1f91d.svg",
+      "sha256": "06feb82c694c6fd203ec41dfeb095d1f30732e14fde12e1fd57e950964e0a6c8"
+    },
+    {
+      "path": "assets/Flexed biceps/Default/3D/flexed_biceps_3d_default.png",
+      "file": "1f4aa.png",
+      "sha256": "c765683c47844d18dd1daa38556f27347d059d7cf54b315a41403326f5af8a38"
+    },
+    {
+      "path": "assets/Flexed biceps/Default/Color/flexed_biceps_color_default.svg",
+      "file": "1f4aa.svg",
+      "sha256": "d4cc7f7f830fd010fad7b98f4ff2e32f1bf7631f1c224afceeff4b8622f2e544"
+    },
+    {
+      "path": "assets/Snake/3D/snake_3d.png",
+      "file": "1f40d.png",
+      "sha256": "3d9ad552f970ebcf8d9adf27d0d08b4f783646a25378d6283e956e2f73c0466c"
+    },
+    {
+      "path": "assets/Snake/Color/snake_color.svg",
+      "file": "1f40d.svg",
+      "sha256": "020a1eb18a45988df616681d780798706560603602f29c6ac61cd58465fa8fcc"
+    },
+    {
+      "path": "assets/Cat face/3D/cat_face_3d.png",
+      "file": "1f431.png",
+      "sha256": "d930f2aee8ae47cb3ca26f2594ddd15df42345d952b5903b776adf4a728860b5"
+    },
+    {
+      "path": "assets/Cat face/Color/cat_face_color.svg",
+      "file": "1f431.svg",
+      "sha256": "59398990e360d55f68f46e6b2bd7585068ffa08b0bc0f13f2d50fc66ea0fb351"
+    },
+    {
+      "path": "assets/Dog face/3D/dog_face_3d.png",
+      "file": "1f436.png",
+      "sha256": "7db4c311218a47053e490ec53e7b3995bb83246b0d6992e135868a5220bb32e7"
+    },
+    {
+      "path": "assets/Dog face/Color/dog_face_color.svg",
+      "file": "1f436.svg",
+      "sha256": "4f1d572ca579b81adc20481f39f8a6348693096f22fcec1f4b2cb7b803c3c559"
+    },
+    {
+      "path": "assets/Panda/3D/panda_3d.png",
+      "file": "1f43c.png",
+      "sha256": "31524ed035f8d769bc7d437268f30a65eb309ea216e84c09823d4f36c2f97070"
+    },
+    {
+      "path": "assets/Panda/Color/panda_color.svg",
+      "file": "1f43c.svg",
+      "sha256": "324df7304eddd6e4bf7027fd19aa1c5c62de52984ccaaef6b265acdd96194956"
+    },
+    {
+      "path": "assets/Dragon/3D/dragon_3d.png",
+      "file": "1f409.png",
+      "sha256": "c29e7f01b3a376bdb2ce55e2b631fa00395a3ea9d0d4870b8475d494ba760f34"
+    },
+    {
+      "path": "assets/Dragon/Color/dragon_color.svg",
+      "file": "1f409.svg",
+      "sha256": "786274932a9fbba809346fa9d75c019b7b1309b63439a386b2447a72fc6162f6"
+    },
+    {
+      "path": "assets/Fox/3D/fox_3d.png",
+      "file": "1f98a.png",
+      "sha256": "1a3bc43212405fb03d8d2bcc709c7f39c99d4a19af06d406cae4724e5fe2b0ad"
+    },
+    {
+      "path": "assets/Fox/Color/fox_color.svg",
+      "file": "1f98a.svg",
+      "sha256": "83292e5983c00597ab3c08e6ceb6a4e66f54df9c5e0c850aa9ea4c5bc8621013"
+    },
+    {
+      "path": "assets/Rose/3D/rose_3d.png",
+      "file": "1f339.png",
+      "sha256": "24a9794f108eb27d8d51ac8fc1898f8cee20e19f1b4e8c063efec5215d28d947"
+    },
+    {
+      "path": "assets/Rose/Color/rose_color.svg",
+      "file": "1f339.svg",
+      "sha256": "5514a8419af66f2d476fcad9d66556ae370733e35342619a740aa7e270a27992"
+    },
+    {
+      "path": "assets/Cherry blossom/3D/cherry_blossom_3d.png",
+      "file": "1f338.png",
+      "sha256": "e911aad0884966bbeb2a3feda131d5b5aa2fb3d70284e97b9cc1e94a75f953c0"
+    },
+    {
+      "path": "assets/Cherry blossom/Color/cherry_blossom_color.svg",
+      "file": "1f338.svg",
+      "sha256": "8cee4d2f3156a6c8b458eccff8fe035e72b9b1378a705a414b8a707eb88f2b71"
+    },
+    {
+      "path": "assets/Sunflower/3D/sunflower_3d.png",
+      "file": "1f33b.png",
+      "sha256": "14eb41f2cb9afa1387e9b925a9458d8fc768be3bd32210e3064fb7f320e123ca"
+    },
+    {
+      "path": "assets/Sunflower/Color/sunflower_color.svg",
+      "file": "1f33b.svg",
+      "sha256": "31a8f9452c3b55055de2d7364d62daa1325034f0f8de10d0685bde9268ba23d3"
+    },
+    {
+      "path": "assets/Four leaf clover/3D/four_leaf_clover_3d.png",
+      "file": "1f340.png",
+      "sha256": "37b310abbb0914050cb033ffcb99fe25b09c4e47d1d0ef93988f60f6fd849d07"
+    },
+    {
+      "path": "assets/Four leaf clover/Color/four_leaf_clover_color.svg",
+      "file": "1f340.svg",
+      "sha256": "180a08c4de8c44b51bdb868a8ec3547ddf6e6fda124e879292362f8bb72e2caf"
+    },
+    {
+      "path": "assets/Sun/3D/sun_3d.png",
+      "file": "2600-fe0f.png",
+      "sha256": "c9bb15d03d4b1e6151d97e12119ac93bbd2bcb5e713a49c1fcfc11ece54caec1"
+    },
+    {
+      "path": "assets/Sun/Color/sun_color.svg",
+      "file": "2600-fe0f.svg",
+      "sha256": "d0540f2589e41ceb725db6a36b8f691a301b3c7e9de9ed98772b2adf501328a7"
+    },
+    {
+      "path": "assets/Rainbow/3D/rainbow_3d.png",
+      "file": "1f308.png",
+      "sha256": "81c60a96369047dd287b9fb54d02d29fe1e9b7fe3f00924330037e861b1fbd81"
+    },
+    {
+      "path": "assets/Rainbow/Color/rainbow_color.svg",
+      "file": "1f308.svg",
+      "sha256": "22abca54e727814f822ffca45e9852004e8b47d1e97f592dbf4f912eff588422"
+    },
+    {
+      "path": "assets/Red apple/3D/red_apple_3d.png",
+      "file": "1f34e.png",
+      "sha256": "7e37f4ad4d227d283f9afad0605fcddf67406bf8c6c4964419efbd23de7ad60c"
+    },
+    {
+      "path": "assets/Red apple/Color/red_apple_color.svg",
+      "file": "1f34e.svg",
+      "sha256": "af1f7c90304096dfc6a05c1e2f25f6e3924ecba50f174c5537a42b4d45e47589"
+    },
+    {
+      "path": "assets/Watermelon/3D/watermelon_3d.png",
+      "file": "1f349.png",
+      "sha256": "00bacc111ae855cf0621d35ba987d519c07fb4103500edc4af2152fa6d27177e"
+    },
+    {
+      "path": "assets/Watermelon/Color/watermelon_color.svg",
+      "file": "1f349.svg",
+      "sha256": "65a089485a93ac9a2a895b468b52b102afcafded0f27f881dc8b1a3e099ba494"
+    },
+    {
+      "path": "assets/Strawberry/3D/strawberry_3d.png",
+      "file": "1f353.png",
+      "sha256": "446d640c24e146d03e8382c61ae52862848b11aadf74e7b47d200bc44d2f0223"
+    },
+    {
+      "path": "assets/Strawberry/Color/strawberry_color.svg",
+      "file": "1f353.svg",
+      "sha256": "c8ab18516629a0e60971065d1cd140f2b53d642f52e1a1397f8ef2b9bf6f38bf"
+    },
+    {
+      "path": "assets/Shortcake/3D/shortcake_3d.png",
+      "file": "1f370.png",
+      "sha256": "0acebe0de7e4d5393c8825ee1a233ea8780e52bfec71ab52dd3e0135e8a9fb37"
+    },
+    {
+      "path": "assets/Shortcake/Color/shortcake_color.svg",
+      "file": "1f370.svg",
+      "sha256": "73914fa4e47edb7155ef5fb96a58345151120173c77a99d44ba345b57b54c8b0"
+    },
+    {
+      "path": "assets/Hot beverage/3D/hot_beverage_3d.png",
+      "file": "2615.png",
+      "sha256": "edeaa3fca5eace5f2546efcd3b3e42ef1fd389a0c51d374dbf7863731db8f314"
+    },
+    {
+      "path": "assets/Hot beverage/Color/hot_beverage_color.svg",
+      "file": "2615.svg",
+      "sha256": "5aa5c0030c1be77bf4ab276f2496962a3b044ed22fa3709cf36f116fbdd13d45"
+    },
+    {
+      "path": "assets/Bubble tea/3D/bubble_tea_3d.png",
+      "file": "1f9cb.png",
+      "sha256": "a641ba6510d10b00d861406412a3e72eecec2ad78b00dfbe570e441a54a22377"
+    },
+    {
+      "path": "assets/Bubble tea/Color/bubble_tea_color.svg",
+      "file": "1f9cb.svg",
+      "sha256": "13a66ee29366a3ddc83795f0c3b768ab4e4f1747030d572ff491e5b15373a33f"
+    },
+    {
+      "path": "assets/Party popper/3D/party_popper_3d.png",
+      "file": "1f389.png",
+      "sha256": "70a8e2f9daf1646be9e773751b7f3b6b281a2415cf29c3c3aeebd9c923cdc3e0"
+    },
+    {
+      "path": "assets/Party popper/Color/party_popper_color.svg",
+      "file": "1f389.svg",
+      "sha256": "c27a0185f142c94f389429c22cb7632d900fd08eb9259f75566f3888b5d53551"
+    },
+    {
+      "path": "assets/Birthday cake/3D/birthday_cake_3d.png",
+      "file": "1f382.png",
+      "sha256": "5c5d6961fde0fa82d1aa2242f938ff10b0327e791674c625c912f13ff206933b"
+    },
+    {
+      "path": "assets/Birthday cake/Color/birthday_cake_color.svg",
+      "file": "1f382.svg",
+      "sha256": "c6ebf8eade094c2de098ab4f50613217cc27d5196e0af9b6f791987e931f6677"
+    },
+    {
+      "path": "assets/Wrapped gift/3D/wrapped_gift_3d.png",
+      "file": "1f381.png",
+      "sha256": "fc9c446401c9fb347f4e9f47e6023247208126047d9ec32059d5e14e127fb562"
+    },
+    {
+      "path": "assets/Wrapped gift/Color/wrapped_gift_color.svg",
+      "file": "1f381.svg",
+      "sha256": "6d0ee74b56170abdefcbbd373cdde0576aa7a262af0960037a1371e57728e88f"
+    },
+    {
+      "path": "assets/Balloon/3D/balloon_3d.png",
+      "file": "1f388.png",
+      "sha256": "1f3ae11652b440750cfd3e724888b3827d8e9349367cea80e57e33fd45588215"
+    },
+    {
+      "path": "assets/Balloon/Color/balloon_color.svg",
+      "file": "1f388.svg",
+      "sha256": "3dbba8b304d9976151ed64889809833b9731be5dcccec643cdcfd3cd69813afc"
+    },
+    {
+      "path": "assets/Sparkles/3D/sparkles_3d.png",
+      "file": "2728.png",
+      "sha256": "e4490c9ff74a3fd73a8f99c760d65b6ed51b8a3e4ad28da137fec050b77e1058"
+    },
+    {
+      "path": "assets/Sparkles/Color/sparkles_color.svg",
+      "file": "2728.svg",
+      "sha256": "27103e1c20965f97432e911bac8f3479af60910cab752cf0a4526ea0a9e892c0"
+    },
+    {
+      "path": "assets/Fire/3D/fire_3d.png",
+      "file": "1f525.png",
+      "sha256": "d56355132d73df1741edcf37cb4e21ad54f1c46eeb76fa17224607abf4128c3f"
+    },
+    {
+      "path": "assets/Fire/Color/fire_color.svg",
+      "file": "1f525.svg",
+      "sha256": "91b3c47c883d41055b8fa1cc1488e6e98b3468a6307cd57478b6c55178d9bcfe"
+    },
+    {
+      "path": "assets/Hundred points/3D/hundred_points_3d.png",
+      "file": "1f4af.png",
+      "sha256": "2c9411a425e60a538a7ee5125d21c9fa2610e827f8d38d0c953e5d8cda8562cf"
+    },
+    {
+      "path": "assets/Hundred points/Color/hundred_points_color.svg",
+      "file": "1f4af.svg",
+      "sha256": "03f9bc50ae5f4ada5659bd39ed1360e479289b0f55e1a1a7e5fe829643647d51"
+    },
+    {
+      "path": "assets/Check mark button/3D/check_mark_button_3d.png",
+      "file": "2705.png",
+      "sha256": "256e3dd950cf1705ab72511ab242472b4bd7db519aa402a6182c1aaf8c58def9"
+    },
+    {
+      "path": "assets/Check mark button/Color/check_mark_button_color.svg",
+      "file": "2705.svg",
+      "sha256": "558fde80fa655011dc1e7f90ceaa02845413c9bb88f4c6b174f3b264c6074316"
+    },
+    {
+      "path": "assets/Rocket/3D/rocket_3d.png",
+      "file": "1f680.png",
+      "sha256": "4636925a1dfc76a45dc83c08b983699d39143a0978f794a4e2dfb6cbffdcd7ab"
+    },
+    {
+      "path": "assets/Rocket/Color/rocket_color.svg",
+      "file": "1f680.svg",
+      "sha256": "3e759cbfacd8b9fb06df57abaf472bb2dbc1415bd60f21dc9f430e20fa0ca252"
+    },
+    {
+      "path": "assets/Laptop/3D/laptop_3d.png",
+      "file": "1f4bb.png",
+      "sha256": "3b8a267f6c3d2721af925782bdbc11c4e1bc9ae806c5c875557b100393665aab"
+    },
+    {
+      "path": "assets/Laptop/Color/laptop_color.svg",
+      "file": "1f4bb.svg",
+      "sha256": "b1e1413ef52cc1d8c5883b619d5b724ff3f325baa4539634a75b3d57597cf562"
+    },
+    {
+      "path": "assets/Books/3D/books_3d.png",
+      "file": "1f4da.png",
+      "sha256": "36f75eaa1e1a849fc950f43962b447c206d96244858468240a6a81beaa97f7be"
+    },
+    {
+      "path": "assets/Books/Color/books_color.svg",
+      "file": "1f4da.svg",
+      "sha256": "2e27d282f5b3fdbb78353bd169ba40f70b7ae3c66c15ae083df894ac6c778927"
+    },
+    {
+      "path": "assets/Musical note/3D/musical_note_3d.png",
+      "file": "1f3b5.png",
+      "sha256": "24f7ec2e5cdf032c3605ec8c57399f72b96585ea6495f8da59695f5ea86da2ff"
+    },
+    {
+      "path": "assets/Musical note/Color/musical_note_color.svg",
+      "file": "1f3b5.svg",
+      "sha256": "dd3a5275432ab6adca8a7db8eb43520a9a3d768fefd34fafd96f33fa3088f96d"
+    },
+    {
+      "path": "assets/Cool button/3D/cool_button_3d.png",
+      "file": "1f192.png",
+      "sha256": "0eec7e1990b5c0b26a8b1120b47d96fb1ea52605328124e21a6abe326347a576"
+    },
+    {
+      "path": "assets/Cool button/Color/cool_button_color.svg",
+      "file": "1f192.svg",
+      "sha256": "e4bce853d1071fabe7a59ca99519341575c7fc155e529122ed70c64fdb67a6e4"
+    }
+  ]
+}

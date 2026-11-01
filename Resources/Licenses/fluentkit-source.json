@@ -1,0 +1,6 @@
+{
+  "revision": "5811513d9820193c3c46ae8ee89b763641fa6686",
+  "archive_sha256": "9f50ebecac24129611278369992ebf6960aab4c0d34c0fdf9a5abb14273f10fe",
+  "snapshot": ".build/dependencies/fluentkit-5811513/WinUI-macOS",
+  "scope": "Committed source only; excludes later working-tree changes."
+}

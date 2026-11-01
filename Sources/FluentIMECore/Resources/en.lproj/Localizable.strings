@@ -1,0 +1,356 @@
+/* Fluent IME interface strings. Keep keys and positional argument types in sync. */
+
+/* advanced */
+"advanced.about" = "About";
+"advanced.addInputHint" = "Go to System Settings → Keyboard to add Fluent Pinyin to your input sources.";
+"advanced.components" = "Built with InputMethodKit · Rime %1$@ · FluentKit";
+"advanced.development" = "Development build";
+"advanced.licenses" = "Open-source licenses";
+"advanced.offlineHint" = "All typing and dictionary conversion happen on-device";
+"advanced.openKeyboard" = "Open Keyboard Settings";
+"advanced.systemInput" = "System input source";
+"advanced.version" = "%1$@ %2$@";
+
+/* app */
+"app.name" = "Fluent Pinyin";
+
+/* appearance */
+"appearance.candidateCount" = "Showing %1$ld candidates per page";
+"appearance.candidates" = "Candidate window";
+"appearance.dark" = "Dark";
+"appearance.expansionAnimation" = "Expand panel animation";
+"appearance.light" = "Light";
+"appearance.pageAnimation" = "Page transition animation";
+"appearance.popupAnimation" = "Window fade-in animation";
+"appearance.symbolsHint" = "Quick access to emoji, GIFs, kaomoji, symbols, and clipboard history";
+"appearance.system" = "Use system setting";
+"appearance.theme" = "Theme";
+"appearance.themeChoice" = "Appearance mode";
+
+/* candidate */
+"candidate.accessibility" = "Pinyin candidates";
+"candidate.collapse" = "Collapse candidates";
+"candidate.expand" = "Expand candidates";
+"candidate.item" = "%1$ld, %2$@";
+"candidate.next" = "Next page";
+"candidate.previous" = "Previous page";
+"candidate.selected" = "Selected";
+
+/* clipboard */
+"clipboard.clear" = "Clear all";
+"clipboard.deleteEntry" = "Delete entry";
+"clipboard.disabled" = "Clipboard history is turned off. Turn it on to start recording newly copied items.";
+"clipboard.empty" = "No items yet. Copied content will appear here.";
+"clipboard.pause" = "Pause";
+"clipboard.privacyHint" = "Passwords, private items, and Universal Clipboard are automatically ignored. Everything stays on your Mac.";
+"clipboard.retentionHint" = "Unpinned items are automatically removed when they expire.";
+"clipboard.start" = "Turn on";
+"clipboard.title" = "Clipboard history";
+
+/* common */
+"common.add" = "Add";
+
+/* dictionary */
+"dictionary.contents" = "Includes core vocabulary, heteronyms, personal names, and places";
+"dictionary.contextHint" = "Uses only recent text in the active field and resets when you switch apps.";
+"dictionary.grammar" = "Wanxiang sentence grammar";
+"dictionary.grammarHint" = "Improves accuracy for full-sentence pinyin typing";
+"dictionary.languageModel" = "Smart language models";
+"dictionary.learning" = "Learn typing habits and word frequency";
+"dictionary.learningHint" = "When turned off, new words aren't recorded, but your existing personal dictionary is kept.";
+"dictionary.local" = "Built-in dictionary";
+"dictionary.modelHint" = "Re-ranks candidates using an on-device model without slowing down typing.";
+"dictionary.modelMissing" = "On-device language model is not installed.";
+"dictionary.openFolder" = "Open user dictionary folder";
+"dictionary.transformer" = "Contextual candidate re-ranking (Experimental)";
+"dictionary.wanxiang" = "Wanxiang comprehensive dictionary";
+
+/* error */
+"error.gifInvalid" = "The selected file is not a valid GIF.";
+"error.gifTooLarge" = "This GIF exceeds the maximum limit (20 MB, 4096 × 4096 px, or 300 frames).";
+"error.gifTooMany" = "You can save up to 100 GIFs.";
+"error.missingData" = "Dictionary files are missing (%1$@). Please reinstall Fluent Pinyin.";
+"error.sessionUnavailable" = "Failed to initialize the pinyin engine. Please check your dictionary installation.";
+"error.startup" = "Fluent Pinyin could not start";
+
+/* general */
+"general.abbreviation" = "Short pinyin (Initials)";
+"general.characterSet" = "Character set";
+"general.correction" = "Typo correction";
+"general.defaultMode.choice" = "Default input mode";
+"general.defaultMode.title" = "Default mode";
+"general.englishPunctuation" = "Use English punctuation in Chinese mode";
+"general.fuzzy" = "Fuzzy pinyin";
+"general.halfWidth" = "Use half-width characters";
+"general.pinyin.choice" = "Pinyin scheme";
+"general.pinyin.full" = "Full pinyin";
+"general.pinyin.title" = "Pinyin";
+"general.simplifiedChinese" = "Simplified Chinese";
+
+/* gif */
+"gif.add" = "Add GIF";
+"gif.added" = "Added %1$ld GIF(s).";
+"gif.copied" = "GIF copied. Press ⌘V to paste.";
+"gif.copyAccessibility" = "Copy GIF: %1$@";
+"gif.empty" = "No saved GIFs yet.";
+"gif.noResults" = "No matching GIFs found.";
+"gif.pasteHint" = "Click a GIF to copy it, then press ⌘V in your app to paste.";
+"gif.pickerTitle" = "Choose local GIF files";
+"gif.removeAccessibility" = "Remove %1$@";
+
+/* keys */
+"keys.arrows" = "Navigate candidates / move cursor";
+"keys.cancel" = "Clear current composition";
+"keys.candidates" = "Candidate selection";
+"keys.capsLockHint" = "Caps Lock: press to switch input sources; hold for Caps Lock.";
+"keys.commitCodeHint" = "Pressing Shift while typing pinyin commits the raw letters and switches to English.";
+"keys.commitRaw" = "Commit raw pinyin letters";
+"keys.confirm" = "Commit highlighted candidate";
+"keys.expansionHint" = "Press ] while typing to expand the grid, [ / ] to page, or [ on the top row to collapse.";
+"keys.keepSelection" = "Keep highlight position when paging";
+"keys.keepSelectionHint" = "When off, paging always selects the first candidate on the new page.";
+"keys.modeSwitch" = "Mode switching";
+"keys.number" = "Select candidate by number";
+"keys.paging" = "Previous / next page";
+"keys.shift" = "Press Shift to toggle Chinese / English";
+
+/* menu */
+"menu.copy" = "Copy";
+"menu.cut" = "Cut";
+"menu.edit" = "Edit";
+"menu.paste" = "Paste";
+"menu.quit" = "Quit Fluent Pinyin";
+"menu.redo" = "Redo";
+"menu.selectAll" = "Select All";
+"menu.settings" = "Fluent Pinyin Settings…";
+"menu.symbols" = "Emoji & Symbols…";
+"menu.undo" = "Undo";
+
+/* mode */
+"mode.chinese" = "Chinese";
+"mode.english" = "English";
+"mode.switchToChinese" = "Switch to Chinese";
+"mode.switchToEnglish" = "Switch to English";
+
+/* navigation */
+"navigation.item" = "%1$@, %2$@";
+
+/* preview */
+"preview.editor.accessibility" = "Typing preview field";
+"preview.open" = "Try it out  →";
+"preview.title" = "Typing preview";
+
+/* registration */
+"registration.reloginHint" = "Please log out and log back in, then add Fluent Pinyin in System Settings → Keyboard → Input Sources.";
+
+/* settings */
+"settings.advanced.detail" = "Input sources, open-source licenses, and version info";
+"settings.advanced.title" = "Advanced";
+"settings.appearance.detail" = "Themes, animations, fonts, and visual effects";
+"settings.appearance.title" = "Appearance";
+"settings.dictionary.detail" = "Personal learning, built-in dictionaries, and language models";
+"settings.dictionary.title" = "Dictionary & Learning";
+"settings.general.detail" = "Typo correction, default mode, punctuation, and fuzzy pinyin";
+"settings.general.title" = "General";
+"settings.home.detail" = "Simplified & Traditional Chinese · Full Pinyin";
+"settings.inputMethod" = "Input Method";
+"settings.keys.detail" = "Mode switching, candidate expansion, and keyboard shortcuts";
+"settings.keys.title" = "Keys";
+"settings.noResults" = "No matching settings found";
+"settings.pinyin" = "Fluent Pinyin";
+"settings.search.accessibility" = "Search settings";
+"settings.search.placeholder" = "Search settings";
+"settings.title" = "Fluent IME Settings";
+"settings.windowTitle" = "Fluent IME Settings";
+
+/* state */
+"state.off" = "Off";
+"state.on" = "On";
+
+/* symbols */
+"symbols.clipboard" = "Clipboard";
+"symbols.close" = "Close panel";
+"symbols.emoji" = "Emoji";
+"symbols.favorites" = "Frequent";
+"symbols.kaomoji" = "Kaomoji";
+"symbols.moreEmoji" = "More emoji";
+"symbols.noResults" = "No matches found";
+"symbols.recent" = "Recently used";
+"symbols.results" = "Search results";
+"symbols.search" = "Search emoji or symbols";
+"symbols.searchAccessibility" = "Search emoji, kaomoji, or symbols";
+"symbols.searchHint" = "Search in Chinese, pinyin, or English (e.g., 微笑, weixiao, smile).";
+"symbols.symbols" = "Symbols";
+"symbols.title" = "Emoji & Symbols";
+
+/* input modes */
+"general.enabledModes" = "Enabled input modes";
+"general.traditionalChinese" = "Traditional Chinese";
+"mode.badgeSimplified" = "简";
+"mode.badgeTraditional" = "繁";
+"mode.switchTo" = "Switch to %1$@";
+"mode.indicator" = "Show floating indicator when switching modes";
+"mode.indicatorHint" = "Briefly shows the active mode near the cursor. Click the badge to switch.";
+"mode.indicatorAccessibility" = "Current input mode: %1$@. Click to switch";
+"appearance.advancedEffects" = "Translucent material effects";
+"appearance.advancedEffectsHint" = "Use acrylic blur backgrounds for the candidate window, emoji panel, and mode badge.";
+
+"font.title" = "Fonts";
+
+"font.hint" = "Customize fonts for each input mode. Falls back to the system font if unavailable.";
+
+"font.system" = "System default";
+
+"font.sampleSimplified" = "Simplified Chinese · 你好，世界";
+
+"font.sampleTraditional" = "Traditional Chinese · 你好，世界";
+
+"font.sampleEnglish" = "English · Hello, world";
+
+"clipboard.detail" = "History toggle, retention period, and storage";
+
+"clipboard.recording" = "Save clipboard history";
+
+"clipboard.retention" = "Keep unpinned items for";
+
+"clipboard.session" = "Current session only";
+
+"clipboard.minutes15" = "15 minutes";
+
+"clipboard.minutes30" = "30 minutes";
+
+"clipboard.hour1" = "1 hour";
+
+"clipboard.day1" = "24 hours";
+
+"clipboard.days7" = "7 days";
+
+"clipboard.pin" = "Pin to top";
+
+"clipboard.unpin" = "Unpin";
+
+"clipboard.more" = "More actions";
+
+"clipboard.copy" = "Copy";
+
+"clipboard.kindText" = "Plain text";
+
+"clipboard.kindImage" = "Image";
+
+"clipboard.kindFiles" = "Files";
+
+"clipboard.kindRichText" = "Rich text";
+
+"clipboard.kindLink" = "Link";
+
+"clipboard.pasteHint" = "Click text to insert directly; click images or files to copy, then press ⌘V to paste.";
+
+"clipboard.pinnedHint" = "Unpinned items are kept in memory until quit. Pinned items are stored encrypted on your Mac and never expire.";
+
+"clipboard.clearHint" = "Clearing removes all history and pinned items without affecting your current system clipboard.";
+
+"clipboard.cleared" = "Clipboard history cleared.";
+
+"clipboard.storageError" = "Could not access encrypted storage to save pinned items. Check Keychain access and try again.";
+
+"clipboard.invalidError" = "Could not read pinned items. Your existing encrypted backup was preserved.";
+
+"clipboard.limitError" = "Pinned items limit reached (50 items or 50 MB). Please remove some older items first.";
+
+"clipboard.copied" = "Copied. Press ⌘V to paste.";
+
+"clipboard.copyError" = "Failed to copy. Please try again.";
+
+"setup.title" = "Welcome Setup";
+
+"setup.welcome" = "Welcome to Fluent Pinyin";
+
+"setup.intro" = "Set up your preferred input modes, fonts, and clipboard options in a few quick steps. You can change these anytime in Settings.";
+
+"setup.step" = "Step %1$ld of %2$ld";
+
+"setup.next" = "Next";
+
+"setup.previous" = "Back";
+
+"setup.later" = "Skip setup";
+
+"setup.finish" = "Finish & Try Typing";
+
+"setup.reopen" = "Run setup assistant again";
+
+"setup.modes" = "Input modes";
+
+"setup.privacy" = "Clipboard & Appearance";
+
+"setup.imeHint" = "Add Fluent Pinyin in System Settings → Keyboard → Text Input → Edit, then switch to it from the menu bar.";
+
+"setup.keyboard" = "Open Keyboard Settings";
+
+"settings.sharedTitle" = "Shared settings";
+"settings.languagesTitle" = "Input languages";
+"settings.modesTitle" = "Input modes";
+"settings.modesDetail" = "Enabled languages and default mode";
+"settings.languageDetail" = "General, dictionary, and fonts";
+"settings.englishDetail" = "Input options and fonts";
+"install.title" = "Set up Fluent IME";
+"install.welcome" = "Welcome to Fluent IME";
+"install.intro" = "Install and enable the input method, then choose your languages and preferences.";
+"install.action" = "Install input method";
+"install.enable" = "Enable input method";
+"install.installed" = "Input method installed";
+"install.notInstalled" = "Not installed or needs update";
+"install.enabled" = "Input method enabled";
+"install.notEnabled" = "Input method not enabled";
+"install.enableHint" = "If the system list has not refreshed, add Fluent Pinyin in System Settings → Keyboard → Input Sources.";
+"install.locationHint" = "Installs only for the current user in ~/Library/Input Methods. No administrator privileges required.";
+"install.busy" = "Installing…";
+"install.failure" = "Operation failed: %1$@";
+"install.dictionaryTitle" = "Existing user dictionary";
+"install.dictionaryFound" = "Found an existing local Fluent IME user dictionary.";
+"install.dictionaryEmpty" = "No existing user dictionary found. Learning will start fresh.";
+"install.merge" = "Keep and merge";
+"install.mergeHint" = "Keep your existing learned words and merge them with the bundled dictionary.";
+"install.reset" = "Back up and start fresh";
+"install.resetHint" = "Archive your current data into a backup and create a clean user dictionary.";
+"install.ready" = "Input method is ready";
+"install.finish" = "Finish and open settings";
+"install.required" = "Please install and enable the input method first.";
+"uninstall.title" = "Uninstall the input method?";
+"uninstall.action" = "Uninstall input method";
+"uninstall.keepData" = "Keep settings, dictionaries, and pinned items";
+"uninstall.detail" = "Removes the input method from your system and quits. Run the installer again to reinstall.";
+"uninstall.removeHint" = "If not kept, all preferences, learned vocabulary, backups, GIFs, and pinned clipboard items will be permanently deleted.";
+"common.cancel" = "Cancel";
+"common.close" = "Close";
+"dictionary.manage" = "Manage user dictionary";
+"dictionary.manageHint" = "Keep your current dictionary or archive and reset it. Resetting will restart the input method.";
+"dictionary.backupReady" = "Existing user dictionary backed up successfully.";
+
+"install.cleanupHint" = "After setup, the installer is moved to Trash. If opened from a DMG, the disk image is ejected and cleaned up.";
+"install.cleanupWarning" = "The input method is installed. The installer could not be removed automatically from this location; please delete it or the DMG manually.";
+"common.operationFailed" = "Operation failed";
+
+"appearance.interfaceLanguage" = "Interface language";
+"appearance.interfaceLanguageHint" = "Changes the language of menus and settings without affecting your input modes.";
+
+"language.simplified" = "简体中文";
+"language.traditional" = "繁體中文";
+"language.english" = "English";
+
+"update.title" = "Check for updates";
+"update.checking" = "Checking for updates…";
+"update.available" = "Version %1$@ is available.";
+"update.install" = "Download and install";
+"update.downloading" = "Downloading the update. Setup will open when the download finishes.";
+"update.current" = "You are up to date (%1$@).";
+"update.noRelease" = "No release is available yet.";
+"update.unavailable" = "Could not check for updates. Try again later.";
+"update.invalid" = "This release is incomplete. Try again later.";
+"update.incompatible" = "This release does not support this Mac or macOS version.";
+"update.integrity" = "The installer could not be verified. Download it again.";
+
+"neural.unavailable" = "Model unavailable";
+"neural.waiting" = "Model not loaded yet";
+"neural.ready" = "Model ready; waiting for context";
+"neural.scored" = "Scored %1$ld times; last score %2$@ ms";

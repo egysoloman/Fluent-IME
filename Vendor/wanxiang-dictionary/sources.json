@@ -1,0 +1,45 @@
+{
+  "repository": "https://github.com/amzxyz/rime-wanxiang",
+  "revision": "60e7efdd2d63dca3f44d26c38e76b9bc3c1314f9",
+  "author": "amzxyz and Wanxiang contributors",
+  "license": "CC-BY-4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "changes": "Tone marks removed for Fluent IME full pinyin; identical word/spelling pairs merged with maximum original weight. No upstream Lua or application code included.",
+  "files": [
+    {
+      "path": "dicts/cuoyin.dict.yaml",
+      "git_blob_sha1": "e621f7dac4ff88e12bb8a641362b34dbd6637b1b",
+      "size": 8116
+    },
+    {
+      "path": "dicts/diming.dict.yaml",
+      "git_blob_sha1": "3714f5b7d472d6c7217a311263155ed291f3c066",
+      "size": 3307073
+    },
+    {
+      "path": "dicts/duoyin.dict.yaml",
+      "git_blob_sha1": "565a26bff0dab516eb7d3a63656979bce7972fb5",
+      "size": 137474
+    },
+    {
+      "path": "dicts/jichu.dict.yaml",
+      "git_blob_sha1": "1e03cf755b2d0784e4e620893237d8a6a23d5a39",
+      "size": 49486503
+    },
+    {
+      "path": "dicts/mingren.dict.yaml",
+      "git_blob_sha1": "71862ee84a1899306b4a5699cb94ce0452f7d3f9",
+      "size": 667181
+    },
+    {
+      "path": "dicts/yiren.dict.yaml",
+      "git_blob_sha1": "9764c992f087eaaf15e6bc067843e3dec6c29c87",
+      "size": 423957
+    },
+    {
+      "path": "dicts/zi.dict.yaml",
+      "git_blob_sha1": "f0f6436035803e30cec2d28947a80faf0a5e7ef6",
+      "size": 616567
+    }
+  ]
+}

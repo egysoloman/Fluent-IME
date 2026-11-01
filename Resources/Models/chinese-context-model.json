@@ -1,0 +1,11 @@
+{
+  "model": "hfl/chinese-roberta-wwm-ext",
+  "revision": "5c58d0b8ec1d9014354d691c538661bf00bfdb44",
+  "license": "Apache-2.0",
+  "parameters": 102290312,
+  "batch": 8,
+  "sequence_length": 32,
+  "precision": "float16",
+  "torch": "2.7.0",
+  "coremltools": "9.0"
+}

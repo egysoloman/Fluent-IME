@@ -1,0 +1,12 @@
+{
+  "source": "https://github.com/BYVoid/OpenCC/tree/ver.1.4.2",
+  "version": "1.4.2",
+  "license": "Apache-2.0",
+  "changes": "Original conversion dictionary bytes; s2t configuration renamed to fluent_s2t.json.",
+  "files": {
+    "STPhrases_GeneratedFromRegionalPhrases.ocd2": "815bbb98c644095fb0bfd76dbf259b9da4350a19d4927b2342e7928fb26b20e2",
+    "STCharacters.ocd2": "94639fe1d2bbeb3dcb4f29a297cda70ecfd26425b8a935f4b6bac0746c3987f2",
+    "STPhrases.ocd2": "c472f936ab624e8887ed48c2572d0af68b904f0be72d98e237a6b8c1f5de024d",
+    "CJK_Compatibility_Ideographs.ocd2": "4b1faa6649012f524068ec18c0fb520ead343c11cbe0a8e4c8853ca61369d666"
+  }
+}
