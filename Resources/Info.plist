@@ -17,11 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.6.0</string>
+	<string>0.6.1</string>
 	<key>CFBundleVersion</key>
-	<string>21</string>
-	<key>FluentIMEEdition</key>
-	<string>full</string>
+	<string>22</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
@@ -57,6 +55,8 @@
 			<string>org.fluentime.inputmethod.FluentIME.Hans</string>
 		</array>
 	</dict>
+	<key>FluentIMEEdition</key>
+	<string>full</string>
 	<key>InputMethodConnectionName</key>
 	<string>FluentIME_Connection</string>
 	<key>InputMethodServerControllerClass</key>

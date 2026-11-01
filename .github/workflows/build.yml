@@ -1,0 +1,18 @@
+name: macOS source build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build with public dependencies
+        run: bash scripts/build.sh
+      - name: Test the packaged Rime dictionaries
+        run: FLUENTIME_TEST_PRECOMPILED_DIR="$PWD/dist/Fluent IME.app/Contents/Resources/Rime" swift test --jobs 8
+      - name: Check localizations and notices
+        run: |
+          python3 scripts/localize.py --check
+          python3 scripts/audit-distribution.py 'dist/Fluent IME.app'

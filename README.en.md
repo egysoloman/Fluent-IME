@@ -52,7 +52,7 @@ The standard edition includes the Wanxiang dictionary and grammar model. Files m
 
 The Transformer is also available as `Fluent-IME-Transformer.zip`. Extract it, then import it in **Input method → Language models**. The same page accepts replacement `.gram` grammar models.
 
-Open `dist/Fluent-IME-0.6.0-Setup.dmg` and double-click **Fluent IME Setup**:
+Open `dist/Fluent-IME-0.6.1-Setup.dmg` and double-click **Fluent IME Setup**:
 1. **No Administrator Privileges Required**: Installs directly into `~/Library/Input Methods/Fluent IME.app` for the current user.
 2. **Guided Setup**: Walks you through enabling the input source, keeping/merging or archiving an existing user dictionary, and selecting your preferred input languages.
 3. **Automatic Installer Cleanup**: Once setup finishes, the installer automatically moves itself to the Trash (and ejects and trashes the DMG if launched from a disk image).
@@ -108,8 +108,8 @@ Host App Text Input Client (NSTextInputClient)
 
 ### Requirements
 - **OS**: macOS 13 or later (Apple Silicon builds inherit the minimum macOS deployment version of the linked `librime` dynamic libraries)
-- **Toolchain**: Xcode / Command Line Tools (Swift 5.9+), Python 3, Homebrew
-- **Dependencies**: `librime` and local `WinUI-macOS` (FluentKit, defaulting to `/Users/stars/Documents/WinUI-macOS`)
+- **Toolchain**: Xcode / Command Line Tools (Swift 5.9+), Python 3.11+
+- **Dependencies**: FluentKit resolves through GitHub SPM (minimum 0.2.0; `Package.resolved` pins 0.3.0). The build script downloads and verifies the Rime runtime. No Homebrew or local FluentKit checkout is required.
 
 ### Build & Development Commands
 
@@ -134,7 +134,7 @@ python3 scripts/package-dmg.py
 To override local dependency paths or build in Debug mode:
 
 ```bash
-FLUENTKIT_PATH='/path/to/WinUI-macOS' RIME_PREFIX='/path/to/librime' bash scripts/build.sh
+FLUENTKIT_PATH='/path/to/WinUI-macOS' RIME_PREFIX='/path/to/rime-runtime' bash scripts/build.sh
 CONFIGURATION=debug bash scripts/build.sh
 ```
 

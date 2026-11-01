@@ -1,7 +1,7 @@
 [
   {
     "name": "Fluent IME",
-    "version": "0.6.0",
+    "version": "0.6.1",
     "license": "MIT",
     "source": "Original project code",
     "notices": [
@@ -19,7 +19,7 @@
   },
   {
     "name": "librime",
-    "version": "1.17.0_2",
+    "version": "1.17.0",
     "revision": "33e78140250125871856cdc5b42ddc6a5fcd3cd4",
     "license": "BSD-3-Clause",
     "source": "https://github.com/rime/librime",
@@ -28,7 +28,8 @@
     ],
     "notices": [
       "Licenses/librime-LICENSE"
-    ]
+    ],
+    "runtime": "Official macOS universal binary, Rime 33e7814; bundled with the separately rebuilt BSD Octagram plugin."
   },
   {
     "name": "librime-octagram",
@@ -45,7 +46,6 @@
   },
   {
     "name": "glog",
-    "version": "0.7.1",
     "license": "BSD-3-Clause",
     "source": "https://github.com/google/glog",
     "libraries": [
@@ -53,23 +53,12 @@
     ],
     "notices": [
       "Licenses/glog-COPYING"
-    ]
-  },
-  {
-    "name": "gflags",
-    "version": "2.3.1",
-    "license": "BSD-3-Clause",
-    "source": "https://github.com/gflags/gflags",
-    "libraries": [
-      "libgflags."
     ],
-    "notices": [
-      "Licenses/gflags-COPYING.txt"
-    ]
+    "revision": "7b134a5c82c0c0b5698bb6bf7a835b230c5638e4",
+    "linkage": "Statically linked in the official Rime runtime or the BSD Octagram plugin."
   },
   {
     "name": "yaml-cpp",
-    "version": "0.9.0",
     "license": "MIT",
     "source": "https://github.com/jbeder/yaml-cpp",
     "libraries": [
@@ -77,11 +66,12 @@
     ],
     "notices": [
       "Licenses/yaml-cpp-LICENSE"
-    ]
+    ],
+    "revision": "2f86d13775d119edbb69af52e5f566fd65c6953b",
+    "linkage": "Statically linked in the official Rime runtime or the BSD Octagram plugin."
   },
   {
     "name": "LevelDB",
-    "version": "1.23_2",
     "license": "BSD-3-Clause",
     "source": "https://github.com/google/leveldb",
     "libraries": [
@@ -89,24 +79,12 @@
     ],
     "notices": [
       "Licenses/leveldb-LICENSE"
-    ]
-  },
-  {
-    "name": "Snappy",
-    "version": "1.3.1",
-    "license": "BSD-3-Clause",
-    "source": "https://github.com/google/snappy",
-    "libraries": [
-      "libsnappy."
     ],
-    "notices": [
-      "Licenses/snappy-COPYING",
-      "Licenses/snappy-COPYING.notestdata"
-    ]
+    "revision": "99b3c03b3284f5886f9ef9a4ef703d57373e61be",
+    "linkage": "Statically linked in the official Rime runtime or the BSD Octagram plugin."
   },
   {
     "name": "MARISA",
-    "version": "0.3.1",
     "license": "BSD-2-Clause",
     "license_choice": "BSD-2-Clause selected from upstream BSD-2-Clause OR LGPL-2.1-or-later",
     "source": "https://github.com/s-yata/marisa-trie",
@@ -115,11 +93,13 @@
     ],
     "notices": [
       "Licenses/marisa-COPYING.md"
-    ]
+    ],
+    "revision": "3e87d53b78e15f2f43783d5e376561a8c9722051",
+    "linkage": "Statically linked in the official Rime runtime or the BSD Octagram plugin."
   },
   {
     "name": "OpenCC",
-    "version": "1.4.2",
+    "version": "Conversion data: 1.4.2; native runtime: pinned Rime SDK submodule",
     "license": "Apache-2.0",
     "source": "https://github.com/BYVoid/OpenCC",
     "libraries": [
@@ -128,7 +108,8 @@
     "notices": [
       "Licenses/opencc-LICENSE"
     ],
-    "changes": "Bundled native runtime and Simplified-to-Traditional conversion dictionaries; original dictionary bytes and license retained."
+    "changes": "Bundled native runtime and Simplified-to-Traditional conversion dictionaries; original dictionary bytes and license retained.",
+    "runtime_revision": "556ed22496d650bd0b13b6c163be9814637970ae"
   },
   {
     "name": "Darts-clone (Rime / Octagram)",
@@ -160,7 +141,7 @@
   },
   {
     "name": "Boost headers",
-    "version": "1.92.0 for Octagram build; Rime bottle headers per upstream build",
+    "version": "1.89.0 (upstream Rime); 1.92.0 (BSD Octagram rebuild)",
     "license": "BSL-1.0",
     "source": "https://github.com/boostorg/boost",
     "notices": [

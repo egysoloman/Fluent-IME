@@ -360,7 +360,7 @@ public extension L10n {
     static var modeChinese: String { text("mode.chinese") }
     /// 英文
     static var modeEnglish: String { text("mode.english") }
-    /// 切换中英文时显示状态提示
+    /// 切换输入模式时显示状态提示
     static var modeIndicator: String { text("mode.indicator") }
     /// 当前输入模式：%1$@，点击可切换
     static func modeIndicatorAccessibility(_ arg1: String) -> String { format("mode.indicatorAccessibility", arguments: [arg1]) }

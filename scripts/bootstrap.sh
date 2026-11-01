@@ -1,13 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if ! command -v brew >/dev/null; then
-  echo '需要 Homebrew 和 Xcode Command Line Tools。' >&2
-  exit 1
-fi
-if ! brew --prefix librime >/dev/null 2>&1; then
-  HOMEBREW_NO_AUTO_UPDATE=1 brew install librime
-fi
+python3 "$ROOT/scripts/prepare-rime.py"
 REVISION=0c6861ef7420ee780270ca6d993d18d4101049d0
 DEST="$ROOT/Vendor/rime-pinyin-simp"
 if ! test -f "$DEST/pinyin_simp.dict.yaml"; then

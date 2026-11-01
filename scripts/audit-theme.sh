@@ -13,7 +13,7 @@ swiftc -parse-as-library -O -swift-version 5 -I "$PRODUCTS" \
     -Xcc "-fmodule-map-file=$PWD/.build/out/Intermediates.noindex/GeneratedModuleMaps/CRimeBridge.modulemap" \
     "${sources[@]}" Tests/Native/SettingsThemeAudit.swift \
     "$PRODUCTS/FluentKit.o" "$PRODUCTS/FluentIMECore.o" "$PRODUCTS/CRimeBridge.o" \
-    -L /opt/homebrew/opt/librime/lib -lrime -framework InputMethodKit -framework Carbon \
+    -L "$PWD/.build/rime-runtime/lib" -Xlinker -rpath -Xlinker "$PWD/.build/rime-runtime/lib" -lrime -framework InputMethodKit -framework Carbon \
     -o "$OUTPUT/SettingsThemeAudit"
 for scenario in general search preview; do
     page=general

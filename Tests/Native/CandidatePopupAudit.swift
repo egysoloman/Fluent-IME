@@ -1,4 +1,5 @@
 import AppKit
+import InputMethodKit
 import FluentKit
 import FluentIMECore
 
@@ -120,9 +121,13 @@ import FluentIMECore
         precondition(badge.isVisible && !badge.expanded && !badge.isKeyWindow)
         badge.contentView!.subviews.compactMap { $0 as? NSButton }.first!.performClick(nil)
         precondition(badge.expanded)
-        let modeButtons = badge.contentView!.subviews.compactMap { $0 as? NSButton }
-        precondition(modeButtons.count == 3)
-        precondition(modeButtons.allSatisfy { $0 is FluentButton && $0.refusesFirstResponder })
+        let modeControl = badge.contentView!.subviews.compactMap { $0 as? NSSegmentedControl }.first!
+        precondition(modeControl.segmentCount == 3)
+        let indicator = modeControl.subviews.first { $0.identifier?.rawValue == "FluentKit.Segmented.SelectionIndicator" }!
+        let commandItem = NSMenuItem(title: "Mode", action: nil, keyEquivalent: "")
+        commandItem.representedObject = InputMode.traditionalChinese.rawValue
+        precondition(InputMethodMenuCommand([kIMKCommandMenuItemName: commandItem] as NSDictionary).mode == .traditionalChinese)
+        precondition(InputMethodMenuCommand(commandItem).mode == .traditionalChinese)
         precondition(badge.contentView!.layer?.cornerRadius == 8)
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             NSApp.appearance = NSAppearance(named: appearance)
@@ -133,8 +138,16 @@ import FluentIMECore
             try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("mode-picker-" + appearance.rawValue + ".png"))
         }
         NSApp.appearance = NSAppearance(named: .aqua)
-        badge.contentView!.subviews.compactMap { $0 as? FluentButton }[1].performClick(nil)
-        precondition(selectedMode == .traditionalChinese && !badge.isVisible)
+        modeControl.selectedSegment = 1
+        modeControl.sendAction(modeControl.action, to: modeControl.target)
+        precondition(selectedMode == .traditionalChinese && badge.isVisible)
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            precondition(indicator.layer?.animation(forKey: "fluent.segmented.selection") != nil, "FluentKit selection animation missing")
+        }
+        // A fresh presentation updates the existing selector, rather than flashing a new badge.
+        badge.present(mode: .traditionalChinese, modes: InputMode.allCases, near: panel.frame) { selectedMode = $0 }
+        precondition(badge.expanded && badge.contentView!.subviews.contains { $0 === modeControl })
+        badge.dismiss(); pump(0.25); precondition(!badge.isVisible)
         Preferences.shared.showInputModeIndicator = false
         badge.present(mode: .english, modes: [.english], near: panel.frame) { _ in }
         precondition(!badge.isVisible)

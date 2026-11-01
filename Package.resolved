@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "fluentkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/egysoloman/FluentKit.git",
+      "state" : {
+        "revision" : "01c8e66094df7ca013833ffce8a8649fa6902399",
+        "version" : "0.3.0"
+      }
+    }
+  ],
+  "version" : 2
+}

@@ -2,11 +2,11 @@
 
 Fluent IME's original Swift/C code is MIT licensed. Bundled components retain their own licenses.
 
-- **FluentKit / WinUI-macOS** — MIT. The default snapshot is FluentKit 0.3.0 (`01c8e66094df7ca013833ffce8a8649fa6902399`); https://github.com/egysoloman/FluentKit. The bundled `fluentkit-source.json` records whether the build used this verified snapshot or a developer-supplied `FLUENTKIT_PATH`. The framework's notices and third-party licenses are copied from the selected source. Its material implementation references HO-COOH/WinUIEssentials; the default snapshot includes that project's attribution and MIT license.
+- **FluentKit / WinUI-macOS** — MIT. SPM resolves from 0.2.0; Package.resolved pins FluentKit 0.3.0 (`01c8e66094df7ca013833ffce8a8649fa6902399`); https://github.com/egysoloman/FluentKit. The bundled `fluentkit-source.json` records whether the build used this pinned checkout or a developer-supplied `FLUENTKIT_PATH`. The framework's notices and third-party licenses are copied from the selected source. Its material implementation references HO-COOH/WinUIEssentials; the default snapshot includes that project's attribution and MIT license.
 - **librime** — BSD-3-Clause. https://github.com/rime/librime. Linked through its public C API.
 - **rime-pinyin-simp** — Apache-2.0. https://github.com/rime/rime-pinyin-simp, pinned to `0c6861ef7420ee780270ca6d993d18d4101049d0`. Its upstream license, author list and dictionary notices are retained with the bundle.
 - **Microsoft Fluent Emoji** — MIT. https://github.com/microsoft/fluentui-emoji, pinned to `1ffb34c752ecf5d402f04cfb4b392c77f57c54bc`. The selected Color SVG and 3D PNG images, original license, source paths and SHA-256 hashes are bundled in `Contents/Resources/FluentEmoji`.
-- **Runtime dependencies of librime** — glog, gflags, yaml-cpp, leveldb, marisa, OpenCC, and any transitive libraries. Their installed license files are collected in `Contents/Resources/Licenses` by the bundle script.
+- **Runtime dependencies of librime** — glog, yaml-cpp, leveldb, marisa, OpenCC, and their header dependencies are statically linked in the pinned Rime runtime or BSD Octagram plugin. Their license files are retained in `Contents/Resources/Licenses` by the bundle script.
 
 Squirrel (https://github.com/rime/squirrel) was consulted for macOS input-source registration conventions. Its GPL application source is not copied or linked.
 

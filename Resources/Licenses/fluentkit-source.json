@@ -1,6 +1,5 @@
 {
   "revision": "01c8e66094df7ca013833ffce8a8649fa6902399",
-  "archive_sha256": "9f8b109fe8b0264ea763356452a8d93a1c3b16b450cb7ef8dc3b2b3682270693",
-  "snapshot": ".build/dependencies/fluentkit-01c8e66/WinUI-macOS",
-  "scope": "Committed source only; excludes later working-tree changes."
+  "snapshot": ".build/checkouts/FluentKit",
+  "scope": "Swift Package Manager checkout; version and revision pinned in Package.resolved."
 }

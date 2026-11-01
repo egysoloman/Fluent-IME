@@ -1,0 +1,40 @@
+{
+  "url": "https://github.com/egysoloman/Fluent-IME/releases/download/v0.6.1/RimeRuntime-1.17.0-macOS.zip",
+  "sha256": "0f89c20d188a527c3a66ef34cd7d1f444c1cc187be6c8d7187bea0e055d200d7",
+  "rime_revision": "33e78140250125871856cdc5b42ddc6a5fcd3cd4",
+  "octagram_revision": "57d18b9f58e5284bd891d559f6bdd16cf60341e9",
+  "runtime_archive_sha256": "11d8dc663c6ec06d5ccb6111ba664a9e7b631b703ac6acd07cffbac664021850",
+  "dependencies_archive_sha256": "dfe6047e87be271963d7466bd1a6e3d9e660c30e5e73e4bb94e8782c0a6ac8df",
+  "source": "https://github.com/rime/librime/releases/tag/1.17.0",
+  "build_script": "scripts/package-rime-runtime.py",
+  "boost_headers": "1.92.0",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "minimum_macos": "13.0",
+  "scope": "Upstream Rime runtime; upstream plugins excluded. Octagram rebuilt from the specified BSD-licensed revision.",
+  "files": {
+    "Licenses/Boost-BSL-1.0.txt": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+    "Licenses/OpenCC-darts-clone-BSD-2.txt": "c6ab19db56ed127201dfb05346ea702ab53c4e387f43eafc343a7f4c2f2ae91e",
+    "Licenses/RapidJSON-license.txt": "a140e5d46fe734a1c78f1a3c3ef207871dd75648be71fdda8e309b23ab8b1f32",
+    "Licenses/Rime-darts-clone-BSD-3.txt": "11bf6ca180d01e60656cd3cbe65cff95b738afe4ca5a8a66b9dd1ec594a41d2f",
+    "Licenses/UTF8-CPP-BSL-1.0.txt": "1b45829b2934a146274162752708e2f3355aae05e13d78a2cf3a656540a553c1",
+    "Licenses/X11-keysyms-license.txt": "0e1703e6a5733a84ee09200be9289f68608332e56c95f2c909fea71527bf2c0f",
+    "Licenses/glog-COPYING": "136d48dea7a681413691f3db3098f6cf5ffaa3119d96d97bb83b8cff3ce38c4a",
+    "Licenses/leveldb-LICENSE": "ccc19f1da0798ed666609b65a5b44dd8b3abe6fc08b9c0592eb76e82e174db19",
+    "Licenses/librime-LICENSE": "f67d27a6d2d586fcfed4b4c886a83747095396a39b6641e18e855086be2ec400",
+    "Licenses/librime-octagram-LICENSE.txt": "f67d27a6d2d586fcfed4b4c886a83747095396a39b6641e18e855086be2ec400",
+    "Licenses/marisa-COPYING.md": "edf58dab34c3dc239ba4ba2d5d3d844d8c5b442aa4dd1149fac81b2d8c6cb8d1",
+    "Licenses/opencc-LICENSE": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308",
+    "Licenses/yaml-cpp-LICENSE": "aa6fcc27be034e41e21dd832f9175bfe694a48491d9e14ff0fa278e19ad14f1b",
+    "include/rime_api.h": "6eb5629162c44761e7b878f1b122f464de5c8685bd3cd5ac1e8519badc6d6424",
+    "include/rime_api_deprecated.h": "21625c4e16480a4540939299a002f21b11150bb10b69f5331e1580875ac63341",
+    "include/rime_api_stdbool.h": "f5a64254e98c1c12ce6628f5d540bcd4e4b542ec287b4873c0b0ce4ed1bece99",
+    "include/rime_levers_api.h": "b2ec30a89125f0fe5e91ea6cb209e8ae71e5f67fa87bc3d4a1dd3be3b5753b5a",
+    "lib/librime.1.dylib": "e6a3a10da06fc04cbf98200946eb7dc2fcac179c2726054f5dfaffced9d256e9",
+    "lib/librime.dylib": "e6a3a10da06fc04cbf98200946eb7dc2fcac179c2726054f5dfaffced9d256e9",
+    "lib/rime-plugins/librime-octagram.dylib": "ad2e92cb2ec5168fbc895ec6d47ddb259f80c7d00b34155641ec4dcd4e9302d3",
+    "provenance.json": "e932d397363be7f33d3a59a633e27ea7291ddbd95e6f92e44dca55f5a01953da"
+  }
+}

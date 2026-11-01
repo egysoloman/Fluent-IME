@@ -77,6 +77,10 @@ private final class SymbolButton: NSButton {
 final class EmojiPanelView: NSView, NSSearchFieldDelegate {
     private let material = FluentMaterialView(material: .mica)
     private let titleLabel = NSTextField(labelWithString: L10n.symbolsTitle)
+    private let clipboardHeader = IMEFlippedView()
+    private let grip = NSView()
+    private var clipboardSelection: UUID?
+    private var clipboardCards: [(UUID, ClipboardCard)] = []
     private let closeButton = makeChromeButton(.close, label: L10n.symbolsClose)
     let searchField = FluentSearchTextField(placeholder: L10n.symbolsSearch)
     private let indicator = NSView()
@@ -108,6 +112,8 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
         fluentSetLocalization(locale: L10n.locale)
         wantsLayer = true; layer?.cornerRadius = 9; layer?.masksToBounds = true
         addSubview(material)
+        grip.wantsLayer = true; grip.layer?.cornerRadius = 1.5; addSubview(grip)
+        addSubview(clipboardHeader)
         titleLabel.font = IMEFont.font(ofSize: 14); addSubview(titleLabel)
         closeButton.onClick = { [weak self] in self?.onClose?() }; addSubview(closeButton)
         for (index, glyph) in glyphs.enumerated() {
@@ -145,6 +151,7 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
         material.fluentTheme = theme
         layer?.borderWidth = 0.5
         layer?.borderColor = theme.surfaceStrokeFlyout.cgColor
+        grip.layer?.backgroundColor = theme.textDisabled.cgColor
         titleLabel.textColor = theme.textPrimary
         closeButton.theme = theme; closeButton.image = IMEGlyph.close.image(color: theme.textPrimary)
         for (index, button) in tabs.enumerated() {
@@ -169,19 +176,23 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
             view.needsDisplay = true
             view.subviews.forEach(refreshInk)
         }
-        refreshInk(document)
+        refreshInk(document); refreshInk(clipboardHeader)
         needsDisplay = true
     }
     override func layout() {
         super.layout(); material.frame = bounds
+        titleLabel.isHidden = selectedTab == 5; grip.isHidden = selectedTab != 5
+        grip.frame = NSRect(x: bounds.midX - 16, y: 12, width: 32, height: 3)
+        clipboardHeader.isHidden = selectedTab != 5
+        clipboardHeader.frame = NSRect(x: 16, y: 96, width: bounds.width - 32, height: 30)
         titleLabel.frame = NSRect(x: 14, y: 10, width: 250, height: 22)
         closeButton.frame = NSRect(x: bounds.width - 30, y: 5, width: 22, height: 22)
         for (index, tab) in tabs.enumerated() { tab.frame = NSRect(x: 22 + CGFloat(index) * 41, y: 43, width: 28, height: 28) }
         indicator.frame = NSRect(x: 28 + CGFloat(selectedTab) * 41, y: 76, width: 16, height: 3)
         searchField.frame = NSRect(x: 17, y: 96, width: bounds.width - 34, height: 32)
         searchField.isHidden = selectedTab == 5
-        let top: CGFloat = selectedTab == 5 ? 98 : 148
-        scroll.frame = NSRect(x: 16, y: top, width: bounds.width - 24, height: bounds.height - top - 2)
+        let top: CGFloat = selectedTab == 5 ? 136 : 148
+        scroll.frame = NSRect(x: 16, y: top, width: bounds.width - 24, height: bounds.height - top - 12)
     }
     func controlTextDidChange(_ obj: Notification) { reload() }
     func selectTab(_ index: Int) {
@@ -194,12 +205,21 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
         pageMotion.play(snapshot, in: scroll.contentView, content: document, backward: backward)
     }
     func moveSelection(by delta: Int) {
+        if selectedTab == 5 {
+            guard !clipboardCards.isEmpty else { return }
+            let next = min(max(0, (clipboardCards.firstIndex { $0.0 == clipboardSelection } ?? 0) + delta), clipboardCards.count - 1)
+            clipboardSelection = clipboardCards[next].0
+            for (id, card) in clipboardCards { card.selectionHighlighted = id == clipboardSelection }
+            document.scrollToVisible(clipboardCards[next].1.frame)
+            return
+        }
         guard !itemButtons.isEmpty else { return }
         selectedIndex = min(max(0, selectedIndex + delta), itemButtons.count - 1)
         for (index, button) in itemButtons.enumerated() { button.selectionHighlighted = index == selectedIndex }
         document.scrollToVisible(itemButtons[selectedIndex].frame)
     }
     func moveRow(backward: Bool) {
+        if selectedTab == 5 { moveSelection(by: backward ? -1 : 1); return }
         guard itemButtons.indices.contains(selectedIndex) else { return }
         let current = itemButtons[selectedIndex].frame
         let options = itemButtons.enumerated().filter { backward ? $0.element.frame.midY < current.midY : $0.element.frame.midY > current.midY }
@@ -210,7 +230,10 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
         }
         if let next { moveSelection(by: next.offset - selectedIndex) }
     }
-    func insertSelection() { if itemButtons.indices.contains(selectedIndex) { select(itemButtons[selectedIndex].entry) } }
+    func insertSelection() {
+        if selectedTab == 5 { clipboardCards.first { $0.0 == clipboardSelection }?.1.onSelect?() }
+        else if itemButtons.indices.contains(selectedIndex) { select(itemButtons[selectedIndex].entry) }
+    }
 
     private func select(_ entry: SymbolEntry) {
         let existing = UserDefaults.standard.stringArray(forKey: "recentSymbols") ?? []
@@ -296,32 +319,45 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
         return fittedWidth
     }
     private func buildClipboard() -> CGFloat {
-        label(L10n.clipboardTitle, y: 0, size: 16)
-        mediaAction(L10n.clipboardClear, x: 218, y: 0, width: 110, enabled: !clipboard.entries.isEmpty || clipboard.storageError != nil) { [weak self] in
+        clipboardHeader.subviews.forEach { $0.removeFromSuperview() }; clipboardCards = []
+        let heading = NSTextField(labelWithString: L10n.clipboardTitle)
+        heading.font = IMEFont.font(ofSize: 16, weight: .semibold); heading.textColor = theme.textPrimary
+        heading.frame = NSRect(x: 0, y: 3, width: 180, height: 26); clipboardHeader.addSubview(heading)
+        let clear = FluentButton(title: L10n.clipboardClear); clear.theme = theme; clear.fluentStyle = IMEToolbarStyle()
+        clear.frame = NSRect(x: 214, y: 0, width: 114, height: 28)
+        clear.isEnabled = !clipboard.entries.isEmpty || clipboard.storageError != nil
+        clear.onClick = { [weak self] in
             guard let self else { return }
             do { try self.clipboard.clear(); self.mediaStatus = L10n.clipboardCleared }
             catch { self.mediaStatus = L10n.clipboardStorageError }
             self.reload()
         }
-        mediaAction(clipboard.isRecording ? L10n.clipboardPause : L10n.clipboardStart, x: 132, y: 0, width: 82) {
-            Preferences.shared.clipboardRecording = !Preferences.shared.clipboardRecording
-        }
+        clipboardHeader.addSubview(clear)
         let status = mediaStatus.isEmpty ? clipboard.storageError ?? "" : mediaStatus
-        if !status.isEmpty { label(status, y: 36, size: 12) }
-        var cardY: CGFloat = status.isEmpty ? 46 : 98
-        if clipboard.entries.isEmpty { label(clipboard.isRecording ? L10n.clipboardEmpty : L10n.clipboardDisabled, y: 128, size: 13) }
+        if !status.isEmpty { label(status, y: 0, size: 12) }
+        var cardY: CGFloat = status.isEmpty ? 2 : 62
+        if clipboard.entries.isEmpty {
+            label(clipboard.isRecording ? L10n.clipboardEmpty : L10n.clipboardDisabled, y: cardY + 34, size: 13)
+            if !clipboard.isRecording {
+                mediaAction(L10n.clipboardStart, x: 0, y: cardY + 100, width: 192) { Preferences.shared.clipboardRecording = true }
+            }
+        }
         let entries = clipboard.entries.sorted { $0.isPinned == $1.isPinned ? $0.date > $1.date : $0.isPinned }
+        if !entries.contains(where: { $0.id == clipboardSelection }) { clipboardSelection = entries.first?.id }
         for entry in entries {
             let card = ClipboardCard(entry); card.theme = theme; card.toolTip = L10n.clipboardPasteHint
-            let height: CGFloat = entry.kind == .image ? 98 : entry.kind == .files ? 64 : 80
-            card.frame = NSRect(x: 0, y: cardY, width: 328, height: height)
-            cardY += height + 8
+            card.selectionHighlighted = entry.id == clipboardSelection
+            card.frame = NSRect(x: 2, y: cardY, width: 324, height: entry.kind == .files ? 76 : 96)
+            cardY += card.frame.height + 10
+            clipboardCards.append((entry.id, card))
             card.onCopy = { [weak self] in
                 guard let self else { return }
                 self.mediaStatus = self.clipboard.copy(entry) ? L10n.clipboardCopied : L10n.clipboardCopyError
                 self.reload(resetScroll: false)
             }
             card.onSelect = { [weak self, weak card] in
+                self?.clipboardSelection = entry.id
+                for (id, view) in self?.clipboardCards ?? [] { view.selectionHighlighted = id == entry.id }
                 if entry.kind == .text || entry.kind == .link { self?.onInsert?(entry.text) }
                 else { card?.onCopy?() }
             }

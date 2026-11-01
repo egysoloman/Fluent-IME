@@ -3,7 +3,7 @@ import Carbon
 import FluentKit
 import FluentIMECore
 
-/// Small nonactivating cursor accessory. Clicking expands only the enabled modes.
+/// A nonactivating cursor accessory. Focus changes and typing dismiss it immediately.
 final class InputModePanel: NSPanel {
     private let surface = NSView()
     private let material = FluentMaterialView(material: .nativeAcrylic)
@@ -14,6 +14,8 @@ final class InputModePanel: NSPanel {
     private var mode: InputMode = .simplifiedChinese
     private var modes: [InputMode] = []
     private var selection: ((InputMode) -> Void)?
+    private var selector: NSView?
+    private var generation = 0
     private(set) var expanded = false
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
@@ -23,7 +25,7 @@ final class InputModePanel: NSPanel {
         isFloatingPanel = true; level = IMEPopupLevel.emoji; shadow.level = level
         hidesOnDeactivate = false; animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        surface.wantsLayer = true; surface.layer?.cornerRadius = 8; surface.layer?.masksToBounds = true
+        surface.wantsLayer = true; surface.layer?.masksToBounds = true
         surface.addSubview(material); contentView = surface
         observation = IMEThemeObservation { [weak self] _ in
             guard let self else { return }
@@ -33,46 +35,101 @@ final class InputModePanel: NSPanel {
     }
     func present(mode: InputMode, modes: [InputMode], near caret: NSRect, onSelect: @escaping (InputMode) -> Void) {
         guard Preferences.shared.showInputModeIndicator, !IsSecureEventInputEnabled(), caret.height > 0 else { dismiss(); return }
+        let wasVisible = isVisible
+        generation += 1
         self.mode = mode; self.modes = InputMode.normalized(modes); anchor = caret; selection = onSelect
-        expanded = false; rebuild(); scheduleDismiss(after: 1.8)
+        if !wasVisible { expanded = false }
+        alphaValue = 1; rebuild()
+        if !wasVisible { animateEntrance(fromWidth: nil) }
+        scheduleDismiss(after: expanded ? 8 : 1.8)
     }
     private func scheduleDismiss(after delay: TimeInterval) {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in self?.dismiss() }
+        timer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in self?.fadeOut() }
     }
     private func rebuild() {
         let theme = IMEThemeObservation.current
-        let shown = expanded ? modes : [mode]
-        surface.subviews.filter { $0 !== material }.forEach { $0.removeFromSuperview() }
         material.fluentTheme = theme; material.isMaterialEnabled = Preferences.shared.advancedEffects && expanded
         material.fallbackColor = expanded ? theme.flyoutSurfaceFill : .clear; material.state = .active
         surface.layer?.borderWidth = expanded ? 0.5 : 0
         surface.layer?.borderColor = theme.surfaceStrokeFlyout.cgColor
-        let padding: CGFloat = expanded ? 4 : 0
         surface.layer?.cornerRadius = expanded ? 8 : 4
-        let size = NSSize(width: CGFloat(shown.count)*38 + padding*2, height: 28 + padding*2)
+        let size = NSSize(width: expanded ? CGFloat(modes.count) * 42 + 8 : 38, height: expanded ? 36 : 28)
         guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) ?? NSScreen.main else { return }
         setFrame(PanelPlacement.frame(size: size, caret: anchor, screen: screen.visibleFrame, gap: 5), display: false)
         material.frame = surface.bounds
-        for (index, value) in shown.enumerated() {
-            let button = FluentButton(title: value.badge, role: value == mode ? .primary : .standard)
+        if expanded {
+            surface.subviews.compactMap { $0 as? FluentButton }.forEach { $0.removeFromSuperview() }
+            let definition = FluentSegmentedControl( modes.map(\.badge), selection: FluentBinding(
+                get: { [weak self] in self?.modes.firstIndex(of: self?.mode ?? .simplifiedChinese) ?? 0 },
+                set: { [weak self] index in
+                    guard let self, self.modes.indices.contains(index) else { return }
+                    self.mode = self.modes[index]
+                    self.selection?(self.mode)
+                    // Keep the control alive while its selection indicator slides.
+                    self.scheduleDismiss(after: 1.2)
+                }))
+            let context = FluentRenderContext(theme: theme, locale: L10n.locale)
+            if let selector { _ = definition._updateView(selector, in: context) }
+            else { let view = definition._makeView(in: context); selector = view; surface.addSubview(view) }
+            selector?.frame = surface.bounds.insetBy(dx: 4, dy: 4)
+            selector?.setAccessibilityLabel(L10n.settingsModesTitle)
+        } else {
+            selector?.removeFromSuperview(); selector = nil
+            surface.subviews.compactMap { $0 as? FluentButton }.forEach { $0.removeFromSuperview() }
+            let button = FluentButton(title: mode.badge, role: .primary)
             button.theme = theme; button.refusesFirstResponder = true
-            button.frame = NSRect(x: CGFloat(index)*38 + padding + 1, y: padding, width: 36, height: 28)
-            button.setAccessibilityLabel(expanded ? value.title : L10n.modeIndicatorAccessibility(value.title))
+            button.frame = NSRect(x: 1, y: 0, width: 36, height: 28)
+            button.setAccessibilityLabel(L10n.modeIndicatorAccessibility(mode.title))
             button.onClick = { [weak self] in
                 guard let self else { return }
-                if !self.expanded { self.expanded = true; self.rebuild(); self.scheduleDismiss(after: 8) }
-                else { let action = self.selection; self.dismiss(); action?(value) }
+                let width = self.frame.width
+                self.expanded = true; self.rebuild(); self.animateEntrance(fromWidth: width); self.scheduleDismiss(after: 8)
             }
             surface.addSubview(button)
         }
+        surface.layoutSubtreeIfNeeded()
         shadow.shadowView.theme = theme
         shadow.setFrame(CandidateChrome.shadowFrame(around: frame, flipped: false), display: false)
         if expanded { shadow.orderFrontRegardless() } else { shadow.orderOut(nil) }
         orderFrontRegardless()
         if expanded, !(childWindows?.contains(where: { $0 === shadow }) ?? false) { addChildWindow(shadow, ordered: .below) }
     }
-    func dismiss() { timer?.invalidate(); timer = nil; selection = nil; expanded = false; shadow.orderOut(nil); orderOut(nil) }
+    private func animateEntrance(fromWidth: CGFloat?) {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, let layer = surface.layer else { return }
+        let token = FluentMotion.controlFast
+        let fade = CABasicAnimation(keyPath: "opacity"); fade.fromValue = fromWidth == nil ? 0 : 0.65; fade.toValue = 1
+        let slide = CABasicAnimation(keyPath: "transform.translation.y"); slide.fromValue = fromWidth == nil ? 4 : 0; slide.toValue = 0
+        let group = CAAnimationGroup(); group.animations = [fade, slide]; group.duration = token.duration; group.timingFunction = token.curve.timingFunction
+        layer.add(group, forKey: "FluentIME.Mode.Entrance")
+        if let fromWidth {
+            let mask = CAShapeLayer(); mask.path = CGPath(rect: surface.bounds, transform: nil); layer.mask = mask
+            let reveal = CABasicAnimation(keyPath: "path")
+            reveal.fromValue = CGPath(roundedRect: NSRect(x: 0, y: 0, width: fromWidth, height: surface.bounds.height), cornerWidth: 4, cornerHeight: 4, transform: nil)
+            reveal.toValue = mask.path; reveal.duration = token.duration; reveal.timingFunction = token.curve.timingFunction
+            mask.add(reveal, forKey: "FluentIME.Mode.Expansion")
+            let current = generation
+            DispatchQueue.main.asyncAfter(deadline: .now() + token.duration) { [weak self] in
+                guard let self, self.generation == current else { return }; self.surface.layer?.mask = nil
+            }
+        }
+    }
+    private func fadeOut() {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { dismiss(); return }
+        let current = generation
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = FluentMotion.controlFaster.duration
+            self.animator().alphaValue = 0; self.shadow.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            guard let self, self.generation == current else { return }
+            self.dismiss()
+        }
+    }
+    func dismiss() {
+        generation += 1; timer?.invalidate(); timer = nil; selection = nil; expanded = false
+        shadow.orderOut(nil); orderOut(nil); alphaValue = 1; shadow.alphaValue = 1
+        surface.layer?.mask = nil; surface.layer?.removeAllAnimations(); selector?.removeFromSuperview(); selector = nil
+    }
     deinit { timer?.invalidate() }
 }
 

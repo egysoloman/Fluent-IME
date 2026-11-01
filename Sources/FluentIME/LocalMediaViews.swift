@@ -62,7 +62,7 @@ private final class ClipboardCardBody: NSButton {
     @objc private func clicked() { invoke?() }
     override func draw(_ dirtyRect: NSRect) {
         if let image = thumbnail {
-            let area = bounds.insetBy(dx: 10, dy: 8)
+            let area = NSRect(x: 8, y: 8, width: min(136, bounds.width - 16), height: bounds.height - 16)
             let ratio = min(area.width / max(1, image.size.width), area.height / max(1, image.size.height))
             image.draw(in: NSRect(x: area.minX, y: area.minY, width: image.size.width * ratio, height: image.size.height * ratio), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         } else {
@@ -90,6 +90,7 @@ final class ClipboardCard: NSView {
     private let body: ClipboardCardBody
     private let more = makeChromeButton(.more, label: L10n.clipboardMore)
     private let pin: FluentButton
+    var selectionHighlighted = false { didSet { applyTheme() } }
     var onSelect: (() -> Void)?
     var onCopy: (() -> Void)?
     var onPin: (() -> Void)?
@@ -114,7 +115,9 @@ final class ClipboardCard: NSView {
         pin.frame = NSRect(x: bounds.width - 32, y: bounds.height - 30, width: 26, height: 24)
     }
     private func applyTheme() {
-        layer?.backgroundColor = theme.controlFill.cgColor; layer?.borderColor = theme.controlStroke.cgColor
+        layer?.backgroundColor = theme.controlFill.cgColor
+        layer?.borderWidth = selectionHighlighted ? 2 : 0.5
+        layer?.borderColor = (selectionHighlighted ? theme.accent : theme.controlStroke.withAlphaComponent(0.25)).cgColor
         body.theme = theme; body.needsDisplay = true
         more.theme = theme; more.image = IMEGlyph.more.image(color: theme.textPrimary)
         flyout?.update(items: menuItems(), theme: theme)

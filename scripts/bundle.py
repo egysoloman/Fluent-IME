@@ -66,9 +66,12 @@ def bundle_dependencies(binary, is_executable=False):
     lines = subprocess.check_output(["otool", "-L", str(binary)], text=True).splitlines()[1:]
     for line in lines:
         dependency = line.strip().split(" (compatibility")[0]
-        if not dependency.startswith(("/opt/homebrew/", "/usr/local/")):
+        if dependency == "@rpath/librime.1.dylib":
+            source = Path(os.environ.get("RIME_PREFIX", str(ROOT / ".build/rime-runtime"))) / "lib/librime.1.dylib"
+        elif dependency.startswith(("/opt/homebrew/", "/usr/local/", str(ROOT / ".build/"))):
+            source = Path(dependency)
+        else:
             continue
-        source = Path(dependency)
         target = FRAMEWORKS / source.name
         if source.resolve() not in copied:
             copied[source.resolve()] = target
@@ -82,11 +85,16 @@ def bundle_dependencies(binary, is_executable=False):
         run("install_name_tool", "-change", dependency, replacement, binary)
 
 bundle_dependencies(executable, True)
-# Homebrew builds this plugin separately. A gram file alone cannot enable it.
-# Compile the pinned BSD-licensed revision, not Homebrew's older GPL revision.
+# Source-build search paths must not remain in the installed executable.
+commands = subprocess.check_output(["otool", "-l", str(executable)], text=True)
+for path in re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (.*?) \(offset", commands):
+    if path.startswith("/"):
+        run("install_name_tool", "-delete_rpath", path, executable)
+
+# The runtime archive contains the separately compiled, pinned BSD Octagram revision.
 plugin = FRAMEWORKS / "rime-plugins/librime-octagram.dylib"
 plugin.parent.mkdir()
-shutil.copy2(ROOT / ".build/plugins/librime-octagram.dylib", plugin)
+shutil.copy2(Path(os.environ.get("RIME_PREFIX", str(ROOT / ".build/rime-runtime"))) / "lib/rime-plugins/librime-octagram.dylib", plugin)
 run("install_name_tool", "-id", "@rpath/librime-octagram.dylib", plugin)
 bundle_dependencies(plugin)
 run("install_name_tool", "-change", "@rpath/librime.1.dylib", "@loader_path/../librime.1.dylib", plugin)
@@ -105,14 +113,15 @@ with (CONTENTS / "Info.plist").open("wb") as file:
 licenses = RESOURCES / "Licenses"
 licenses.mkdir()
 shutil.copytree(ROOT / "Resources/Licenses", licenses, dirs_exist_ok=True)
-for folder, prefix in [("wanxiang-dictionary", "Wanxiang-Dictionary"), ("cldr", "Unicode-CLDR"), ("librime-octagram", "librime-octagram")]:
+shutil.copy2(Path(os.environ.get("RIME_PREFIX", str(ROOT / ".build/rime-runtime"))) / "Licenses/librime-octagram-LICENSE.txt", licenses / "librime-octagram-LICENSE.txt")
+for folder, prefix in [("wanxiang-dictionary", "Wanxiang-Dictionary"), ("cldr", "Unicode-CLDR")]:
     shutil.copy2(ROOT / "Vendor" / folder / "LICENSE", licenses / (prefix + "-LICENSE.txt"))
 for folder, name in [("wanxiang-dictionary", "sources.json"), ("wanxiang-dictionary", "conversion.json"), ("cldr", "sources.json")]:
     shutil.copy2(ROOT / "Vendor" / folder / name, licenses / (folder + "-" + name))
 shutil.copy2(ROOT / "Resources/FluentEmoji/LICENSE", licenses / "Fluent-Emoji-MIT.txt")
 shutil.copy2(ROOT / "Vendor/wanxiang/LICENSE", licenses / "Wanxiang-CC-BY-4.0.txt")
 shutil.copy2(ROOT / "LICENSE", licenses / "FluentIME-MIT.txt")
-fluent_source = Path(os.environ.get("FLUENTKIT_PATH", str(ROOT / ".build/dependencies/fluentkit-01c8e66/WinUI-macOS")))
+fluent_source = Path(os.environ.get("FLUENTKIT_PATH", str(ROOT / ".build/checkouts/FluentKit")))
 fluent_notices = copy_fluentkit_notices(fluent_source, licenses)
 fluent_provenance = json.loads((licenses / "fluentkit-source.json").read_text())
 components = json.loads((licenses / "components.json").read_text())

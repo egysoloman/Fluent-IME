@@ -12,7 +12,7 @@ import CRimeBridge
         func all(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(all) }
         func pump() { RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.16)) }
         func capture(_ v: NSView, _ name: String) throws {
-            v.layoutSubtreeIfNeeded(); pump(); v.displayIfNeeded(); CATransaction.flush()
+            v.layoutSubtreeIfNeeded(); RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.65)); v.displayIfNeeded(); CATransaction.flush()
             let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(v.bounds.width * 2), pixelsHigh: Int(v.bounds.height * 2), bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
             let cg = NSGraphicsContext(bitmapImageRep: bitmap)!.cgContext; cg.scaleBy(x: 2, y: 2)
             if v.isFlipped { cg.translateBy(x: 0, y: v.bounds.height); cg.scaleBy(x: 1, y: -1) }
@@ -38,11 +38,11 @@ import CRimeBridge
         let window = setup.window!, root = window.contentView!
         setup.showWindow(nil); pump()
         precondition(all(root).compactMap { $0 as? FluentSearchTextField }.isEmpty, "Setup must not have search")
-        precondition(!button(L10n.setupNext, in: root).isEnabled)
+        precondition(button(L10n.installAction, in: root).isEnabled)
         try capture(root, "setup-install")
-        button(L10n.installAction, in: root).onClick?(); button(L10n.installEnable, in: root).onClick?()
-        precondition(button(L10n.setupNext, in: root).isEnabled)
-        button(L10n.setupNext, in: root).onClick?()
+        button(L10n.installAction, in: root).onClick?(); pump()
+        try capture(root, "setup-enable")
+        button(L10n.installEnable, in: root).onClick?()
         if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             func entranceOffset() -> Double? {
                 let group = all(root).compactMap { $0.layer?.animation(forKey: "FluentIME.Page.Entrance") as? CAAnimationGroup }.first

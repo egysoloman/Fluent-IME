@@ -194,8 +194,16 @@ final class FluentInputController: IMKInputController {
         return menu
     }
     @objc private func toggleMode(_ sender: Any?) { input?.toggleLanguage() }
-    @objc private func selectMode(_ sender: NSMenuItem) {
-        if let raw = sender.representedObject as? String, let mode = InputMode(rawValue: raw) { input?.selectMode(mode) }
+    @objc private func selectMode(_ sender: Any?) {
+        let command = InputMethodMenuCommand(sender)
+        guard let mode = command.mode, Preferences.shared.enabledInputModes.contains(mode) else { return }
+        attachMenuClient(command.client)
+        input?.selectMode(mode)
+    }
+    private func attachMenuClient(_ target: IMKTextInput?) {
+        guard let target = target ?? activeClient ?? client() else { return }
+        if input == nil { activateServer(target) }
+        else { activeClient = target }
     }
     private func showModeIndicator() {
         guard Preferences.shared.showInputModeIndicator, let input, let client = activeClient, let caret = caretRect(for: client) else { return }
@@ -203,7 +211,7 @@ final class FluentInputController: IMKInputController {
         SystemInputModeIndicator.shared.showCurrent()
     }
     @objc private func openSettings(_ sender: Any?) { input?.finish(); Runtime.shared.showSettings() }
-    @objc private func openEmoji(_ sender: Any?) { showEmoji() }
+    @objc private func openEmoji(_ sender: Any?) { attachMenuClient(InputMethodMenuCommand(sender).client); showEmoji() }
     private func showEmoji() {
         guard let target = activeClient ?? client() else { return }
         var caret = NSRect.zero
@@ -216,4 +224,16 @@ final class FluentInputController: IMKInputController {
             target.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
         }
     }
+}
+
+/// IMK dispatches menu actions with a command dictionary, unlike ordinary AppKit menus.
+struct InputMethodMenuCommand {
+    let item: NSMenuItem?
+    let client: IMKTextInput?
+    init(_ sender: Any?) {
+        let command = sender as? NSDictionary
+        item = (command?[kIMKCommandMenuItemName] as? NSMenuItem) ?? (sender as? NSMenuItem)
+        client = command?[kIMKCommandClientName] as? IMKTextInput
+    }
+    var mode: InputMode? { (item?.representedObject as? String).flatMap(InputMode.init(rawValue:)) }
 }

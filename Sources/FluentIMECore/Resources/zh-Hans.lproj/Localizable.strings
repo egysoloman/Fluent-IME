@@ -189,7 +189,7 @@
 "mode.badgeSimplified" = "简";
 "mode.badgeTraditional" = "繁";
 "mode.switchTo" = "切换为%1$@";
-"mode.indicator" = "切换中英文时显示状态提示";
+"mode.indicator" = "切换输入模式时显示状态提示";
 "mode.indicatorHint" = "状态切换时在光标旁显示浮标，点击也可切换模式。";
 "mode.indicatorAccessibility" = "当前输入模式：%1$@，点击可切换";
 "appearance.advancedEffects" = "透明材质效果";

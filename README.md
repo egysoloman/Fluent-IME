@@ -52,7 +52,7 @@
 
 Transformer 也可单独下载 `Fluent-IME-Transformer.zip`，解压后在 **输入法 → 语言模型** 导入；该页也可替换 `.gram` 语法模型。
 
-打开分发镜像 `dist/Fluent-IME-0.6.0-Setup.dmg`，双击运行 **Fluent IME Setup**：
+打开分发镜像 `dist/Fluent-IME-0.6.1-Setup.dmg`，双击运行 **Fluent IME Setup**：
 1. **无需管理员权限**：仅安装至当前用户的 `~/Library/Input Methods/Fluent IME.app`。
 2. **向导式配置**：自动引导完成输入源启用、既有个人词库合并或归档备份，以及输入语言偏好设置。
 3. **自动清理安装包**：完成向导后，安装器会自动移入废纸篓；若从 DMG 磁盘映像启动，将自动推出映像并将 DMG 文件移入废纸篓。
@@ -108,8 +108,8 @@ Transformer 也可单独下载 `Fluent-IME-Transformer.zip`，解压后在 **输
 
 ### 环境要求
 - **操作系统**：macOS 13 及以上（Apple Silicon 构建产物最低系统版本取决于所链接的 `librime` 动态库版本）
-- **开发工具**：Xcode / Command Line Tools（Swift 5.9+）、Python 3、Homebrew
-- **依赖组件**：`librime` 及本地 `WinUI-macOS`（FluentKit，默认路径 `/Users/stars/Documents/WinUI-macOS`）
+- **开发工具**：Xcode / Command Line Tools（Swift 5.9+）、Python 3.11+
+- **依赖组件**：FluentKit 通过 GitHub SPM 获取（最低 0.2.0，`Package.resolved` 锁定 0.3.0）。构建脚本自动下载并校验 Rime 运行库，无需 Homebrew 或本地 FluentKit。
 
 ### 常用构建与调试命令
 
@@ -131,10 +131,10 @@ python3 scripts/package-installer.py
 python3 scripts/package-dmg.py
 ```
 
-如需覆盖默认的本地依赖路径或使用 Debug 配置：
+仅开发自定义依赖时需要指定本地路径；也可选择 Debug 配置：
 
 ```bash
-FLUENTKIT_PATH='/path/to/WinUI-macOS' RIME_PREFIX='/path/to/librime' bash scripts/build.sh
+FLUENTKIT_PATH='/path/to/WinUI-macOS' RIME_PREFIX='/path/to/rime-runtime' bash scripts/build.sh
 CONFIGURATION=debug bash scripts/build.sh
 ```
 

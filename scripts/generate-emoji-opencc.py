@@ -54,6 +54,7 @@ outputs = {
     'fluent_emoji.txt': ''.join(f'{word}\t{word} {" ".join(glyphs)}\n' for word, glyphs in mapping.items()),
     'fluent_emoji.json': json.dumps({
         'name': 'Fluent IME emoji alternatives (Unicode CLDR)',
+        'segmentation': {'type': 'mmseg', 'dict': {'type': 'text', 'file': 'fluent_emoji.txt'}},
         'conversion_chain': [{'dict': {'type': 'text', 'file': 'fluent_emoji.txt'}}],
     }, ensure_ascii=False, indent=2) + '\n',
 }
