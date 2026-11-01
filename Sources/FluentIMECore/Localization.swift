@@ -5,10 +5,19 @@ import Foundation
 public enum L10n {
     static let supportedLanguages = ["zh-Hans", "zh-Hant", "en"]
     private static let resourceBundle = Bundle.module
-    private static let bundles: [String: Bundle] = Dictionary(uniqueKeysWithValues: supportedLanguages.compactMap { language in
-        guard let path = resourceBundle.path(forResource: language, ofType: "lproj"), let bundle = Bundle(path: path) else { return nil }
-        return (language, bundle)
-    })
+    private static let bundles = localizedBundles(in: resourceBundle)
+
+    static func localizedBundles(in resource: Bundle) -> [String: Bundle] {
+        // SwiftPM's native build system lowercases zh-Hans/zh-Hant directories.
+        // Bundle.path(forResource:) does not match those locale names reliably.
+        guard let root = resource.resourceURL,
+              let folders = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return [:] }
+        return Dictionary(uniqueKeysWithValues: supportedLanguages.compactMap { language in
+            guard let folder = folders.first(where: { $0.lastPathComponent.lowercased() == language.lowercased() + ".lproj" }),
+                  let bundle = Bundle(url: folder) else { return nil }
+            return (language, bundle)
+        })
+    }
     public static var interfaceLanguage: String {
         if let language = ProcessInfo.processInfo.environment["FLUENTIME_RENDER_LANGUAGE"] {
             return resolveLanguage([language])

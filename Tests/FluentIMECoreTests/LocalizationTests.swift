@@ -2,6 +2,20 @@ import XCTest
 @testable import FluentIMECore
 
 final class LocalizationTests: XCTestCase {
+    func testLowercasedSwiftPMResourceDirectories() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("bundle")
+        defer { try? FileManager.default.removeItem(at: root) }
+        for (language, title) in [("zh-hans", "输入预览"), ("zh-hant", "輸入預覽"), ("en", "Typing preview")] {
+            let folder = root.appendingPathComponent(language + ".lproj")
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try Data(("\"preview.title\" = \"" + title + "\";\n").utf8).write(to: folder.appendingPathComponent("Localizable.strings"))
+        }
+        let bundle = try XCTUnwrap(Bundle(url: root))
+        let languages = L10n.localizedBundles(in: bundle)
+        XCTAssertEqual(languages["zh-Hans"]?.localizedString(forKey: "preview.title", value: nil, table: "Localizable"), "输入预览")
+        XCTAssertEqual(languages["zh-Hant"]?.localizedString(forKey: "preview.title", value: nil, table: "Localizable"), "輸入預覽")
+        XCTAssertEqual(languages["en"]?.localizedString(forKey: "preview.title", value: nil, table: "Localizable"), "Typing preview")
+    }
     func testModuleCatalogsResolveWithoutTheApplicationBundle() {
         XCTAssertEqual(L10n.text("preview.title", language: "zh-Hans"), "输入预览")
         XCTAssertEqual(L10n.text("preview.title", language: "en"), "Typing preview")
