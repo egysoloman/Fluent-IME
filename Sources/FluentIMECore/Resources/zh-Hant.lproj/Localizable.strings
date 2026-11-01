@@ -103,7 +103,7 @@
 "keys.cancel" = "清除目前輸入的拼音";
 "keys.candidates" = "候選字詞選取";
 "keys.capsLockHint" = "中/英（Caps Lock）鍵：短按切換系統輸入法，長按鎖定大寫。";
-"keys.commitCodeHint" = "輸入拼音中途按 Shift 切為英文時，直接送出已輸入的英文字母。";
+"keys.commitCodeHint" = "切換為英文時，直接送出已輸入的字母。";
 "keys.commitRaw" = "直接送出原始拼音字母";
 "keys.confirm" = "送出目前反白的候選字詞";
 "keys.expansionHint" = "輸入時按「】」展開更多候選；展開後用「【 / 】」翻頁，在首列按「【」收合。";
@@ -112,7 +112,7 @@
 "keys.modeSwitch" = "中英文切換";
 "keys.number" = "選取對應編號的候選字詞";
 "keys.paging" = "候選字詞上一頁 / 下一頁";
-"keys.shift" = "單按 Shift 鍵切換中英文";
+"keys.shift" = "單按 Shift 鍵切換輸入模式";
 
 /* menu */
 "menu.copy" = "拷貝";
@@ -354,3 +354,27 @@
 "neural.waiting" = "等待模型載入";
 "neural.ready" = "模型已就緒，等待前文";
 "neural.scored" = "已評分 %1$ld 次，最近一次 %2$@ 毫秒";
+
+"setup.stageInstall" = "安裝";
+"setup.stageDictionary" = "詞庫";
+"setup.stageModes" = "輸入模式";
+"setup.stagePreferences" = "偏好設定";
+
+/* Model management */
+"models.title" = "語言模型";
+"models.detail" = "下載、匯入與還原內建模型";
+"models.grammarTitle" = "語法模型";
+"models.custom" = "已選擇匯入的模型";
+"models.bundled" = "內建模型";
+"models.grammarFormat" = "支援 Rime Octagram 的 .gram 檔案。標準版已含萬象語法模型。";
+"models.transformerFormat" = "解壓縮下載檔案後，選擇模型資料夾。須包含相容的 Core ML 評分模型與詞表；不支援直接匯入通用大型模型。";
+"models.download" = "下載模型…";
+"models.import" = "匯入模型…";
+"models.restore" = "還原內建模型";
+"models.importGrammar" = "選擇語法模型";
+"models.importTransformer" = "選擇 Transformer 模型資料夾";
+"models.validating" = "正在驗證模型…";
+"models.restartHint" = "模型已儲存，重新啟動輸入法後生效。取消可稍後重新啟動。";
+"models.restart" = "重新啟動輸入法";
+"models.invalidGrammar" = "無法讀取此語法模型，請選擇完整的 Rime Octagram .gram 檔案。";
+"models.invalidTransformer" = "模型介面或詞表不相容。請使用 Fluent IME 評分模型格式。";

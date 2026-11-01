@@ -1,6 +1,14 @@
 import Foundation
 import CryptoKit
 
+public enum ReleaseEdition: String, Decodable {
+    case lite, full
+    public static var current: Self {
+        if let value = Bundle.main.object(forInfoDictionaryKey: "FluentIMEEdition") as? String, let edition = Self(rawValue: value) { return edition }
+        return Bundle.main.resourceURL.map { FileManager.default.fileExists(atPath: $0.appendingPathComponent("Models/ChineseContextScorer.mlmodelc").path) } == true ? .full : .lite
+    }
+}
+
 public struct ReleaseVersion: Comparable, Equatable {
     private let parts: [Int]
     public init?(_ value: String) {
@@ -23,8 +31,10 @@ public struct GitHubRelease: Decodable {
     public let prerelease: Bool
     public let assets: [Asset]
     public var version: String { tag_name.hasPrefix("v") ? String(tag_name.dropFirst()) : tag_name }
-    public var installer: Asset? { assets.first { $0.name == "Fluent-IME-\(version)-Setup.dmg" } }
-    public var manifest: Asset? { assets.first { $0.name == "release.json" } }
+    public var installer: Asset? { installer(for: .lite) }
+    public var manifest: Asset? { manifest(for: .lite) }
+    public func installer(for edition: ReleaseEdition) -> Asset? { assets.first { $0.name == "Fluent-IME-\(version)\(edition == .full ? "-Full" : "")-Setup.dmg" } }
+    public func manifest(for edition: ReleaseEdition) -> Asset? { assets.first { $0.name == (edition == .full ? "release-full.json" : "release.json") } }
     public func isNewer(than current: String) -> Bool {
         guard !draft, !prerelease, let next = ReleaseVersion(version), let old = ReleaseVersion(current) else { return false }
         return next > old
@@ -56,13 +66,14 @@ public final class GitHubUpdateService {
     public static let repository = "egysoloman/Fluent-IME"
     public static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
     private let transport = UpdateTransport()
+    private let edition: ReleaseEdition
     private lazy var session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 30; config.timeoutIntervalForResource = 1800
         config.httpAdditionalHeaders = ["User-Agent": "Fluent-IME-Updater", "Accept": "application/vnd.github+json"]
         return URLSession(configuration: config, delegate: transport, delegateQueue: nil)
     }()
-    public init() {}
+    public init(edition: ReleaseEdition = .current) { self.edition = edition }
     public static func trustedAsset(_ url: URL) -> Bool {
         url.scheme == "https" && url.host == "github.com" && url.user == nil && url.password == nil && url.port == nil && url.path.hasPrefix("/\(repository)/releases/download/")
     }
@@ -76,12 +87,13 @@ public final class GitHubUpdateService {
         return release
     }
     public func download(_ release: GitHubRelease, to directory: URL) async throws -> URL {
-        guard let asset = release.installer, let manifest = release.manifest,
+        guard let asset = release.installer(for: edition), let manifest = release.manifest(for: edition),
               Self.trustedAsset(asset.browser_download_url), Self.trustedAsset(manifest.browser_download_url),
               (1...2_000_000_000).contains(asset.size), manifest.size < 100_000 else { throw UpdateError.invalidRelease }
         let (metadata, response) = try await session.data(from: manifest.browser_download_url)
         guard (response as? HTTPURLResponse)?.statusCode == 200, metadata.count < 100_000 else { throw UpdateError.invalidRelease }
         let info = try JSONDecoder().decode(UpdateManifest.self, from: metadata)
+        guard info.edition == edition else { throw UpdateError.invalidRelease }
         try info.validate(release: release)
         let transport = UpdateTransport(limit: asset.size)
         let config = URLSessionConfiguration.ephemeral; config.timeoutIntervalForResource = 1800
@@ -111,6 +123,7 @@ public struct UpdateManifest: Decodable {
     public let version: String
     public let minimum_macos: String
     public let architecture: String
+    public let edition: ReleaseEdition
     public let installer: Installer
     public func validate(release: GitHubRelease) throws {
         guard version == release.version else { throw UpdateError.invalidRelease }

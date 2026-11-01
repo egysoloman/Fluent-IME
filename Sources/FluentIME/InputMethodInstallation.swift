@@ -18,8 +18,11 @@ final class InputMethodInstallation: SetupInstallation {
     var isInstalled: Bool {
         guard files.isInstalled else { return false }
         guard InstallerLifecycle.isInstaller else { return true }
-        let target = NSDictionary(contentsOf: files.application.appendingPathComponent("Contents/Info.plist"))?["CFBundleVersion"] as? String ?? "0"
-        let payload = NSDictionary(contentsOf: InstallerLifecycle.payload.appendingPathComponent("Contents/Info.plist"))?["CFBundleVersion"] as? String ?? "999999"
+        let targetInfo = NSDictionary(contentsOf: files.application.appendingPathComponent("Contents/Info.plist"))
+        let payloadInfo = NSDictionary(contentsOf: InstallerLifecycle.payload.appendingPathComponent("Contents/Info.plist"))
+        guard (targetInfo?["FluentIMEEdition"] as? String ?? "full") == (payloadInfo?["FluentIMEEdition"] as? String ?? "full") else { return false }
+        let target = targetInfo?["CFBundleVersion"] as? String ?? "0"
+        let payload = payloadInfo?["CFBundleVersion"] as? String ?? "999999"
         return (Int(target) ?? 0) >= (Int(payload) ?? 999999)
     }
     var isEnabled: Bool { Self.sources().contains { Self.bool($0, kTISPropertyInputSourceIsEnabled) } }

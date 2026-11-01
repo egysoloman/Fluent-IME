@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 python3 scripts/prepare-fluentkit.py
-export FLUENTKIT_PATH="$ROOT/.build/dependencies/fluentkit-5811513/WinUI-macOS"
+export FLUENTKIT_PATH="${FLUENTKIT_PATH:-$ROOT/.build/dependencies/fluentkit-01c8e66/WinUI-macOS}"
 python3 scripts/localize.py --check
 bash scripts/bootstrap.sh
 python3 scripts/fetch-wanxiang.py

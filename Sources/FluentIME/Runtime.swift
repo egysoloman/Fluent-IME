@@ -25,6 +25,7 @@ final class Runtime {
                 // Offline rendering must never compete with the active IMK server's LevelDB lock.
                 user = FileManager.default.temporaryDirectory.appendingPathComponent("FluentIME-Preview-" + UUID().uuidString)
             }
+            try UserModels.library.prepareGrammar(in: user)
             return try RimeEngine(sharedDirectory: shared, userDirectory: user)
         }
     }
@@ -58,7 +59,7 @@ final class NeuralRuntime {
     static let shared = NeuralRuntime()
     let ranker: CoreMLCandidateRanker?
     private init() {
-        let directory = Bundle.main.resourceURL?.appendingPathComponent("Models")
+        let directory = UserModels.library.transformerDirectory ?? Bundle.main.resourceURL?.appendingPathComponent("Models")
         if let directory, FileManager.default.fileExists(atPath: directory.appendingPathComponent("ChineseContextScorer.mlmodelc").path) {
             ranker = CoreMLCandidateRanker(modelURL: directory.appendingPathComponent("ChineseContextScorer.mlmodelc"), vocabularyURL: directory.appendingPathComponent("chinese-context-vocab.txt"))
         } else { ranker = nil }

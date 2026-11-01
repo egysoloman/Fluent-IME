@@ -47,6 +47,11 @@
 ## 安裝與解除安裝
 
 ### 使用安裝輔助程式（推薦）
+
+標準版保留萬象詞庫與語法模型，不含 Transformer；檔名帶 `Full` 的版本另含 Transformer。
+
+Transformer 也可單獨下載 `Fluent-IME-Transformer.zip`，解壓縮後在 **輸入法 → 語言模型** 匯入；此頁也可替換 `.gram` 語法模型。
+
 打開安裝映像檔 `dist/Fluent-IME-0.6.0-Setup.dmg`，連按兩下執行 **Fluent IME Setup**：
 1. **無需管理者權限**：僅安裝至目前使用者的 `~/Library/Input Methods/Fluent IME.app`。
 2. **引導式設定**：自動引導完成輸入來源啟用、既有個人詞庫合併或封存備份，以及輸入語言偏好設定。
@@ -74,7 +79,7 @@
 | `Enter` | 直接送出原始拼音字母 |
 | `Esc` | 清除目前輸入的拼音組合 |
 | `Backspace` / `Delete` | 刪除或編輯拼音組合 |
-| `Shift`（單按） | 切換中英文輸入狀態（輸入拼音中途按 Shift 將直接送出已輸入的字母並切為英文） |
+| `Shift`（單按） | 按啟用順序輪換簡體中文、繁體中文和英文；切換為英文時，直接送出已輸入的字母 |
 | `Caps Lock` | 開啟或關閉大寫鎖定 |
 
 ---

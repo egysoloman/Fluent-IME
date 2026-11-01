@@ -122,7 +122,18 @@ import FluentIMECore
         precondition(badge.expanded)
         let modeButtons = badge.contentView!.subviews.compactMap { $0 as? NSButton }
         precondition(modeButtons.count == 3)
-        modeButtons[1].performClick(nil)
+        precondition(modeButtons.allSatisfy { $0 is FluentButton && $0.refusesFirstResponder })
+        precondition(badge.contentView!.layer?.cornerRadius == 8)
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            NSApp.appearance = NSAppearance(named: appearance)
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+            let view = badge.contentView!
+            let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("mode-picker-" + appearance.rawValue + ".png"))
+        }
+        NSApp.appearance = NSAppearance(named: .aqua)
+        badge.contentView!.subviews.compactMap { $0 as? FluentButton }[1].performClick(nil)
         precondition(selectedMode == .traditionalChinese && !badge.isVisible)
         Preferences.shared.showInputModeIndicator = false
         badge.present(mode: .english, modes: [.english], near: panel.frame) { _ in }
@@ -237,7 +248,7 @@ import FluentIMECore
             precondition(!Preferences.shared.expandedCandidates && face.frame.height == collapsedHeight)
             Preferences.shared.showInputModeIndicator = true
             preview.showWindow(nil)
-            let language = all.compactMap { $0 as? FluentButton }.first { $0.title == L10n.modeSwitchTo(InputMode.english.title) }!
+            let language = all.compactMap { $0 as? FluentButton }.first { $0.title == L10n.modeSwitchTo(InputMode.traditionalChinese.title) }!
             language.performClick(nil); pump(0.03)
             let visibleModePanels = NSApp.windows.compactMap { $0 as? InputModePanel }.filter(\.isVisible)
             precondition(!visibleModePanels.isEmpty, "Try-input mode indicator must use actual text-view caret geometry")

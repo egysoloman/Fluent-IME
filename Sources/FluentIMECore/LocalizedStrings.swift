@@ -306,7 +306,7 @@ public extension L10n {
     static var keysCandidates: String { text("keys.candidates") }
     /// 中/英（Caps Lock）键：短按切换系统输入法，长按锁定大写。
     static var keysCapsLockHint: String { text("keys.capsLockHint") }
-    /// 输入拼音中途按 Shift 切为英文时，直接上屏已输入的字母。
+    /// 切换为英文时，直接上屏已输入的字母。
     static var keysCommitCodeHint: String { text("keys.commitCodeHint") }
     /// 直接上屏原始拼音字母
     static var keysCommitRaw: String { text("keys.commitRaw") }
@@ -324,7 +324,7 @@ public extension L10n {
     static var keysNumber: String { text("keys.number") }
     /// 候选词上一页 / 下一页
     static var keysPaging: String { text("keys.paging") }
-    /// 单按 Shift 键切换中英文
+    /// 单按 Shift 键切换输入模式
     static var keysShift: String { text("keys.shift") }
     /// English
     static var languageEnglish: String { text("language.english") }
@@ -372,6 +372,40 @@ public extension L10n {
     static var modeSwitchToChinese: String { text("mode.switchToChinese") }
     /// 切换为英文
     static var modeSwitchToEnglish: String { text("mode.switchToEnglish") }
+    /// 内置模型
+    static var modelsBundled: String { text("models.bundled") }
+    /// 已选择导入的模型
+    static var modelsCustom: String { text("models.custom") }
+    /// 下载、导入与恢复内置模型
+    static var modelsDetail: String { text("models.detail") }
+    /// 下载模型…
+    static var modelsDownload: String { text("models.download") }
+    /// 支持 Rime Octagram 的 .gram 文件。标准版已含万象语法模型。
+    static var modelsGrammarFormat: String { text("models.grammarFormat") }
+    /// 语法模型
+    static var modelsGrammarTitle: String { text("models.grammarTitle") }
+    /// 导入模型…
+    static var modelsImport: String { text("models.import") }
+    /// 选择语法模型
+    static var modelsImportGrammar: String { text("models.importGrammar") }
+    /// 选择 Transformer 模型文件夹
+    static var modelsImportTransformer: String { text("models.importTransformer") }
+    /// 无法读取此语法模型，请选择完整的 Rime Octagram .gram 文件。
+    static var modelsInvalidGrammar: String { text("models.invalidGrammar") }
+    /// 模型接口或词表不兼容。请使用 Fluent IME 评分模型格式。
+    static var modelsInvalidTransformer: String { text("models.invalidTransformer") }
+    /// 重启输入法
+    static var modelsRestart: String { text("models.restart") }
+    /// 模型已保存，重启输入法后生效。取消可稍后重启。
+    static var modelsRestartHint: String { text("models.restartHint") }
+    /// 恢复内置模型
+    static var modelsRestore: String { text("models.restore") }
+    /// 语言模型
+    static var modelsTitle: String { text("models.title") }
+    /// 解压下载文件后，选择模型文件夹。需包含兼容的 Core ML 评分模型与词表；不支持直接导入通用大模型。
+    static var modelsTransformerFormat: String { text("models.transformerFormat") }
+    /// 正在校验模型…
+    static var modelsValidating: String { text("models.validating") }
     /// %1$@，%2$@
     static func navigationItem(_ arg1: String, _ arg2: String) -> String { format("navigation.item", arguments: [arg1, arg2]) }
     /// 模型已就绪，等待上文
@@ -458,6 +492,14 @@ public extension L10n {
     static var setupPrivacy: String { text("setup.privacy") }
     /// 重新运行初始向导
     static var setupReopen: String { text("setup.reopen") }
+    /// 词库
+    static var setupStageDictionary: String { text("setup.stageDictionary") }
+    /// 安装
+    static var setupStageInstall: String { text("setup.stageInstall") }
+    /// 输入模式
+    static var setupStageModes: String { text("setup.stageModes") }
+    /// 偏好设置
+    static var setupStagePreferences: String { text("setup.stagePreferences") }
     /// 第 %1$ld / %2$ld 步
     static func setupStep(_ arg1: Int, _ arg2: Int) -> String { format("setup.step", arguments: [arg1, arg2]) }
     /// 初始向导

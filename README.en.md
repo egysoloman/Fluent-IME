@@ -47,6 +47,11 @@
 ## Installation & Uninstallation
 
 ### Using the Setup DMG (Recommended)
+
+The standard edition includes the Wanxiang dictionary and grammar model. Files marked `Full` also include the Transformer.
+
+The Transformer is also available as `Fluent-IME-Transformer.zip`. Extract it, then import it in **Input method → Language models**. The same page accepts replacement `.gram` grammar models.
+
 Open `dist/Fluent-IME-0.6.0-Setup.dmg` and double-click **Fluent IME Setup**:
 1. **No Administrator Privileges Required**: Installs directly into `~/Library/Input Methods/Fluent IME.app` for the current user.
 2. **Guided Setup**: Walks you through enabling the input source, keeping/merging or archiving an existing user dictionary, and selecting your preferred input languages.
@@ -74,7 +79,7 @@ Go to **Fluent Pinyin Settings → Advanced → Uninstall input method**:
 | `Enter` | Commit raw pinyin letters |
 | `Esc` | Clear current pinyin composition |
 | `Backspace` / `Delete` | Edit or delete pinyin composition |
-| `Shift` (Single tap) | Toggle Chinese / English mode (pressing Shift while composing commits the raw letters and switches to English) |
+| `Shift` (Single tap) | Cycle through enabled Simplified Chinese, Traditional Chinese and English modes; switching to English commits the raw letters |
 | `Caps Lock` | Turn Caps Lock on or off |
 
 ---

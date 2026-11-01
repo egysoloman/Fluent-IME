@@ -5,6 +5,9 @@ import FluentIMECore
 final class SetupWindowController: NSWindowController, NSWindowDelegate {
     private let root = IMEFlippedView()
     private let content = IMEFlippedView()
+    private let viewport = IMEFlippedView()
+    private let pageMotion = IMEPageMotion()
+    private var lastInstallState: [Bool] = []
     private let installation: SetupInstallation
     private let onComplete: () -> Void
     private var theme = Preferences.shared.theme
@@ -23,13 +26,13 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     private var indicator = Preferences.shared.showInputModeIndicator
     init(installation: SetupInstallation = InputMethodInstallation.shared, onComplete: @escaping () -> Void = {}) {
         self.installation = installation; self.onComplete = onComplete
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 680), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 640), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = L10n.installTitle; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self; window.contentView = root; root.wantsLayer = true
         root.fluentSetLocalization(locale: L10n.locale)
         appearance = IMEThemeObservation { [weak self] theme in self?.theme = theme; self?.build() }
-        activeObserver = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in if self?.step == 0 { self?.build() } }
+        activeObserver = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in guard let self, self.step == 0, !self.busy else { return }; if self.lastInstallState != [self.installation.isInstalled, self.installation.isEnabled] { self.build() } }
         build(); window.center()
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -38,43 +41,68 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if !completed, !InputMethodInstallation.shared.isRunningInstalled, !CommandLine.arguments.contains("--render-audit") { NSApp.terminate(nil) }
     }
-    private func label(_ text: String, y: CGFloat, size: CGFloat = 14, height: CGFloat = 42, secondary: Bool = false, parent: NSView? = nil) {
+    @discardableResult private func label(_ text: String, x: CGFloat = 0, y: CGFloat, width: CGFloat = 608, size: CGFloat = 14, height: CGFloat = 42, secondary: Bool = false, parent: NSView? = nil) -> NSTextField {
         let value = FluentSelectableLabel(wrappingLabelWithString: text)
         value.theme = theme; value.font = IMEFont.font(ofSize: size); value.textColor = secondary ? theme.textSecondary : theme.textPrimary
-        value.frame = NSRect(x: 0, y: y, width: 576, height: height); (parent ?? content).addSubview(value)
+        value.frame = NSRect(x: x, y: y, width: width, height: height); (parent ?? content).addSubview(value)
+        return value
     }
-    @discardableResult private func button(_ title: String, x: CGFloat = 0, y: CGFloat, width: CGFloat = 240, enabled: Bool = true, parent: NSView? = nil, action: @escaping () -> Void) -> FluentButton {
-        let button = FluentButton(title: title); button.theme = theme; button.isEnabled = enabled && !busy; button.onClick = action
+    @discardableResult private func button(_ title: String, x: CGFloat = 0, y: CGFloat, width: CGFloat = 192, enabled: Bool = true, primary: Bool = false, parent: NSView? = nil, action: @escaping () -> Void) -> FluentButton {
+        let button = FluentButton(title: title, role: primary ? .primary : .standard); button.theme = theme; button.isEnabled = enabled && !busy; button.onClick = action
         button.frame = NSRect(x: x, y: y, width: width, height: 34); (parent ?? content).addSubview(button); return button
+    }
+    private func card(x: CGFloat = 0, y: CGFloat, width: CGFloat = 608, height: CGFloat) {
+        let view = NSView(frame: NSRect(x: x, y: y, width: width, height: height)); view.wantsLayer = true
+        view.layer?.cornerRadius = 8; view.layer?.borderWidth = 0.5
+        view.layer?.borderColor = theme.surfaceStrokeFlyout.cgColor
+        view.layer?.backgroundColor = (theme.isDark ? NSColor.white.withAlphaComponent(0.035) : NSColor.white.withAlphaComponent(0.65)).cgColor
+        content.addSubview(view)
     }
     private func toggle(_ title: String, y: CGFloat, value: Bool, action: @escaping (Bool) -> Void) {
         let toggle = FluentToggle(title: title, isOn: value); toggle.theme = theme
-        toggle.frame = NSRect(x: 0, y: y, width: 560, height: 32); toggle.onValueChanged = action; content.addSubview(toggle)
+        toggle.frame = NSRect(x: 16, y: y, width: 576, height: 32); toggle.onValueChanged = action; content.addSubview(toggle)
     }
-    private func choice(y: CGFloat, selected: String, options: [(String, String)], action: @escaping (String) -> Void) {
+    private func choice(x: CGFloat = 0, y: CGFloat, width: CGFloat = 300, selected: String, options: [(String, String)], action: @escaping (String) -> Void) {
         var selection: String? = selected
         let titles = Dictionary(uniqueKeysWithValues: options)
         let definition = FluentComboBox(options: options.map(\.0), selection: FluentBinding(get: { selection }, set: { selection = $0; if let value = $0 { action(value) } }), title: { titles[$0] ?? $0 })
-        let view = definition._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale)); view.frame = NSRect(x: 0, y: y, width: 360, height: 32); content.addSubview(view)
+        let view = definition._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale)); view.frame = NSRect(x: x, y: y, width: width, height: 32); content.addSubview(view)
+    }
+    private func navigate(_ destination: Int) {
+        guard !busy, (0...3).contains(destination), destination != step else { return }
+        let snapshot = pageMotion.capture(viewport), backward = destination < step
+        step = destination; status = ""; build()
+        pageMotion.play(snapshot, in: viewport, content: content, backward: backward, navigation: true)
     }
     private func build() {
         guard isWindowLoaded else { return }
+        pageMotion.cancel()
         root.subviews.forEach { $0.removeFromSuperview() }; content.subviews.forEach { $0.removeFromSuperview() }
         root.layer?.backgroundColor = theme.windowBackground.cgColor
         let titlebar = FluentTitleBar(title: L10n.installTitle, heightMode: .compact, backgroundStyle: .transparent, windowControlsStyle: .windows,
             leftHeader: { FluentEmptyView() }, content: { FluentEmptyView() }, rightHeader: { FluentEmptyView() })
-        let bar = titlebar._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale)); bar.frame = NSRect(x: 0, y: 0, width: 640, height: 40); root.addSubview(bar)
-        let header = IMEFlippedView(frame: NSRect(x: 32, y: 68, width: 576, height: 130)); root.addSubview(header)
-        label(L10n.setupStep(step + 1, 4), y: 0, size: 12, height: 24, secondary: true, parent: header)
-        let titles = [L10n.installWelcome, L10n.installDictionaryTitle, L10n.setupModes, L10n.setupPrivacy]
-        label(titles[step], y: 32, size: 25, height: 46, parent: header)
-        label(step == 0 ? L10n.installIntro : step == 1 ? (installation.hasLocalDictionary ? L10n.installDictionaryFound : L10n.installDictionaryEmpty) : step == 2 ? L10n.fontHint : L10n.clipboardPrivacyHint,
-              y: 82, height: 48, secondary: true, parent: header)
-        content.frame = NSRect(x: 32, y: 216, width: 576, height: 372); root.addSubview(content)
+        let bar = titlebar._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale)); bar.frame = NSRect(x: 0, y: 0, width: 680, height: 40); root.addSubview(bar)
+        let stages = [L10n.setupStageInstall, L10n.setupStageDictionary, L10n.setupStageModes, L10n.setupStagePreferences]
+        for (index, title) in stages.enumerated() {
+            let x = CGFloat(index) * 156 + 36
+            let marker = NSView(frame: NSRect(x: x, y: 66, width: 140, height: 3)); marker.wantsLayer = true; marker.layer?.cornerRadius = 1.5
+            marker.layer?.backgroundColor = (index <= step ? theme.accent : theme.surfaceStrokeFlyout).cgColor; root.addSubview(marker)
+            label(title, x: x, y: 80, width: 140, size: 12, height: 28, secondary: index != step, parent: root)
+        }
+        viewport.frame = NSRect(x: 36, y: 128, width: 608, height: 422)
+        viewport.wantsLayer = true; viewport.layer?.masksToBounds = true; root.addSubview(viewport)
+        content.frame = viewport.bounds; viewport.addSubview(content)
+        let titles = [L10n.installWelcome, L10n.settingsDictionaryTitle, L10n.setupModes, L10n.setupPrivacy]
+        let title = label(titles[step], y: 0, size: 26, height: 38); title.font = IMEFont.font(ofSize: 26, weight: .semibold)
+        label(step == 0 ? L10n.installIntro : step == 1 ? (installation.hasLocalDictionary ? L10n.installDictionaryFound : L10n.installDictionaryEmpty) : step == 2 ? L10n.settingsModesDetail : L10n.clipboardPrivacyHint,
+              y: 48, size: 13, height: 54, secondary: true)
         switch step {
         case 0:
-            label(installation.isInstalled ? L10n.installInstalled : L10n.installNotInstalled, y: 0)
-            button(busy ? L10n.installBusy : L10n.installAction, y: 36) { [weak self] in
+            lastInstallState = [installation.isInstalled, installation.isEnabled]
+            card(y: 112, height: 92)
+            label(installation.isInstalled ? L10n.installInstalled : L10n.installNotInstalled, x: 16, y: 128, width: 366, height: 24)
+            label(L10n.installLocationHint, x: 16, y: 158, width: 366, size: 12, height: 36, secondary: true)
+            button(busy ? L10n.installBusy : L10n.installAction, x: 400, y: 141, enabled: !installation.isInstalled, primary: !installation.isInstalled) { [weak self] in
                 guard let self else { return }; self.busy = true; self.status = ""; self.build()
                 self.installation.install { [weak self] result in
                     self?.busy = false
@@ -82,54 +110,64 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
                     self?.build()
                 }
             }
-            label(installation.isEnabled ? L10n.installEnabled : L10n.installNotEnabled, y: 94)
-            button(L10n.installEnable, y: 130, enabled: installation.isInstalled) { [weak self] in
+            card(y: 216, height: 106)
+            label(installation.isEnabled ? L10n.installEnabled : L10n.installNotEnabled, x: 16, y: 232, width: 366, height: 24)
+            label(L10n.installEnableHint, x: 16, y: 262, width: 366, size: 12, height: 48, secondary: true)
+            button(L10n.installEnable, x: 400, y: 249, enabled: installation.isInstalled && !installation.isEnabled, primary: installation.isInstalled && !installation.isEnabled) { [weak self] in
                 do { try self?.installation.enable(); self?.status = "" } catch { self?.status = L10n.installFailure(error.localizedDescription) }
                 self?.build()
             }
-            button(L10n.advancedOpenKeyboard, y: 188, width: 300) { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!) }
-            label(L10n.installEnableHint, y: 238, height: 62, secondary: true)
-            button(L10n.updateTitle, x: 320, y: 188, width: 240) { [weak self] in if let root = self?.root { UpdateCoordinator.shared.present(in: root) } }
-            label(L10n.installLocationHint, y: 308, size: 12, height: 48, secondary: true)
+            button(L10n.advancedOpenKeyboard, y: 344, width: 278) { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!) }
+            button(L10n.updateTitle, x: 414, y: 344, width: 194) { [weak self] in if let root = self?.root { UpdateCoordinator.shared.present(in: root) } }
         case 1:
             if installation.hasLocalDictionary {
                 for (index, title) in [L10n.installMerge, L10n.installReset].enumerated() {
+                    let y = CGFloat(index * 116 + 112)
+                    card(y: y, height: 104)
                     let radio = FluentRadioButton(title: title, isSelected: resetDictionary == (index == 1), groupName: "ExistingDictionary")
-                    radio.theme = theme; radio.frame = NSRect(x: 0, y: CGFloat(index * 116), width: 560, height: 34)
+                    radio.theme = theme; radio.frame = NSRect(x: 16, y: y + 12, width: 576, height: 34)
                     radio.onValueChanged = { [weak self] selected in if selected { self?.resetDictionary = index == 1 } }; content.addSubview(radio)
-                    label(index == 0 ? L10n.installMergeHint : L10n.installResetHint, y: CGFloat(index * 116 + 44), height: 60, secondary: true)
+                    label(index == 0 ? L10n.installMergeHint : L10n.installResetHint, x: 44, y: y + 54, width: 548, size: 13, height: 42, secondary: true)
                 }
-            } else { resetDictionary = false; label(L10n.installDictionaryEmpty, y: 0, height: 90) }
+            } else {
+                resetDictionary = false
+                card(y: 112, height: 100)
+                label(L10n.installDictionaryEmpty, x: 20, y: 138, width: 568, height: 60)
+            }
         case 2:
             for (index, mode) in InputMode.allCases.enumerated() {
+                let x = CGFloat(index) * 208
+                card(x: x, y: 112, width: 192, height: 84)
                 let check = FluentCheckBox(title: mode.title, isChecked: modes.contains(mode)); check.theme = theme
-                check.frame = NSRect(x: 0, y: CGFloat(index * 44), width: 560, height: 30); check.isEnabled = modes.count > 1 || !check.isChecked
+                check.frame = NSRect(x: x + 12, y: 136, width: 168, height: 34); check.isEnabled = modes.count > 1 || !check.isChecked
                 check.onValueChanged = { [weak self] checked in
                     guard let self else { return }
                     self.modes = InputMode.normalized(checked ? self.modes + [mode] : self.modes.filter { $0 != mode })
                     if !self.modes.contains(self.defaultMode) { self.defaultMode = self.modes[0] }; self.build()
                 }; content.addSubview(check)
             }
-            label(L10n.generalDefaultModeChoice, y: 164)
-            choice(y: 202, selected: defaultMode.rawValue, options: modes.map { ($0.rawValue, $0.title) }) { [weak self] in if let mode = InputMode(rawValue: $0) { self?.defaultMode = mode } }
+            label(L10n.generalDefaultModeChoice, y: 238, height: 28)
+            choice(y: 276, selected: defaultMode.rawValue, options: modes.map { ($0.rawValue, $0.title) }) { [weak self] in if let mode = InputMode(rawValue: $0) { self?.defaultMode = mode } }
         default:
-            toggle(L10n.clipboardRecording, y: 0, value: recording) { [weak self] in self?.recording = $0 }
-            label(L10n.clipboardRetention, y: 52)
-            choice(y: 90, selected: String(retention), options: [("0", L10n.clipboardSession), ("900", L10n.clipboardMinutes15), ("1800", L10n.clipboardMinutes30), ("3600", L10n.clipboardHour1), ("86400", L10n.clipboardDay1), ("604800", L10n.clipboardDays7)]) { [weak self] in self?.retention = Int($0) ?? 1800 }
-            label(InstallerLifecycle.isInstaller ? L10n.installCleanupHint : L10n.clipboardPinnedHint, y: 148, height: 70, secondary: true)
-            toggle(L10n.appearanceAdvancedEffects, y: 248, value: effects) { [weak self] in self?.effects = $0 }
-            toggle(L10n.modeIndicator, y: 300, value: indicator) { [weak self] in self?.indicator = $0 }
+            card(y: 112, height: 152)
+            toggle(L10n.clipboardRecording, y: 124, value: recording) { [weak self] in self?.recording = $0 }
+            label(L10n.clipboardRetention, x: 16, y: 176, width: 246, size: 13, height: 26)
+            choice(x: 296, y: 168, width: 296, selected: String(retention), options: [("0", L10n.clipboardSession), ("900", L10n.clipboardMinutes15), ("1800", L10n.clipboardMinutes30), ("3600", L10n.clipboardHour1), ("86400", L10n.clipboardDay1), ("604800", L10n.clipboardDays7)]) { [weak self] in self?.retention = Int($0) ?? 1800 }
+            label(L10n.clipboardPinnedHint, x: 16, y: 216, width: 576, size: 12, height: 38, secondary: true)
+            card(y: 276, height: 92)
+            toggle(L10n.appearanceAdvancedEffects, y: 284, value: effects) { [weak self] in self?.effects = $0 }
+            toggle(L10n.modeIndicator, y: 328, value: indicator) { [weak self] in self?.indicator = $0 }
+            if InstallerLifecycle.isInstaller { label(L10n.installCleanupHint, y: 380, size: 12, height: 42, secondary: true) }
         }
-        let statusLabel = FluentSelectableLabel(wrappingLabelWithString: status); statusLabel.theme = theme
-        statusLabel.textColor = theme.textSecondary; statusLabel.font = IMEFont.font(ofSize: 12)
-        statusLabel.frame = NSRect(x: 32, y: 588, width: 576, height: 30); root.addSubview(statusLabel)
-        if step > 0 { button(L10n.setupPrevious, x: 32, y: 628, width: 160, parent: root) { [weak self] in self?.step -= 1; self?.status = ""; self?.build() } }
-        button(step == 3 ? L10n.installFinish : L10n.setupNext, x: 348, y: 628, width: 260,
-               enabled: step != 0 || (installation.isInstalled && installation.isEnabled), parent: root) { [weak self] in self?.advance() }
+        label(status, x: 36, y: 550, width: 608, size: 12, height: 28, secondary: true, parent: root)
+        let separator = NSView(frame: NSRect(x: 0, y: 578, width: 680, height: 0.5)); separator.wantsLayer = true; separator.layer?.backgroundColor = theme.surfaceStrokeFlyout.cgColor; root.addSubview(separator)
+        if step > 0 { button(L10n.setupPrevious, x: 36, y: 594, width: 132, parent: root) { [weak self] in guard let self else { return }; self.navigate(self.step - 1) } }
+        button(step == 3 ? L10n.installFinish : L10n.setupNext, x: 448, y: 594, width: 196,
+               enabled: step != 0 || (installation.isInstalled && installation.isEnabled), primary: true, parent: root) { [weak self] in self?.advance() }
         root.layoutSubtreeIfNeeded()
     }
     private func advance() {
-        guard step == 3 else { step += 1; status = ""; build(); return }
+        guard step == 3 else { navigate(step + 1); return }
         busy = true; build()
         installation.complete(resetDictionary: resetDictionary, applyPreferences: { [self] in
             let p = Preferences.shared

@@ -103,7 +103,7 @@
 "keys.cancel" = "Clear current composition";
 "keys.candidates" = "Candidate selection";
 "keys.capsLockHint" = "Caps Lock: press to switch input sources; hold for Caps Lock.";
-"keys.commitCodeHint" = "Pressing Shift while typing pinyin commits the raw letters and switches to English.";
+"keys.commitCodeHint" = "Switching to English commits the raw letters being composed.";
 "keys.commitRaw" = "Commit raw pinyin letters";
 "keys.confirm" = "Commit highlighted candidate";
 "keys.expansionHint" = "Press ] while typing to expand the grid, [ / ] to page, or [ on the top row to collapse.";
@@ -112,7 +112,7 @@
 "keys.modeSwitch" = "Mode switching";
 "keys.number" = "Select candidate by number";
 "keys.paging" = "Previous / next page";
-"keys.shift" = "Press Shift to toggle Chinese / English";
+"keys.shift" = "Press Shift to cycle input modes";
 
 /* menu */
 "menu.copy" = "Copy";
@@ -354,3 +354,27 @@
 "neural.waiting" = "Model not loaded yet";
 "neural.ready" = "Model ready; waiting for context";
 "neural.scored" = "Scored %1$ld times; last score %2$@ ms";
+
+"setup.stageInstall" = "Install";
+"setup.stageDictionary" = "Dictionary";
+"setup.stageModes" = "Input modes";
+"setup.stagePreferences" = "Preferences";
+
+/* Model management */
+"models.title" = "Language models";
+"models.detail" = "Download, import, and restore bundled models";
+"models.grammarTitle" = "Grammar model";
+"models.custom" = "Imported model selected";
+"models.bundled" = "Bundled model";
+"models.grammarFormat" = "Accepts Rime Octagram .gram files. The standard edition includes Wanxiang grammar.";
+"models.transformerFormat" = "Extract the download and select its folder. Requires a compatible Core ML scorer and vocabulary; generic language models cannot be imported directly.";
+"models.download" = "Download model…";
+"models.import" = "Import model…";
+"models.restore" = "Restore bundled model";
+"models.importGrammar" = "Choose a grammar model";
+"models.importTransformer" = "Choose a Transformer model folder";
+"models.validating" = "Validating model…";
+"models.restartHint" = "Model saved. Restart the input method to apply it, or cancel to restart later.";
+"models.restart" = "Restart input method";
+"models.invalidGrammar" = "Invalid grammar model. Choose a complete Rime Octagram .gram file.";
+"models.invalidTransformer" = "Incompatible model interface or vocabulary. Use the Fluent IME scorer format.";

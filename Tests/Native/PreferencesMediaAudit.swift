@@ -42,7 +42,20 @@ import CRimeBridge
         try capture(root, "setup-install")
         button(L10n.installAction, in: root).onClick?(); button(L10n.installEnable, in: root).onClick?()
         precondition(button(L10n.setupNext, in: root).isEnabled)
-        button(L10n.setupNext, in: root).onClick?(); try capture(root, "setup-dictionary")
+        button(L10n.setupNext, in: root).onClick?()
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            func entranceOffset() -> Double? {
+                let group = all(root).compactMap { $0.layer?.animation(forKey: "FluentIME.Page.Entrance") as? CAAnimationGroup }.first
+                let slide = group?.animations?.compactMap { $0 as? CABasicAnimation }.first { $0.keyPath == "transform.translation.x" }
+                return (slide?.fromValue as? NSNumber)?.doubleValue
+            }
+            precondition(entranceOffset() == 40, "Setup forward transition missing")
+            button(L10n.setupPrevious, in: root).onClick?()
+            precondition(entranceOffset() == -40, "Setup backward transition missing")
+            button(L10n.setupNext, in: root).onClick?()
+        }
+        precondition(button(L10n.setupNext, in: root).role == .primary)
+        try capture(root, "setup-dictionary")
         button(L10n.setupNext, in: root).onClick?(); pump()
         all(root).compactMap { $0 as? FluentCheckBox }.first!.onValueChanged?(false)
         precondition(Preferences.shared.enabledInputModes == InputMode.allCases, "Wizard changed preferences before Finish")
@@ -192,7 +205,7 @@ import CRimeBridge
         button(L10n.clipboardClear, in: palette).onClick?(); precondition(history.entries.isEmpty)
         let cleared = try ClipboardVault(directory: dir, key: { _ in key }).load(); precondition(cleared.isEmpty)
         try capture(palette, "clipboard-cleared"); panel.orderOut(nil)
-        for page in ["fonts", "clipboard"] {
+        for page in ["fonts", "clipboard", "models"] {
             setenv("FLUENTIME_RENDER_PAGE", page, 1)
             let controller = try SettingsWindowController(engine: engine)
             try controller.render(to: output.appendingPathComponent("settings-" + page + ".png"))

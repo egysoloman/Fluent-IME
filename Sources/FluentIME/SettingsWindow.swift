@@ -116,7 +116,7 @@ final class PreviewTextView: NSTextView {
 }
 
 private enum SettingsPage: String, CaseIterable {
-    case home, language, modes, general, keys, appearance, dictionary, advanced, preview, fonts, clipboard
+    case home, language, modes, general, keys, appearance, dictionary, models, advanced, preview, fonts, clipboard
     var title: String {
         switch self {
         case .home: return L10n.settingsInputMethod
@@ -126,6 +126,7 @@ private enum SettingsPage: String, CaseIterable {
         case .keys: return L10n.settingsKeysTitle
         case .appearance: return L10n.settingsAppearanceTitle
         case .dictionary: return L10n.settingsDictionaryTitle
+        case .models: return L10n.modelsTitle
         case .advanced: return L10n.settingsAdvancedTitle
         case .preview: return L10n.previewTitle
         case .fonts: return L10n.fontTitle
@@ -141,6 +142,7 @@ private enum SettingsPage: String, CaseIterable {
         case .keys: return L10n.settingsKeysDetail
         case .appearance: return L10n.settingsAppearanceDetail
         case .dictionary: return L10n.settingsDictionaryDetail
+        case .models: return L10n.modelsDetail
         case .advanced: return L10n.settingsAdvancedDetail
         case .preview: return L10n.previewTitle
         case .fonts: return L10n.fontHint
@@ -152,12 +154,12 @@ private enum SettingsPage: String, CaseIterable {
         case .home, .language, .modes, .general: return .general
         case .keys, .preview: return .keyboard
         case .appearance, .fonts: return .appearance
-        case .dictionary: return .dictionary
+        case .dictionary, .models: return .dictionary
         case .clipboard: return .clipboard
         case .advanced: return .advanced
         }
     }
-    static let categories: [SettingsPage] = [.modes, .keys, .appearance, .clipboard, .advanced]
+    static let categories: [SettingsPage] = [.modes, .keys, .appearance, .models, .clipboard, .advanced]
 }
 
 /// Compact native settings: retain the reference content geometry without the Windows sidebar.
@@ -190,6 +192,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     private var sample: Composition { sampleInput.composition }
     private var fontSignature = FontPreferences.signature
     private var clipboardStatus = ""
+    private var modelStatus = ""
     private weak var neuralStatusLabel: NSTextField?
     private var neuralObserver: NSObjectProtocol?
     private func neuralStatusText() -> String {
@@ -604,12 +607,35 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             _ = label(L10n.dictionaryLanguageModel, y: 390, size: 20)
             toggle(L10n.dictionaryGrammar, y: 438, value: language.wanxiangGrammar) { language.wanxiangGrammar = $0 }
             _ = label(L10n.dictionaryGrammarHint, y: 506, size: 13, secondary: true)
-            toggle(L10n.dictionaryTransformer, y: 566, value: language.neuralRanking) { language.neuralRanking = $0 }
+            toggle(L10n.dictionaryTransformer, y: 566, value: NeuralRuntime.shared.ranker != nil && language.neuralRanking, enabled: NeuralRuntime.shared.ranker != nil) { language.neuralRanking = $0 }
             _ = label(NeuralRuntime.shared.ranker == nil ? L10n.dictionaryModelMissing : L10n.dictionaryModelHint, y: 634, size: 13, secondary: true)
             _ = label(L10n.dictionaryContextHint, y: 666, size: 13, secondary: true)
             neuralStatusLabel = label(neuralStatusText(), y: 706, size: 13, secondary: true)
             _ = action(L10n.dictionaryManage, y: 758, width: 300) { [weak self] in self?.manageDictionary() }
-            documentHeight = 838
+            _ = action(L10n.modelsTitle, y: 814, width: 300) { [weak self] in self?.navigate(.models) }
+            documentHeight = 894
+        case .models:
+            let selection = UserModels.library.selection
+            for (index, grammar) in [true, false].enumerated() {
+                let y = CGFloat(index * 290)
+                _ = label(grammar ? L10n.modelsGrammarTitle : L10n.dictionaryTransformer, y: y, size: 20)
+                let custom = grammar ? selection.grammar != nil : selection.transformer != nil
+                let missing = !grammar && Bundle.main.resourceURL.map { !FileManager.default.fileExists(atPath: $0.appendingPathComponent("Models/ChineseContextScorer.mlmodelc").path) } != false
+                _ = label(custom ? L10n.modelsCustom : (missing ? L10n.dictionaryModelMissing : L10n.modelsBundled), y: y + 44, size: 13, secondary: true)
+                paragraph(grammar ? L10n.modelsGrammarFormat : L10n.modelsTransformerFormat, y: y + 76, height: 64)
+                _ = action(L10n.modelsDownload, y: y + 152, width: 170) { UserModels.download(grammar: grammar) }
+                _ = action(L10n.modelsImport, x: 188, y: y + 152, width: 170) { [weak self] in
+                    guard let self else { return }
+                    UserModels.chooseImport(grammar: grammar, in: root) { [weak self] status in self?.modelStatus = status; self?.buildPage() }
+                }
+                let restore = action(L10n.modelsRestore, y: y + 204, width: 240) { [weak self] in
+                    guard let self else { return }
+                    UserModels.restore(grammar: grammar, in: root) { [weak self] status in self?.modelStatus = status; self?.buildPage() }
+                }
+                restore.isEnabled = custom
+            }
+            paragraph(modelStatus, y: 594, height: 60)
+            documentHeight = 674
         case .advanced:
             _ = label(L10n.advancedSystemInput, y: 0, size: 20)
             _ = label(L10n.advancedAddInputHint, y: 48)

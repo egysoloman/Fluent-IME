@@ -3,30 +3,6 @@ import Carbon
 import FluentKit
 import FluentIMECore
 
-private final class ModeBadgeButton: NSButton {
-    var selected = false
-    var theme = IMEThemeObservation.current
-    var invoke: (() -> Void)?
-    override var acceptsFirstResponder: Bool { false }
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    init(mode: InputMode) {
-        super.init(frame: .zero)
-        title = mode.badge; isBordered = false; target = self; action = #selector(clicked)
-        setAccessibilityLabel(mode.title)
-    }
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    @objc private func clicked() { invoke?() }
-    override func draw(_ dirtyRect: NSRect) {
-        if selected {
-            theme.accent.setFill()
-            NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 13, yRadius: 13).fill()
-        }
-        let attributes: [NSAttributedString.Key: Any] = [.font: IMEFont.font(ofSize: 13, weight: .semibold), .foregroundColor: selected ? NSColor.white : theme.textPrimary]
-        let size = (title as NSString).size(withAttributes: attributes)
-        (title as NSString).draw(at: NSPoint(x: (bounds.width-size.width)/2, y: (bounds.height-size.height)/2), withAttributes: attributes)
-    }
-}
-
 /// Small nonactivating cursor accessory. Clicking expands only the enabled modes.
 final class InputModePanel: NSPanel {
     private let surface = NSView()
@@ -47,7 +23,7 @@ final class InputModePanel: NSPanel {
         isFloatingPanel = true; level = IMEPopupLevel.emoji; shadow.level = level
         hidesOnDeactivate = false; animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        surface.wantsLayer = true; surface.layer?.cornerRadius = 14; surface.layer?.masksToBounds = true
+        surface.wantsLayer = true; surface.layer?.cornerRadius = 8; surface.layer?.masksToBounds = true
         surface.addSubview(material); contentView = surface
         observation = IMEThemeObservation { [weak self] _ in
             guard let self else { return }
@@ -72,16 +48,18 @@ final class InputModePanel: NSPanel {
         material.fallbackColor = expanded ? theme.flyoutSurfaceFill : .clear; material.state = .active
         surface.layer?.borderWidth = expanded ? 0.5 : 0
         surface.layer?.borderColor = theme.surfaceStrokeFlyout.cgColor
-        let size = NSSize(width: CGFloat(shown.count)*34 + (expanded ? 4 : 0), height: 28)
+        let padding: CGFloat = expanded ? 4 : 0
+        surface.layer?.cornerRadius = expanded ? 8 : 4
+        let size = NSSize(width: CGFloat(shown.count)*38 + padding*2, height: 28 + padding*2)
         guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) ?? NSScreen.main else { return }
         setFrame(PanelPlacement.frame(size: size, caret: anchor, screen: screen.visibleFrame, gap: 5), display: false)
         material.frame = surface.bounds
         for (index, value) in shown.enumerated() {
-            let button = ModeBadgeButton(mode: value)
-            button.theme = theme; button.selected = value == mode
-            button.frame = NSRect(x: CGFloat(index)*34 + (expanded ? 2 : 0), y: 0, width: 34, height: 28)
+            let button = FluentButton(title: value.badge, role: value == mode ? .primary : .standard)
+            button.theme = theme; button.refusesFirstResponder = true
+            button.frame = NSRect(x: CGFloat(index)*38 + padding + 1, y: padding, width: 36, height: 28)
             button.setAccessibilityLabel(expanded ? value.title : L10n.modeIndicatorAccessibility(value.title))
-            button.invoke = { [weak self] in
+            button.onClick = { [weak self] in
                 guard let self else { return }
                 if !self.expanded { self.expanded = true; self.rebuild(); self.scheduleDismiss(after: 8) }
                 else { let action = self.selection; self.dismiss(); action?(value) }
@@ -115,6 +93,7 @@ final class SystemInputModeIndicator {
         sourceObserver = DistributedNotificationCenter.default().addObserver(forName: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String), object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
             let id = self.sourceID, fromFluent = self.previousSource.hasPrefix("org.fluentime.")
+            guard id != self.previousSource else { return }
             self.previousSource = id
             if fromFluent || id.hasPrefix("org.fluentime.") { self.showCurrent() }
             else { self.panel.dismiss() }
@@ -156,7 +135,8 @@ final class SystemInputModeIndicator {
                     if TISSelectInputSource(source) != noErr { self.requestedMode = nil }
                 } else { self.requestedMode = nil }
             }
-            self.showCurrent()
+            // The input-session update or TIS notification displays the new
+            // mode once. Do not re-open the panel from its own click callback.
         }
     }
 }

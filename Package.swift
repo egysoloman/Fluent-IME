@@ -3,7 +3,7 @@ import PackageDescription
 import Foundation
 
 let environment = ProcessInfo.processInfo.environment
-let fluentPath = environment["FLUENTKIT_PATH"] ?? ".build/dependencies/fluentkit-5811513/WinUI-macOS"
+let fluentPath = environment["FLUENTKIT_PATH"] ?? ".build/dependencies/fluentkit-01c8e66/WinUI-macOS"
 let rimePrefix = environment["RIME_PREFIX"] ?? (FileManager.default.fileExists(atPath: "/opt/homebrew/opt/librime") ? "/opt/homebrew/opt/librime" : "/usr/local/opt/librime")
 
 let package = Package(

@@ -525,7 +525,7 @@ final class EngineTests: XCTestCase {
     }
 
     func testShiftLanguageToggleAndEnglishPassthrough() throws {
-        let input = try InputSession(engine: XCTUnwrap(Self.engine))
+        let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { InputOptions(enabledModes: [.simplifiedChinese, .english]) })
         XCTAssertFalse(input.handle(key("", code: 56, flags: .shift, type: .flagsChanged)))
         XCTAssertTrue(input.handle(key("", code: 56, type: .flagsChanged)))
         XCTAssertFalse(input.isChinese)
@@ -543,12 +543,32 @@ final class EngineTests: XCTestCase {
         input.onCommit = { commits.append($0) }
         for character in "jiux" { _ = input.handle(key(String(character))) }
         XCTAssertTrue(input.composition.isComposing)
-        input.toggleLanguage()
+        input.selectMode(.english)
         XCTAssertEqual(commits, ["jiux"])
         XCTAssertFalse(input.composition.isComposing)
         XCTAssertFalse(input.isChinese)
         input.finishRaw()
         XCTAssertEqual(commits, ["jiux"])
+    }
+
+    func testShiftCyclesEveryEnabledModeAndPreservesChineseComposition() throws {
+        for mask in 1..<8 {
+            let modes = InputMode.allCases.enumerated().filter { mask & (1 << $0.offset) != 0 }.map(\.element)
+            let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { InputOptions(learning: false, enabledModes: modes, defaultMode: modes[0]) })
+            for index in 1...(modes.count * 2) {
+                _ = input.handle(key("", code: 56, flags: .shift, type: .flagsChanged))
+                _ = input.handle(key("", code: 56, type: .flagsChanged))
+                XCTAssertEqual(input.mode, modes[index % modes.count])
+            }
+        }
+        let input = try InputSession(engine: XCTUnwrap(Self.engine))
+        var commits: [String] = []; input.onCommit = { commits.append($0) }
+        for character in "nihao" { _ = input.handle(key(String(character))) }
+        input.toggleLanguage()
+        XCTAssertEqual(input.mode, .traditionalChinese)
+        XCTAssertEqual(input.composition.rawInput, "nihao"); XCTAssertTrue(commits.isEmpty)
+        input.toggleLanguage()
+        XCTAssertEqual(input.mode, .english); XCTAssertEqual(commits, ["nihao"])
     }
 
     func testNativeCapsLockFinalizesRawAndPassesUppercaseThrough() throws {
@@ -614,7 +634,7 @@ final class EngineTests: XCTestCase {
         var output = ""; input.onCommit = { output += $0 }; input.choose(index)
         XCTAssertEqual(output, "漢語")
         input.toggleLanguage(); XCTAssertEqual(input.mode, .english)
-        input.toggleLanguage(); XCTAssertEqual(input.mode, .traditionalChinese)
+        input.toggleLanguage(); XCTAssertEqual(input.mode, .simplifiedChinese)
         options.enabledModes = [.simplifiedChinese, .english]; input.applyOptions()
         XCTAssertEqual(input.mode, .simplifiedChinese)
         input.selectMode(.traditionalChinese); XCTAssertEqual(input.mode, .simplifiedChinese)

@@ -20,6 +20,17 @@ FRAMEWORKS = CONTENTS / "Frameworks"
 def run(*args):
     subprocess.run([str(arg) for arg in args], check=True)
 
+def copy_fluentkit_notices(source, destination):
+    """Carry upstream attribution with the selected framework, including overrides."""
+    files = [(source / "LICENSE", "FluentKit-MIT.txt")]
+    if (source / "NOTICE.md").is_file():
+        files.append((source / "NOTICE.md", "FluentKit-NOTICE.md"))
+    for notice in sorted((source / "LICENSES").glob("*.txt")):
+        files.append((notice, "FluentKit-" + notice.name))
+    for notice, name in files:
+        shutil.copy2(notice, destination / name)
+    return ["Licenses/" + name for _, name in files]
+
 run("python3", ROOT / "scripts/localize.py", "--check")
 run("python3", ROOT / "scripts/generate-emoji-opencc.py", "--check")
 
@@ -88,6 +99,7 @@ for binary in [executable, *FRAMEWORKS.rglob("*.dylib")]:
 with (CONTENTS / "Info.plist").open("rb") as file:
     info = plistlib.load(file)
 info["LSMinimumSystemVersion"] = ".".join(map(str, max(minimums)))
+info["FluentIMEEdition"] = "full" if (RESOURCES / "Models/ChineseContextScorer.mlmodelc").exists() else "lite"
 with (CONTENTS / "Info.plist").open("wb") as file:
     plistlib.dump(info, file)
 licenses = RESOURCES / "Licenses"
@@ -99,9 +111,16 @@ for folder, name in [("wanxiang-dictionary", "sources.json"), ("wanxiang-diction
     shutil.copy2(ROOT / "Vendor" / folder / name, licenses / (folder + "-" + name))
 shutil.copy2(ROOT / "Resources/FluentEmoji/LICENSE", licenses / "Fluent-Emoji-MIT.txt")
 shutil.copy2(ROOT / "Vendor/wanxiang/LICENSE", licenses / "Wanxiang-CC-BY-4.0.txt")
-for source, name in [(ROOT / "LICENSE", "FluentIME-MIT.txt"),
-                     (Path(os.environ.get("FLUENTKIT_PATH", str(ROOT / ".build/dependencies/fluentkit-5811513/WinUI-macOS"))) / "LICENSE", "FluentKit-MIT.txt")]:
-    shutil.copy2(source, licenses / name)
+shutil.copy2(ROOT / "LICENSE", licenses / "FluentIME-MIT.txt")
+fluent_source = Path(os.environ.get("FLUENTKIT_PATH", str(ROOT / ".build/dependencies/fluentkit-01c8e66/WinUI-macOS")))
+fluent_notices = copy_fluentkit_notices(fluent_source, licenses)
+fluent_provenance = json.loads((licenses / "fluentkit-source.json").read_text())
+components = json.loads((licenses / "components.json").read_text())
+for component in components:
+    if component["name"] == "FluentKit":
+        component["revision"] = fluent_provenance["revision"]
+        component["notices"] = fluent_notices + ["Licenses/fluentkit-source.json"]
+(licenses / "components.json").write_text(json.dumps(components, indent=2, ensure_ascii=False) + "\n")
 for source in (ROOT / "Vendor/rime-pinyin-simp").glob("*"):
     if source.name.lower().startswith(("license", "copying", "readme", "authors", "notice")):
         shutil.copy2(source, licenses / ("rime-pinyin-simp-" + source.name))

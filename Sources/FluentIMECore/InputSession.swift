@@ -45,12 +45,8 @@ public final class InputSession {
     public let rime: RimeSession
     public private(set) var mode: InputMode = .simplifiedChinese
     public var isChinese: Bool { mode.isChinese }
-    private var lastChineseMode: InputMode = .simplifiedChinese
     public var nextMode: InputMode {
         let modes = InputMode.normalized(options().enabledModes)
-        if mode.isChinese, modes.contains(.english) { return .english }
-        if mode == .english, modes.contains(lastChineseMode) { return lastChineseMode }
-        if mode == .english, let chinese = modes.first(where: \.isChinese) { return chinese }
         return modes[(modes.firstIndex(of: mode).map { $0 + 1 } ?? 0) % modes.count]
     }
     private var shift = ShiftTapTracker()
@@ -140,7 +136,6 @@ public final class InputSession {
         let initialMode = options().initialMode
         mode = initialMode
         appliedOptions = languageOptions?(initialMode) ?? options()
-        if mode.isChinese { lastChineseMode = mode }
         guard rime.selectSchema(appliedOptions.schemaID) else { throw EngineError.sessionUnavailable }
         rime.setOption("ascii_punct", appliedOptions.englishPunctuation)
         rime.setOption("traditional", mode == .traditionalChinese)
@@ -340,7 +335,6 @@ public final class InputSession {
         else { resetContext() }
         mode = next
         applyOptions(preservingComposition: next.isChinese)
-        if next.isChinese { lastChineseMode = next }
         rime.setOption("traditional", next == .traditionalChinese)
         expandedKey = ""; expandedItems = []
         publish(selectFirst: true)

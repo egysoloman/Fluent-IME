@@ -16,9 +16,11 @@ final class FluentInputController: IMKInputController {
     private var sourceObserver: NSObjectProtocol?
     private var anchorGeneration = 0
     private var compositionAnchor: NSRect?
-    private var indicatedMode: InputMode?
+    private var modeIndicatorRequest = ModeIndicatorRequest()
 
     override func activateServer(_ sender: Any!) {
+        modeIndicatorRequest.deactivate()
+        SystemInputModeIndicator.shared.panel.dismiss()
         invalidateAnchor()
         activeClient = sender as? IMKTextInput
         if input == nil {
@@ -26,7 +28,7 @@ final class FluentInputController: IMKInputController {
             catch { NSLog("Fluent IME: %@", error.localizedDescription); return }
         }
         input?.resetContext()
-        indicatedMode = input?.mode
+        if let input { modeIndicatorRequest.activate(mode: input.mode) }
         input?.onCommit = { [weak self] text in
             guard let self else { return }
             self.activeClient?.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
@@ -52,7 +54,10 @@ final class FluentInputController: IMKInputController {
                 self.input?.finishRaw(); self.panel.orderOut(nil)
             }
         }
-        DispatchQueue.main.async { [weak self] in self?.showModeIndicator() }
+        // Focus alone must not produce a mode hint.
+        if let input, let client = activeClient, let caret = caretRect(for: client) {
+            SystemInputModeIndicator.shared.remember(input: input, caret: caret)
+        }
     }
 
     override func recognizedEvents(_ sender: Any!) -> Int {
@@ -62,7 +67,10 @@ final class FluentInputController: IMKInputController {
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event else { return false }
-        if event.type == .keyDown || event.type == .leftMouseDown || event.type == .rightMouseDown { SystemInputModeIndicator.shared.panel.dismiss() }
+        if event.type == .keyDown || event.type == .leftMouseDown || event.type == .rightMouseDown {
+            modeIndicatorRequest.cancel()
+            SystemInputModeIndicator.shared.panel.dismiss()
+        }
         if event.type == .leftMouseDown || event.type == .rightMouseDown { input?.finish(); input?.resetContext(); return false }
         if input == nil { activateServer(sender) }
         activeClient = sender as? IMKTextInput
@@ -82,6 +90,8 @@ final class FluentInputController: IMKInputController {
         else { input?.finish() }
     }
     override func deactivateServer(_ sender: Any!) {
+        modeIndicatorRequest.deactivate()
+        SystemInputModeIndicator.shared.panel.dismiss()
         if latinSourceIsSelected { input?.finishRaw() } else { input?.finish() }
         input?.resetContext()
         if let input, let client = activeClient, let caret = caretRect(for: client) {
@@ -91,13 +101,15 @@ final class FluentInputController: IMKInputController {
         Preferences.shared.expandedCandidates = false
         activeClient = nil
         invalidateAnchor()
-        DispatchQueue.main.async { SystemInputModeIndicator.shared.showCurrent() }
     }
     override func hidePalettes() {
+        modeIndicatorRequest.cancel()
         Preferences.shared.expandedCandidates = false
         invalidateAnchor(); panel.orderOut(nil); SystemInputModeIndicator.shared.panel.dismiss()
     }
     override func inputControllerWillClose() {
+        modeIndicatorRequest.deactivate()
+        SystemInputModeIndicator.shared.panel.dismiss()
         input?.finish()
         emojiPanel.dismiss()
         panel.orderOut(nil)
@@ -117,9 +129,12 @@ final class FluentInputController: IMKInputController {
     private func update(_ composition: Composition) {
         guard let client = activeClient else { return }
         if composition.isComposing { SystemInputModeIndicator.shared.panel.dismiss() }
-        if indicatedMode != input?.mode {
-            indicatedMode = input?.mode
-            DispatchQueue.main.async { [weak self] in self?.showModeIndicator() }
+        if let mode = input?.mode, let request = modeIndicatorRequest.changed(to: mode) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.activeClient === client,
+                      self.modeIndicatorRequest.accepts(request) else { return }
+                self.showModeIndicator()
+            }
         }
         let changed = !hadMarkedText || markedPreedit != composition.preedit || markedCursor != composition.cursorUTF16
         anchorGeneration += 1

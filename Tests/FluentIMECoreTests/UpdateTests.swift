@@ -18,6 +18,15 @@ final class UpdateTests: XCTestCase {
         XCTAssertTrue(GitHubUpdateService.trustedAsset(URL(string: "https://github.com/egysoloman/Fluent-IME/releases/download/v0.6.0/a.dmg")!))
         for value in ["http://github.com/egysoloman/Fluent-IME/releases/download/a", "https://github.com/other/Fluent-IME/releases/download/a", "https://github.com.example.com/egysoloman/Fluent-IME/releases/download/a", "https://user:secret@github.com/egysoloman/Fluent-IME/releases/download/a"] { XCTAssertFalse(GitHubUpdateService.trustedAsset(URL(string: value)!)) }
     }
+    func testEditionsSelectSeparateInstallersAndManifests() throws {
+        let names = ["Fluent-IME-0.6.0-Setup.dmg", "Fluent-IME-0.6.0-Full-Setup.dmg", "release.json", "release-full.json"]
+        let data = try JSONSerialization.data(withJSONObject: ["tag_name": "v0.6.0", "draft": false, "prerelease": false, "assets": names.map { ["name": $0, "size": 8, "browser_download_url": "https://github.com/egysoloman/Fluent-IME/releases/download/v0.6.0/" + $0] }])
+        let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+        XCTAssertEqual(release.installer(for: .lite)?.name, names[0])
+        XCTAssertEqual(release.installer(for: .full)?.name, names[1])
+        XCTAssertEqual(release.manifest(for: .lite)?.name, names[2])
+        XCTAssertEqual(release.manifest(for: .full)?.name, names[3])
+    }
     func testChecksumAndSizeRejectCorruptedDownloads() throws {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: file) }

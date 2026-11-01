@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
-"""Extract the verified upstream commit, never a live working tree."""
+"""Prepare the pinned upstream commit or record an explicit developer override."""
 from pathlib import Path
-import hashlib,json,os,subprocess,tarfile
+import hashlib,json,os,subprocess,sys,tarfile
 root=Path(__file__).resolve().parent.parent
-sha='5811513d9820193c3c46ae8ee89b763641fa6686'
-dest=root/'.build/dependencies/fluentkit-5811513/WinUI-macOS'
+sha='01c8e66094df7ca013833ffce8a8649fa6902399'
+dest=root/'.build/dependencies/fluentkit-01c8e66/WinUI-macOS'
+manifest_path=root/'Resources/Licenses/fluentkit-source.json'
+override=os.environ.get('FLUENTKIT_PATH')
+if override:
+    supplied=Path(override).expanduser().resolve()
+    if not (supplied/'Package.swift').is_file():
+        raise SystemExit('FLUENTKIT_PATH must contain a Swift package: '+str(supplied))
+    manifest={'revision':None,'archive_sha256':None,'snapshot':'developer override',
+              'scope':'FLUENTKIT_PATH supplied by the developer; not verified against the pinned commit.'}
+    manifest_path.write_text(json.dumps(manifest,indent=2)+'\n')
+    print('FluentKit developer override: '+str(supplied))
+    sys.exit(0)
 archive=dest.parent/'source.tar'
 source=Path(os.environ.get('FLUENTKIT_SOURCE',str(Path.home()/'Documents/WinUI-macOS')))
 if not (dest/'.fluentime-revision').is_file():
@@ -24,5 +35,5 @@ with tarfile.open(archive) as tar:
         if member.isfile():
             assert hashlib.sha256((dest/member.name).read_bytes()).digest()==hashlib.sha256(tar.extractfile(member).read()).digest(),member.name
 manifest={'revision':sha,'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),'snapshot':str(dest.relative_to(root)),'scope':'Committed source only; excludes later working-tree changes.'}
-(root/'Resources/Licenses/fluentkit-source.json').write_text(json.dumps(manifest,indent=2)+'\n')
+manifest_path.write_text(json.dumps(manifest,indent=2)+'\n')
 print('FluentKit pinned and verified: '+sha)
