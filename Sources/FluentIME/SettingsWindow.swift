@@ -67,11 +67,13 @@ private final class SettingsNavigationButton: NSButton {
     var isCurrent = false
     var theme = Preferences.shared.theme
     private var hovered = false
+    private var iconSize: CGFloat = 22
     override var isFlipped: Bool { true }
     init(title: String, detail: String = "", glyph: SettingsGlyph, selected: Bool = false, theme: FluentTheme) {
         super.init(frame: .zero)
         self.title = title; self.detail = detail; self.isCurrent = selected; self.theme = theme
-        image = glyph.image(color: theme.textPrimary)
+        iconSize = glyph == .updates ? 28 : 22
+        image = glyph.image(color: theme.textPrimary, pointSize: iconSize)
         isBordered = false; target = self; action = #selector(clicked)
         setAccessibilityLabel(detail.isEmpty ? title : L10n.navigationItem(title, detail))
     }
@@ -94,7 +96,7 @@ private final class SettingsNavigationButton: NSButton {
         }
         let hasDetail = !detail.isEmpty
         if let image {
-            FluentIconSource.image(image).draw(in: NSRect(x: 10, y: hasDetail ? 12 : 8, width: 22, height: 22), color: theme.textPrimary)
+            FluentIconSource.image(image).draw(in: NSRect(x: 21 - iconSize / 2, y: (hasDetail ? 23 : 19) - iconSize / 2, width: iconSize, height: iconSize), color: theme.textPrimary)
         }
         (title as NSString).draw(at: NSPoint(x: Self.textInset, y: hasDetail ? 7 : 8), withAttributes: [.font: IMEFont.font(ofSize: 14), .foregroundColor: theme.textPrimary])
         if hasDetail {

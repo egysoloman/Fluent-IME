@@ -106,7 +106,7 @@
 "keys.commitCodeHint" = "Switching to English commits the raw letters being composed.";
 "keys.commitRaw" = "Commit raw pinyin letters";
 "keys.confirm" = "Commit highlighted candidate";
-"keys.expansionHint" = "Press ] while typing to expand the grid, [ / ] to page, or [ on the top row to collapse.";
+"keys.expansionHint" = "Press ] while typing to expand the grid, [ / ] to move between rows, or [ on the top row to collapse.";
 "keys.keepSelection" = "Keep highlight position when paging";
 "keys.keepSelectionHint" = "When off, paging always selects the first candidate on the new page.";
 "keys.modeSwitch" = "Mode switching";

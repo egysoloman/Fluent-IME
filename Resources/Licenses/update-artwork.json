@@ -30,5 +30,11 @@
     "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/assets/History/SVG/ic_fluent_history_24_regular.svg",
     "svg_sha256": "07d75bb67b1b81cf504b86952cf90fc7af2de44ee6b335595ee3806047fc45b4",
     "sha256": "c5d0b58aef8178ca9ea440f93ca00934c0aa7b7ddda3bc965a400b3c24eaa2ef"
+  },
+  {
+    "file": "update-preview.pdf",
+    "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/assets/Megaphone/SVG/ic_fluent_megaphone_24_regular.svg",
+    "svg_sha256": "f3f0a8e008e429e2fae7a16bbc0c2f2fa643fe781501dcbb0544c55d61fb3b9c",
+    "sha256": "89bef0b346ed7af8202fbd3ef77240c8bf0cbe404e72b46cac561f26ff881d9a"
   }
 ]

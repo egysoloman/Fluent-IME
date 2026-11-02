@@ -324,7 +324,7 @@ public extension L10n {
     static var keysCommitRaw: String { text("keys.commitRaw") }
     /// 上屏当前高亮的候选词
     static var keysConfirm: String { text("keys.confirm") }
-    /// 输入时按“】”展开更多候选；展开后用“【 / 】”翻页，在首行按“【”收起。
+    /// 输入时按“】”展开更多候选；展开后用“【 / 】”上下换行，在首行按“【”收起。
     static var keysExpansionHint: String { text("keys.expansionHint") }
     /// 翻页时保留候选词高亮位置
     static var keysKeepSelection: String { text("keys.keepSelection") }

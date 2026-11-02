@@ -106,7 +106,7 @@
 "keys.commitCodeHint" = "切換為英文時，直接送出已輸入的字母。";
 "keys.commitRaw" = "直接送出原始拼音字母";
 "keys.confirm" = "送出目前反白的候選字詞";
-"keys.expansionHint" = "輸入時按「】」展開更多候選；展開後用「【 / 】」翻頁，在首列按「【」收合。";
+"keys.expansionHint" = "輸入時按「】」展開更多候選；展開後用「【 / 】」上下換列，在首列按「【」收合。";
 "keys.keepSelection" = "翻頁時保留候選字選取位置";
 "keys.keepSelectionHint" = "關閉後，每次翻頁都會預設選取該頁的第一個候選字詞。";
 "keys.modeSwitch" = "中英文切換";

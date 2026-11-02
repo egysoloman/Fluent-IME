@@ -7,7 +7,6 @@ final class CandidateChoice: NSButton {
     var language: InputMode = .simplifiedChinese
     var number = 1
     var selected = false
-    var compactNumber = false
     var theme = FluentTheme.current
     var invoke: (() -> Void)?
     var onHover: (() -> Void)?
@@ -38,7 +37,7 @@ final class CandidateChoice: NSButton {
             theme.accent.setFill()
             NSBezierPath(roundedRect: NSRect(x: 0.5, y: 6, width: 3, height: bounds.height - 12), xRadius: 1.5, yRadius: 1.5).fill()
         }
-        let numberAttributes: [NSAttributedString.Key: Any] = [.font: IMEFont.font(ofSize: compactNumber ? 8 : 14.5, language: .english), .foregroundColor: theme.textSecondary]
+        let numberAttributes: [NSAttributedString.Key: Any] = [.font: IMEFont.font(ofSize: 14.5, language: .english), .foregroundColor: theme.textSecondary]
         let label = "\(number)" as NSString
         let numberSize = label.size(withAttributes: numberAttributes)
         if number > 0 { label.draw(at: NSPoint(x: 12, y: (bounds.height - numberSize.height) / 2), withAttributes: numberAttributes) }
@@ -163,7 +162,6 @@ final class CandidateView: NSView {
             else { button = CandidateChoice(); choices.append(button); document.addSubview(button) }
             button.language = language; button.candidate = candidate; button.number = index + 1
             button.selected = index == composition.highlighted; button.theme = theme
-            button.compactNumber = expanded
             button.setAccessibilityLabel(L10n.candidateItem(index + 1, candidate.text))
             button.setAccessibilityValue(button.selected ? L10n.candidateSelected : "")
             button.toolTip = candidate.comment.isEmpty ? candidate.text : "\(candidate.text) · \(candidate.comment)"
@@ -242,7 +240,12 @@ final class CandidateView: NSView {
     }
     private func scrolled() {
         guard expanded else { return }
-        let first = min(choices.count, max(0, Int(ceil(strip.contentView.bounds.minY / gridRowHeight))) * columns)
+        let visible = strip.contentView.bounds
+        // Keyboard navigation numbers the active row. After wheel scrolling
+        // moves that row out of view, number the first complete visible row.
+        let selected = choices.firstIndex { $0.selected && visible.contains($0.frame) }
+        let first = selected.map { ($0 / columns) * columns }
+            ?? min(choices.count, max(0, Int(ceil(visible.minY / gridRowHeight))) * columns)
         for (index, choice) in choices.enumerated() {
             choice.number = (first..<first + columns).contains(index) ? index - first + 1 : 0
             choice.setAccessibilityLabel(choice.number > 0 ? "\(choice.number)，\(choice.candidate.text)" : choice.candidate.text)

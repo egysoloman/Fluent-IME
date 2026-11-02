@@ -6,11 +6,24 @@ import FluentIMECore
 /// The caller uses FluentIconSource's aspect-fit rendering instead of stretching NSImage.
 enum SettingsGlyph {
     case general, keyboard, appearance, dictionary, advanced, clipboard, updates, updatePreview, updateHistory
-    func image(color: NSColor) -> NSImage {
-        if self == .updates || self == .updateHistory {
-            let asset: UpdateArtwork = self == .updates ? .sync : .history
-            if let url = asset.url, let image = NSImage(contentsOf: url),
-               let tinted = FluentIconSource.image(image, tint: .template).image(pointSize: 22, color: color) { return tinted }
+    func image(color: NSColor, pointSize: CGFloat = 22) -> NSImage {
+        if self == .updates || self == .updateHistory || self == .updatePreview {
+            let asset: UpdateArtwork = self == .updates ? .sync : self == .updateHistory ? .history : .preview
+            if let url = asset.url, let image = NSImage(contentsOf: url) {
+                return NSImage(size: NSSize(width: pointSize, height: pointSize), flipped: false) { _ in
+                    NSGraphicsContext.saveGraphicsState()
+                    if self == .updates {
+                        let rotation = NSAffineTransform()
+                        rotation.translateX(by: pointSize / 2, yBy: pointSize / 2)
+                        rotation.rotate(byDegrees: 90)
+                        rotation.translateX(by: -pointSize / 2, yBy: -pointSize / 2)
+                        rotation.concat()
+                    }
+                    FluentIconSource.image(image, tint: .template).draw(in: NSRect(x: 0, y: 0, width: pointSize, height: pointSize), color: color)
+                    NSGraphicsContext.restoreGraphicsState()
+                    return true
+                }
+            }
         }
         if self == .clipboard { return IMEGlyph.clipboard.image(color: color) }
         return NSImage(size: NSSize(width: 22, height: 22), flipped: true) { _ in
@@ -18,15 +31,10 @@ enum SettingsGlyph {
             let p = NSBezierPath(); p.lineWidth = 1.15; p.lineCapStyle = .round; p.lineJoinStyle = .round
             switch self {
             case .clipboard: break
-            case .updatePreview:
-                p.move(to: NSPoint(x: 3, y: 8)); p.line(to: NSPoint(x: 9, y: 8)); p.line(to: NSPoint(x: 18, y: 3))
-                p.line(to: NSPoint(x: 18, y: 18)); p.line(to: NSPoint(x: 9, y: 13)); p.line(to: NSPoint(x: 3, y: 13)); p.close()
-                p.move(to: NSPoint(x: 6, y: 13)); p.line(to: NSPoint(x: 7.5, y: 19)); p.line(to: NSPoint(x: 10, y: 19)); p.line(to: NSPoint(x: 9, y: 13)); p.stroke()
-            case .updates, .updateHistory: break
+            case .updates, .updateHistory, .updatePreview: break
             case .general:
                 ("A" as NSString).draw(at: NSPoint(x: 0, y: 5), withAttributes: [.font: NSFont.systemFont(ofSize: 17, weight: .regular), .foregroundColor: color])
                 ("字" as NSString).draw(at: NSPoint(x: 11, y: -1), withAttributes: [.font: IMEFont.font(ofSize: 11), .foregroundColor: color])
-                p.move(to: NSPoint(x: 12, y: 12)); p.line(to: NSPoint(x: 18, y: 12)); p.stroke()
             case .keyboard:
                 let border = NSBezierPath(roundedRect: NSRect(x: 1, y: 4, width: 20, height: 14), xRadius: 2, yRadius: 2)
                 border.lineWidth = 1.3; border.stroke()

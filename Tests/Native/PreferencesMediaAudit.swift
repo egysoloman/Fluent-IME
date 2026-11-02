@@ -222,9 +222,11 @@ import CRimeBridge
         let cleared = try ClipboardVault(directory: dir, key: { _ in key }).load(); precondition(cleared.isEmpty)
         try capture(palette, "clipboard-cleared"); panel.orderOut(nil)
         final class FakeUpdateService: IMEUpdateService {
+            let notes: String
+            init(notes: String = "## Improvements\n- Candidate motion follows the selected language.\n- Clipboard storage no longer blocks the interface.") { self.notes = notes }
             func fixture(_ channel: UpdateChannel) -> GitHubRelease {
                 GitHubRelease(tag_name: channel == .preview ? "v99.1.0-beta.1" : "v99.0.0", draft: false, prerelease: channel == .preview, assets: [],
-                    body: "## Improvements\n- Candidate motion follows the selected language.\n- Clipboard storage no longer blocks the interface.", published_at: "2026-11-02T00:00:00Z")
+                    body: notes, published_at: "2026-11-02T00:00:00Z")
             }
             func latest(channel: UpdateChannel) async throws -> GitHubRelease? {
                 try await Task.sleep(nanoseconds: channel == .preview ? 100_000_000 : 1_200_000_000)
@@ -251,6 +253,10 @@ import CRimeBridge
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.65))
         precondition(updater.canInstall)
         try capture(updateView, "update-available")
+        let notesText = all(updateView).compactMap { $0 as? NSTextView }.first!
+        let notesScroll = notesText.enclosingScrollView!, notesCard = notesScroll.superview!
+        precondition(abs(notesCard.bounds.height - notesScroll.frame.maxY - 16) < 1, "Notes card must fit its content")
+        let shortNotesHeight = notesCard.frame.height
         let historyPage = UpdateHistoryPageView(coordinator: updater)
         historyPage.wantsLayer = true; historyPage.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
         updateWindow.contentView = historyPage; pump()
@@ -323,6 +329,19 @@ import CRimeBridge
             precondition(icons.contains { $0.accessibilityLabel() == expected }, "Wrong status artwork")
             try capture(view, failed ? "update-warning-artwork" : "update-current-artwork")
         }
+        let longBody = (1...12).map { "- Change \($0): Expanded candidates move one row at a time and keep the numbered row aligned with the selection, while the row numbers stay the same size as in the collapsed popup." }.joined(separator: "\n")
+        let longUpdater = UpdateCoordinator(service: FakeUpdateService(notes: longBody), defaults: updateDefaults)
+        let longView = UpdatePageView(coordinator: longUpdater)
+        updateWindow.contentView = longView; longUpdater.check()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 1.5)); longView.layoutSubtreeIfNeeded()
+        let longText = all(longView).compactMap { $0 as? NSTextView }.first!
+        let longScroll = longText.enclosingScrollView!, longCard = longScroll.superview!
+        precondition(longCard.frame.height > shortNotesHeight + 100, "Long release notes must grow the card")
+        precondition(!longScroll.hasVerticalScroller, "Release notes use the page's scroll view")
+        let wideHeight = longCard.frame.height, widePageHeight = longView.preferredHeight
+        updateWindow.setContentSize(NSSize(width: 400, height: 800)); pump(); longView.layoutSubtreeIfNeeded()
+        precondition(longCard.frame.height > wideHeight && longView.preferredHeight > widePageHeight, "Wrapped notes must reflow when the window narrows: width=\(longView.bounds.width), card=\(wideHeight)→\(longCard.frame.height), page=\(widePageHeight)→\(longView.preferredHeight)")
+        precondition(abs(longCard.bounds.height - longScroll.frame.maxY - 16) < 1)
         updateWindow.orderOut(nil)
         for page in ["fonts", "clipboard", "models", "updates", "updateHistory", "advanced"] {
             setenv("FLUENTIME_RENDER_PAGE", page, 1)

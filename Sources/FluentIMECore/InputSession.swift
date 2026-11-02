@@ -60,7 +60,7 @@ public final class InputSession {
     private var expandedKey = ""
     private var expandedItems: [Candidate] = []
     private var expandedHasMore = false
-    private var visibleStart = 0
+    private var numberedRowStart = 0
     private var expandedColumns = 6
     private var pinyinPreedit = PinyinPreedit()
     private let rankingClock: () -> TimeInterval
@@ -107,7 +107,8 @@ public final class InputSession {
         guard options().expandedCandidates, result.isComposing else { return result }
         let key = result.rawInput + "\u{0}" + result.preedit + "\u{0}" + appliedOptions.schemaID
         if key != expandedKey {
-            expandedKey = key; expandedItems = []; expandedHasMore = true; visibleStart = 0
+            expandedKey = key; expandedItems = []; expandedHasMore = true
+            numberedRowStart = ((result.page * result.pageSize + result.highlighted) / expandedColumns) * expandedColumns
         }
         let selected = result.page * result.pageSize + result.highlighted
         while expandedItems.count <= selected && expandedHasMore { appendCandidates() }
@@ -127,7 +128,7 @@ public final class InputSession {
         appendCandidates(); onUpdate?(composition)
     }
     public func setCandidateViewport(start: Int, columns: Int) {
-        visibleStart = max(0, start); expandedColumns = max(1, min(9, columns))
+        numberedRowStart = max(0, start); expandedColumns = max(1, min(9, columns))
     }
 
     public init(engine: RimeEngine, options: @escaping () -> InputOptions = { InputOptions() }, ranker: CandidateReranking? = nil, languageOptions: ((InputMode) -> InputOptions)? = nil, rankingClock: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws {
@@ -204,7 +205,7 @@ public final class InputSession {
             if !current.isContinuous && key == 93 {
                 lockRanking(); changeExpansion(true); publish(); return true
             }
-            if current.isContinuous && key == 91 && visibleStart == 0 && current.highlighted < expandedColumns {
+            if current.isContinuous && key == 91 && numberedRowStart == 0 && current.highlighted < expandedColumns {
                 lockRanking(); changeExpansion(false); publish(); return true
             }
         }
@@ -252,10 +253,13 @@ public final class InputSession {
         if current.isContinuous && !current.candidates.isEmpty {
             if (49...57).contains(key) {
                 let offset = Int(key - 49)
-                if offset < expandedColumns, current.candidates.indices.contains(visibleStart + offset) { choose(visibleStart + offset) }
+                if offset < expandedColumns, current.candidates.indices.contains(numberedRowStart + offset) { choose(numberedRowStart + offset) }
                 return true
             }
             if key == 32 { choose(current.highlighted); return true }
+            if [91, 93, 45, 61].contains(key) {
+                page(backward: key == 91 || key == 45); return true
+            }
             var delta: Int?
             switch key {
             case RimeKey.left: delta = -1
@@ -263,17 +267,12 @@ public final class InputSession {
             case RimeKey.tab: delta = flags.contains(.shift) ? -1 : 1
             case RimeKey.up: delta = -expandedColumns
             case RimeKey.down: delta = expandedColumns
-            case RimeKey.pageUp, 91, 45: delta = -expandedColumns * 5
-            case RimeKey.pageDown, 93, 61: delta = expandedColumns * 5
+            case RimeKey.pageUp: delta = -expandedColumns * 5
+            case RimeKey.pageDown: delta = expandedColumns * 5
             default: break
             }
             if let delta {
-                let desired = max(0, current.highlighted + delta)
-                while desired >= expandedItems.count && expandedHasMore { appendCandidates() }
-                let next = composition
-                let slot = min(desired, max(0, next.candidates.count - 1))
-                if next.candidateIndices.indices.contains(slot) { _ = rime.highlightAbsolute(next.candidateIndices[slot]) }
-                publish(); return true
+                moveExpandedSelection(to: current.highlighted + delta); return true
             }
         }
         if key == RimeKey.enter, composition.isComposing {
@@ -305,6 +304,12 @@ public final class InputSession {
     public func page(backward: Bool) {
         lockRanking()
         let before = composition
+        if before.isContinuous {
+            let row = max(0, numberedRowStart + (backward ? -expandedColumns : expandedColumns))
+            let column = options().keepCandidateSelectionOnPage ? before.highlighted % expandedColumns : 0
+            moveExpandedSelection(to: row + column)
+            return
+        }
         guard backward ? before.page > 0 : !before.isLastPage else { publish(); return }
         let previous = before.page
         _ = rime.process(key: backward ? RimeKey.pageUp : RimeKey.pageDown)
@@ -314,6 +319,17 @@ public final class InputSession {
             // differ after model ranking or exact/fuzzy spelling prioritization.
             let slot = options().keepCandidateSelectionOnPage ? min(before.highlighted, after.candidateIndices.count - 1) : 0
             _ = rime.highlightAbsolute(after.candidateIndices[slot])
+        }
+        publish()
+    }
+    private func moveExpandedSelection(to destination: Int) {
+        let desired = max(0, destination)
+        while desired >= expandedItems.count && expandedHasMore { appendCandidates() }
+        let next = composition
+        let slot = min(desired, max(0, next.candidates.count - 1))
+        if next.candidateIndices.indices.contains(slot) {
+            _ = rime.highlightAbsolute(next.candidateIndices[slot])
+            numberedRowStart = (slot / expandedColumns) * expandedColumns
         }
         publish()
     }

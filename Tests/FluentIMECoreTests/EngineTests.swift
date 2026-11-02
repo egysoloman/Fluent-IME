@@ -90,7 +90,7 @@ final class EngineTests: XCTestCase {
             XCTAssertEqual(output, "u"); XCTAssertFalse(input.composition.isComposing)
         }
     }
-    func testBracketExpansionPagesAndCollapsesOnlyAtFirstRow() throws {
+    func testBracketExpansionMovesOneRowAndCollapsesOnlyAtFirstRow() throws {
         var options = InputOptions(learning: false, bracketsExpandCandidates: true)
         let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { options })
         input.onExpansionChange = { [weak input] in options.expandedCandidates = $0; input?.applyOptions() }
@@ -99,18 +99,41 @@ final class EngineTests: XCTestCase {
         _ = input.handle(key("]", code: 30))
         XCTAssertTrue(input.composition.isContinuous)
         _ = input.handle(key("]", code: 30))
-        XCTAssertGreaterThanOrEqual(input.composition.highlighted, 30)
-        input.setCandidateViewport(start: 6, columns: 6)
+        XCTAssertEqual(input.composition.highlighted, 6)
+        _ = input.handle(key("]", code: 30))
+        XCTAssertEqual(input.composition.highlighted, 12)
+        _ = input.handle(key("[", code: 33))
+        XCTAssertTrue(input.composition.isContinuous)
+        XCTAssertEqual(input.composition.highlighted, 6)
         _ = input.handle(key("[", code: 33))
         XCTAssertTrue(input.composition.isContinuous)
         XCTAssertEqual(input.composition.highlighted, 0)
-        input.setCandidateViewport(start: 0, columns: 6)
         _ = input.handle(key("[", code: 33))
         XCTAssertFalse(input.composition.isContinuous)
         input.cancel()
         var output = ""; input.onCommit = { output += $0 }
         _ = input.handle(key("]", code: 30)); input.finish()
         XCTAssertEqual(output, "】")
+    }
+    func testExpandedRowNavigationKeepsConfiguredColumnAndNumberKeysFollowRow() throws {
+        for preserveColumn in [false, true] {
+            var options = InputOptions(learning: false, expandedCandidates: true)
+            options.keepCandidateSelectionOnPage = preserveColumn
+            let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { options })
+            for char in "shi" { _ = input.handle(key(String(char))) }
+            _ = input.handle(key("", code: 124))
+            XCTAssertEqual(input.composition.highlighted, 1)
+            input.page(backward: false)
+            XCTAssertEqual(input.composition.highlighted, preserveColumn ? 7 : 6)
+            _ = input.handle(key("=", code: 24))
+            XCTAssertEqual(input.composition.highlighted, preserveColumn ? 13 : 12)
+            _ = input.handle(key("-", code: 27))
+            XCTAssertEqual(input.composition.highlighted, preserveColumn ? 7 : 6)
+            let expected = input.composition.candidates[8].text
+            var output = ""; input.onCommit = { output += $0 }
+            _ = input.handle(key("3", code: 20))
+            XCTAssertEqual(output, expected)
+        }
     }
     func testWanxiangWordsAndGrammarWithDefaultAndAllFuzzyRules() throws {
         XCTAssertTrue(try XCTUnwrap(Self.engine).grammarAvailable)

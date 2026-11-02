@@ -194,7 +194,8 @@ import FluentIMECore
         badge.present(mode: .english, modes: [.english], near: panel.frame) { _ in }
         precondition(!badge.isVisible)
         print("Acrylic toggle and optional nonactivating three-mode indicator passed")
-        // Continuous expansion: numbering follows the first visible row and
+        // Continuous expansion: numbering follows the active row, or the first
+        // visible row after the active row has been scrolled offscreen, and
         // appending another batch must preserve the user's scroll position.
         let oldExpansion = UserDefaults.standard.object(forKey: "expandedCandidates")
         defer { if let oldExpansion { UserDefaults.standard.set(oldExpansion, forKey: "expandedCandidates") } else { UserDefaults.standard.removeObject(forKey: "expandedCandidates") } }
@@ -209,6 +210,16 @@ import FluentIMECore
         let strip = panel.candidateView.subviews.compactMap { $0 as? NSScrollView }.first!
         precondition(strip.documentView!.subviews.count == 128 && strip.hasVerticalScroller)
         precondition(visibleColumns == 6)
+        composition.highlighted = 8
+        panel.present(composition, caret: caret); settle("continuous-next-row")
+        let activeRow = strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }.filter { $0.number > 0 }
+        precondition(visibleStart == 6 && activeRow.map(\.number) == [1,2,3,4,5,6])
+        precondition(activeRow[2].selected)
+        let rowBitmap = panel.candidateView.bitmapImageRepForCachingDisplay(in: panel.candidateView.bounds)!
+        panel.candidateView.cacheDisplay(in: panel.candidateView.bounds, to: rowBitmap)
+        try rowBitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("continuous-active-row.png"))
+        composition.highlighted = 0
+        panel.present(composition, caret: caret); settle("continuous-first-row")
         strip.contentView.scroll(to: NSPoint(x: 0, y: 280)); strip.reflectScrolledClipView(strip.contentView)
         settle("continuous-scroll")
         precondition(visibleStart == 60)
@@ -224,6 +235,7 @@ import FluentIMECore
         panel.present(composition, caret: caret); settle("continuous-keyboard-reveal")
         let selected = strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }.first(where: \.selected)!
         precondition(strip.contentView.bounds.contains(selected.frame))
+        precondition(visibleStart == 150 && selected.number == 1)
         Preferences.shared.expandedCandidates = false
         composition.candidates = Array(composition.candidates.prefix(7)); composition.highlighted = 0; composition.isContinuous = false
         panel.present(composition, caret: caret); settle("continuous-collapse")

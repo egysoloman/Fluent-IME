@@ -106,7 +106,7 @@
 "keys.commitCodeHint" = "切换为英文时，直接上屏已输入的字母。";
 "keys.commitRaw" = "直接上屏原始拼音字母";
 "keys.confirm" = "上屏当前高亮的候选词";
-"keys.expansionHint" = "输入时按“】”展开更多候选；展开后用“【 / 】”翻页，在首行按“【”收起。";
+"keys.expansionHint" = "输入时按“】”展开更多候选；展开后用“【 / 】”上下换行，在首行按“【”收起。";
 "keys.keepSelection" = "翻页时保留候选词高亮位置";
 "keys.keepSelectionHint" = "关闭后，每次翻页都会默认选中该页的第一个候选词。";
 "keys.modeSwitch" = "中英文切换";
