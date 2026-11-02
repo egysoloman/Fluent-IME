@@ -38,14 +38,7 @@ enum InstallerLifecycle {
     }
     static func finishCleanup(installer: URL) throws {
         let readOnly = try installer.resourceValues(forKeys: [.volumeIsReadOnlyKey]).volumeIsReadOnly ?? true
-        var disks: [String: Any] = [:]
-        if readOnly {
-            let process = Process(), pipe = Pipe(); process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-            process.arguments = ["info", "-plist"]; process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
-            try process.run(); let data = pipe.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
-            if process.terminationStatus == 0 { disks = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any] ?? [:] }
-        }
-        let target = try InstallerCleanup.target(installer: installer, readOnly: readOnly, diskImages: disks)
+        let target = try InstallerCleanup.target(installer: installer, readOnly: readOnly, diskImages: readOnly ? try mountedImages() : [:])
         if let volume = target.mountedVolume {
             // The installer has exited; no executable remains on this mounted image.
             // Never force-detach a busy volume. Keep the installer if detaching fails.
@@ -55,5 +48,27 @@ enum InstallerLifecycle {
             guard process.terminationStatus == 0 else { throw CocoaError(.fileWriteUnknown) }
         }
         try FileManager.default.trashItem(at: target.item, resultingItemURL: nil)
+        // A downloaded update leaves only its receipt in a private per-download folder.
+        let folder = target.item.deletingLastPathComponent()
+        if folder.deletingLastPathComponent().resolvingSymlinksInPath() == updates.resolvingSymlinksInPath() {
+            try? FileManager.default.removeItem(at: folder)
+        }
+    }
+    private static var updates: URL { InputMethodInstallation.shared.files.support.appendingPathComponent("Updates") }
+    private static func mountedImages() throws -> [String: Any] {
+        let process = Process(), pipe = Pipe(); process.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
+        process.arguments = ["info", "-plist"]; process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
+        try process.run(); let data = pipe.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return [:] }
+        return (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any] ?? [:]
+    }
+    /// Releases up to 0.6.4 open a downloaded installer without arguments. Only the
+    /// in-app updater mounts installers from the private Updates folder, so treat
+    /// that launch as an update rather than showing setup or maintenance.
+    static var launchedByLegacyUpdater: Bool {
+        guard isInstaller, !CommandLine.arguments.dropFirst().contains(where: { $0.hasPrefix("--") }),
+              let disks = try? mountedImages(),
+              let image = try? InstallerCleanup.target(installer: Bundle.main.bundleURL, readOnly: true, diskImages: disks).item else { return false }
+        return image.deletingLastPathComponent().deletingLastPathComponent().resolvingSymlinksInPath() == updates.resolvingSymlinksInPath()
     }
 }

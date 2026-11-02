@@ -117,10 +117,11 @@ if !rendering, InstallerLifecycle.isMaintenance {
             if request != .show || installation.isPresent || !installation.hasInstallerPayload { controller.handle(request) }
         }
         catch { controller.showFailure(error) }
-    } else if arguments.contains("--apply-update") || installation.isPresent || !InstallerLifecycle.isInstaller {
+    } else if case let applyUpdate = arguments.contains("--apply-update") || (installation.isPresent && !installation.isInstalled && InstallerLifecycle.launchedByLegacyUpdater),
+              applyUpdate || installation.isPresent || !InstallerLifecycle.isInstaller {
         let controller = MaintenanceWindowController(showSetup: { delegate.showSetup() }); delegate.controller = controller
         controller.showWindow(nil)
-        if arguments.contains("--apply-update") { controller.applyBundledUpdate() }
+        if applyUpdate { controller.applyBundledUpdate() }
     } else { delegate.showSetup() }
     if app.activationPolicy() != .accessory { app.activate(ignoringOtherApps: true) }
     withExtendedLifetime(delegate) { app.run() }; exit(0)

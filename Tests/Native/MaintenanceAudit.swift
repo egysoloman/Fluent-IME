@@ -11,6 +11,7 @@ import FluentIMECore
             var isPresent = true
             var installedVersion: String? = "0.6.4"
             var hasInstallerPayload = true
+            var payloadVersion: String? { hasInstallerPayload ? "0.6.6" : nil }
             var choice: Bool?
             var completion: ((Result<Void, Error>) -> Void)?
             func remove(keepData: Bool, completion: @escaping (Result<Void, Error>) -> Void) { choice = keepData; self.completion = completion }
@@ -38,6 +39,8 @@ import FluentIMECore
                     let needed = label.cell!.cellSize(forBounds: NSRect(x: 0, y: 0, width: label.bounds.width, height: 1000))
                     precondition(needed.height <= label.bounds.height + 1 && root.bounds.contains(label.frame), "Maintenance text clipped")
                 }
+                let versions = all(root).compactMap { ($0 as? FluentSelectableLabel)?.stringValue }.filter { $0.contains(L10n.updateInstalledVersion("0.6.4")) }
+                precondition(versions.count == 1 && versions[0].contains(L10n.maintenancePayloadVersion("0.6.6")) == payload, "Installer must show the installed and payload versions")
                 let prefix = "\(dark ? "dark" : "light")-\(payload ? "installer" : "maintenance")"
                 try capture(root, prefix)
                 let uninstall = actions.first { $0.title == L10n.uninstallAction }!

@@ -43,7 +43,9 @@ final class MaintenanceWindowController: NSWindowController, NSWindowDelegate {
             button.frame = NSRect(x: x, y: y, width: width, height: 36); button.onClick = action; root.addSubview(button)
         }
         label(L10n.maintenanceTitle, y: 76, height: 42, size: 26)
-        label(installation.installedVersion.map(L10n.updateInstalledVersion) ?? L10n.installNotInstalled, y: 130, height: 32, secondary: true)
+        var version = installation.installedVersion.map(L10n.updateInstalledVersion) ?? L10n.installNotInstalled
+        if let payload = installation.payloadVersion, payload != installation.installedVersion { version += " · " + L10n.maintenancePayloadVersion(payload) }
+        label(version, y: 130, height: 32, secondary: true)
         label(status.isEmpty ? L10n.maintenanceDetail : status, y: 176, height: 72, secondary: status.isEmpty)
         if busy {
             let progress = FluentProgressBar(value: 0); progress.theme = theme; progress.isIndeterminate = true

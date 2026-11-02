@@ -15,6 +15,7 @@ protocol MaintenanceInstallation: AnyObject {
     var isPresent: Bool { get }
     var installedVersion: String? { get }
     var hasInstallerPayload: Bool { get }
+    var payloadVersion: String? { get }
     func remove(keepData: Bool, completion: @escaping (Result<Void, Error>) -> Void)
 }
 final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation {
@@ -22,6 +23,10 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
     let files = InstallationFiles()
     var isPresent: Bool { files.isInstalled }
     var installedVersion: String? { (NSDictionary(contentsOf: files.application.appendingPathComponent("Contents/Info.plist")))?["CFBundleShortVersionString"] as? String }
+    var payloadVersion: String? {
+        guard InstallerLifecycle.isInstaller, hasInstallerPayload else { return nil }
+        return NSDictionary(contentsOf: InstallerLifecycle.payload.appendingPathComponent("Contents/Info.plist"))?["CFBundleShortVersionString"] as? String
+    }
     var hasInstallerPayload: Bool { InstallerLifecycle.isMaintenance && FileManager.default.fileExists(atPath: InstallerLifecycle.payload.appendingPathComponent("Contents/MacOS/FluentIME").path) }
     private(set) var needsQuitAfterFailure = false
     var isInstalled: Bool {

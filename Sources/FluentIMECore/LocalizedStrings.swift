@@ -352,6 +352,8 @@ public extension L10n {
     static var maintenanceOpen: String { text("maintenance.open") }
     /// 正在打开维护程序…
     static var maintenanceOpening: String { text("maintenance.opening") }
+    /// 安装包版本 %1$@
+    static func maintenancePayloadVersion(_ arg1: String) -> String { format("maintenance.payloadVersion", arguments: [arg1]) }
     /// 输入法及本地数据已移除。
     static var maintenanceRemoved: String { text("maintenance.removed") }
     /// 输入法已移除。设置、词库和固定项目已保留。

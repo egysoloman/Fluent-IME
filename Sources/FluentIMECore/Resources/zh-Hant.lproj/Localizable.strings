@@ -408,6 +408,7 @@
 "maintenance.detail" = "管理已安裝的輸入法，或重新執行安裝引導。";
 "maintenance.open" = "開啟維護程式";
 "maintenance.install" = "執行此安裝套件";
+"maintenance.payloadVersion" = "安裝套件版本 %1$@";
 "maintenance.opening" = "正在開啟維護程式…";
 "maintenance.removing" = "正在結束並解除安裝輸入法…";
 "maintenance.removed" = "輸入法及本機資料已移除。";

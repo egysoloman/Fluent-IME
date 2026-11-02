@@ -1,5 +1,5 @@
 {
-  "revision": "01c8e66094df7ca013833ffce8a8649fa6902399",
+  "revision": "ae2f051ffc7cf65742fefdd53881f6bbcc242574",
   "snapshot": ".build/checkouts/FluentKit",
   "scope": "Swift Package Manager checkout; version and revision pinned in Package.resolved."
 }
