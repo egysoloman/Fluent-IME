@@ -293,7 +293,9 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         }
         status.stringValue = coordinator.historyLoading ? L10n.updateHistoryLoading : coordinator.historyError ?? (records.isEmpty ? L10n.updateHistoryEmpty : "")
         retry.isHidden = coordinator.historyError == nil || coordinator.historyLoading
-        let height = 66 + (status.stringValue.isEmpty ? 0 : 86) + rows.reduce(CGFloat(0)) { $0 + (expanded.contains($1.6) ? 294 : 82) } + 24
+        var height: CGFloat = 90
+        if !status.stringValue.isEmpty { height += 86 }
+        for row in rows { height += expanded.contains(row.6) ? 294 : 82 }
         if height != preferredHeight { preferredHeight = height; onHeightChange?(height) }
         needsLayout = true
     }
