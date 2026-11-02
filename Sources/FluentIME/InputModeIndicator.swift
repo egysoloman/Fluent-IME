@@ -51,7 +51,7 @@ final class InputModePanel: NSPanel {
         self.mode = mode; self.modes = nextModes; anchor = caret; selection = onSelect
         if !wasVisible { expanded = false }
         alphaValue = 1; shadow.alphaValue = 1; rebuild()
-        if let snapshot, let button = surface.subviews.first(where: { $0 is FluentButton }) {
+        if let snapshot, let button = surface.subviews.first(where: { $0 is FluentButton || $0 is CompactModeBadge }) {
             badgeMotion.play(snapshot, in: surface, content: button, backward: backward)
         } else if !wasVisible { animateEntrance() }
         scheduleDismiss(after: expanded ? 8 : 1.8)
@@ -74,7 +74,7 @@ final class InputModePanel: NSPanel {
         if resize { setFrame(target, display: false) }
         material.frame = surface.bounds
         if expanded {
-            surface.subviews.compactMap { $0 as? FluentButton }.forEach { $0.removeFromSuperview() }
+            surface.subviews.filter { $0 is FluentButton || $0 is CompactModeBadge }.forEach { $0.removeFromSuperview() }
             let definition = FluentSegmentedControl( modes.map(\.badge), selection: FluentBinding(
                 get: { [weak self] in self?.modes.firstIndex(of: self?.mode ?? .simplifiedChinese) ?? 0 },
                 set: { [weak self] index in
@@ -91,13 +91,8 @@ final class InputModePanel: NSPanel {
             selector?.setAccessibilityLabel(L10n.settingsModesTitle)
         } else {
             selector?.removeFromSuperview(); selector = nil
-            surface.subviews.compactMap { $0 as? FluentButton }.forEach { $0.removeFromSuperview() }
-            let button = FluentButton(title: mode.badge, role: .primary)
-            button.theme = theme; button.refusesFirstResponder = true
-            if small { button.fluentControlSize = .small }
-            button.frame = NSRect(x: 1, y: 0, width: size.width - 2, height: size.height)
-            button.setAccessibilityLabel(L10n.modeIndicatorAccessibility(mode.title))
-            button.onClick = { [weak self] in
+            surface.subviews.filter { $0 is FluentButton || $0 is CompactModeBadge }.forEach { $0.removeFromSuperview() }
+            let expand: () -> Void = { [weak self] in
                 guard let self else { return }
                 let initial = self.frame, snapshot = self.badgeMotion.capture(self.surface)
                 self.badgeMotion.cancel()
@@ -106,7 +101,21 @@ final class InputModePanel: NSPanel {
                 self.animateExpansion(from: initial, to: target, snapshot: snapshot)
                 self.scheduleDismiss(after: 8)
             }
-            surface.addSubview(button)
+            if small {
+                // A FluentButton keeps its control insets and scales its font below a
+                // legible size at 20 pt; the small badge draws its letter itself.
+                let badge = CompactModeBadge(frame: NSRect(origin: .zero, size: size))
+                badge.title = mode.badge; badge.theme = theme; badge.onClick = expand
+                badge.setAccessibilityLabel(L10n.modeIndicatorAccessibility(mode.title))
+                surface.addSubview(badge)
+            } else {
+                let button = FluentButton(title: mode.badge, role: .primary)
+                button.theme = theme; button.refusesFirstResponder = true
+                button.frame = NSRect(x: 1, y: 0, width: size.width - 2, height: size.height)
+                button.setAccessibilityLabel(L10n.modeIndicatorAccessibility(mode.title))
+                button.onClick = expand
+                surface.addSubview(button)
+            }
         }
         surface.layoutSubtreeIfNeeded()
         shadow.shadowView.theme = theme
@@ -248,4 +257,26 @@ final class SystemInputModeIndicator {
             // mode once. Do not re-open the panel from its own click callback.
         }
     }
+}
+
+/// The small mode indicator, close to the macOS Caps Lock badge: an accent pill with a
+/// centered letter. Clicking it expands the mode switcher like the regular badge.
+final class CompactModeBadge: NSView {
+    var title = "" { didSet { needsDisplay = true } }
+    var theme = IMEThemeObservation.current { didSet { needsDisplay = true } }
+    var onClick: (() -> Void)?
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        setAccessibilityElement(true); setAccessibilityRole(.button)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func draw(_ dirtyRect: NSRect) {
+        theme.accentFillDefault.setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: 6, yRadius: 6).fill()
+        let text = NSAttributedString(string: title, attributes: [.font: IMEFont.font(ofSize: 12, weight: .semibold), .foregroundColor: theme.textOnAccent])
+        let size = text.size()
+        text.draw(at: NSPoint(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2))
+    }
+    override func mouseDown(with event: NSEvent) { onClick?() }
+    override func accessibilityPerformPress() -> Bool { onClick?(); return true }
 }

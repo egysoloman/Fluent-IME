@@ -193,6 +193,27 @@ import FluentIMECore
         Preferences.shared.showInputModeIndicator = false
         badge.present(mode: .english, modes: [.english], near: panel.frame) { _ in }
         precondition(!badge.isVisible)
+        // The small indicator is a compact badge, centered on the caret, that still expands.
+        let savedSize = Preferences.shared.modeIndicatorSize
+        Preferences.shared.showInputModeIndicator = true; Preferences.shared.modeIndicatorSize = "small"
+        let smallAnchor = NSRect(x: screen.midX, y: screen.midY, width: 2, height: 20)
+        for dark in [false, true] {
+            NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua); pump(0.1)
+            let small = InputModePanel()
+            small.present(mode: .english, modes: [.simplifiedChinese, .english], near: smallAnchor) { _ in }
+            pump(0.3)
+            let compact = small.contentView!.subviews.compactMap { $0 as? CompactModeBadge }.first
+            precondition(compact != nil && small.frame.size == NSSize(width: 28, height: 20), "Small size uses the compact badge")
+            precondition(abs(small.frame.midX - smallAnchor.midX) < 0.5, "Centered on the caret")
+            let image = small.contentView!.bitmapImageRepForCachingDisplay(in: small.contentView!.bounds)!
+            small.contentView!.cacheDisplay(in: small.contentView!.bounds, to: image)
+            try image.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("indicator-small-\(dark ? "dark" : "light").png"))
+            compact!.onClick?(); pump(0.4)
+            precondition(small.expanded, "Clicking the small badge expands the switcher")
+            small.dismiss()
+        }
+        NSApp.appearance = NSAppearance(named: .aqua)
+        Preferences.shared.modeIndicatorSize = savedSize
         print("Acrylic toggle and optional nonactivating three-mode indicator passed")
         // Continuous expansion: numbering follows the active row, or the first
         // visible row after the active row has been scrolled offscreen, and
