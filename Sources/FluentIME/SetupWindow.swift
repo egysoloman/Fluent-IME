@@ -103,7 +103,9 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         var selection: String? = selected
         let titles = Dictionary(uniqueKeysWithValues: options)
         let definition = FluentComboBox(options: options.map(\.0), selection: FluentBinding(get: { selection }, set: { selection = $0; if let value = $0 { action(value) } }), title: { titles[$0] ?? $0 })
-        let view = definition._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale)); view.frame = NSRect(x: x, y: y, width: width, height: 32); content.addSubview(view)
+        let view = definition._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale))
+        view.translatesAutoresizingMaskIntoConstraints = true
+        view.frame = NSRect(x: x, y: y, width: width, height: 32); content.addSubview(view)
     }
     private func navigate(_ destination: Int) {
         guard !busy, (0...4).contains(destination), destination != step else { return }
@@ -140,9 +142,11 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         switch step {
         case 0:
             card(y: 128, height: 116)
-            if checking {
-                label(L10n.updateChecking, x: 20, y: 148, width: 504, size: 16, height: 28)
-                let progress = FluentProgressBar(value: 0); progress.theme = theme; progress.isIndeterminate = true
+            if checking || busy {
+                label(checking ? L10n.updateChecking : L10n.installBusy, x: 20, y: 148, width: 504, size: 16, height: 28)
+                let progress = FluentProgressBar(value: 0, isIndeterminate: true)
+                progress.translatesAutoresizingMaskIntoConstraints = true
+                progress.theme = theme
                 progress.frame = NSRect(x: 20, y: 196, width: 504, height: 4); content.addSubview(progress)
             } else {
                 let state = installation.newerInstalledVersion.map(L10n.installNewerInstalled) ?? (installation.isInstalled ? L10n.installInstalled : L10n.installNotInstalled)

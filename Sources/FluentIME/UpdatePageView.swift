@@ -181,6 +181,7 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     convenience init() { self.init(coordinator: .shared) }
     init(coordinator: UpdateCoordinator) {
         self.coordinator = coordinator; super.init(frame: .zero)
+        progress.translatesAutoresizingMaskIntoConstraints = true
         for view in [icon, version, status, detail, progress, lastCheck, primary, cancel, notesCard, more, preview, automatic, history] { addSubview(view) }
         for view in [releaseTitle, notesTitle, notes] { notesCard.addSubview(view) }
         primary.onClick = { [weak coordinator] in guard let coordinator else { return }; if coordinator.canInstall { coordinator.install() } else { coordinator.check() } }
@@ -306,6 +307,7 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     convenience init() { self.init(coordinator: .shared) }
     init(coordinator: UpdateCoordinator) {
         self.coordinator = coordinator; super.init(frame: .zero)
+        progress.translatesAutoresizingMaskIntoConstraints = true
         for view in [hint, allReleases, status, retry, progress] { addSubview(view) }
         allReleases.onClick = { NSWorkspace.shared.open(GitHubUpdateService.releasesURL) }
         retry.onClick = { [weak coordinator] in coordinator?.loadHistory() }

@@ -10,10 +10,19 @@ import FluentIMECore
         // A Mac without the input method registered gets NULL from TIS; setup must not crash on it.
         precondition(InputMethodInstallation.inputSources([kTISPropertyBundleID as String: "org.fluentime.audit.unregistered"]).isEmpty)
         _ = InputMethodInstallation.shared.isEnabled
-        final class Installation: SetupInstallation {
+        final class Installation: SetupInstallation, @unchecked Sendable {
             var isInstalled = false, isEnabled = false, hasLocalDictionary = true
             var newerInstalledVersion: String?
-            func install(completion: @escaping (Result<Void, Error>) -> Void) { isInstalled = true; completion(.success(())) }
+            var installDelay: TimeInterval = 0
+            func install(completion: @escaping (Result<Void, Error>) -> Void) {
+                if installDelay > 0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + installDelay) {
+                        self.isInstalled = true; completion(.success(()))
+                    }
+                } else {
+                    isInstalled = true; completion(.success(()))
+                }
+            }
             func enable() throws { isEnabled = true }
             func complete(resetDictionary: Bool, applyPreferences: @escaping () -> Void, completion: @escaping (Result<Void, Error>) -> Void) { fatalError("Layout audit must not commit preferences") }
         }
@@ -82,6 +91,7 @@ import FluentIMECore
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.5))
         precondition(texts(root).contains(L10n.updateChecking) && button(L10n.installAction, root)?.isEnabled == false, "Checking comes first and blocks installing")
         precondition(!texts(root).contains(L10n.installNotInstalled), "The local installation is checked only after the update check")
+        precondition(all(root).compactMap { $0 as? FluentProgressBar }.first?.bounds.width == 504, "Update check progress bar must span full card width")
         try capture(root, "check-running")
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 1.6))
         precondition(texts(root).contains { $0.contains("99.0.0") } && button(L10n.setupDownloadLatest, root) != nil, "A newer release must be offered")
@@ -89,6 +99,16 @@ import FluentIMECore
         button(L10n.setupContinue, root)!.onClick?(); RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.6))
         precondition(button(L10n.setupDownloadLatest, root) == nil && button(L10n.installAction, root)?.isEnabled == true && texts(root).contains(L10n.installNotInstalled))
         outdated.window?.orderOut(nil)
+        let installingTarget = Installation(); installingTarget.installDelay = 0.8
+        let installing = SetupWindowController(installation: installingTarget); installing.showWindow(nil)
+        root = installing.window!.contentView!
+        button(L10n.installAction, root)!.onClick?()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.35))
+        precondition(texts(root).contains(L10n.installBusy) && button(L10n.installBusy, root)?.isEnabled == false, "Installing state must show busy label and disable action button")
+        precondition(all(root).compactMap { $0 as? FluentProgressBar }.first?.bounds.width == 504, "Install progress bar must span full card width")
+        try capture(root, "install-running")
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.6))
+        installing.window?.orderOut(nil)
         let offline = Updates([.failure(URLError(.notConnectedToInternet)), .success(nil)])
         let retrying = SetupWindowController(installation: Installation(), updates: offline); retrying.showWindow(nil)
         root = retrying.window!.contentView!; RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.6))
