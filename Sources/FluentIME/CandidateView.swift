@@ -79,7 +79,6 @@ final class CandidateView: NSView {
     private var lastPageAnimation = true
     private var expansionEnabled = false
     private var scrollObserver: NSObjectProtocol?
-    private var columns = 6
     private var lastSelection = -1
     private var revealSelection = false
     private var hasMore = false
@@ -91,6 +90,11 @@ final class CandidateView: NSView {
     var onLayoutChange: (() -> Void)?
     var onLoadMore: (() -> Void)?
     var onViewportChanged: ((Int, Int) -> Void)?
+    /// The expanded grid's row starts and how many candidates they cover.
+    var onRowsChanged: (([Int], Int) -> Void)?
+    /// Expanded rows hold as many candidates as fit, up to six, so long ones are not cut off.
+    private var rows: [Range<Int>] = []
+    private var gridWidths: [CGFloat] = []
     var onInteraction: (() -> Void)?
     var preferredSize = NSSize(width: 578, height: CandidateChrome.rowHeight)
     private var toolsWidth: CGFloat { expansionEnabled ? 110 : 83 }
@@ -174,8 +178,8 @@ final class CandidateView: NSView {
         // vertically and is fetched lazily; it is not another seven-item page.
         let gridWidth = max(400, min(560, ((widths.prefix(7).max() ?? 66) - 6) * 6 + 36))
         let width = min(maxWidth, expanded ? gridWidth : naturalWidth)
-        columns = max(1, min(6, Int((width - 36) / 60)))
-        preferredSize = NSSize(width: width, height: expanded ? min(5, max(1, ceil(CGFloat(choices.count) / CGFloat(columns)))) * gridRowHeight + 8 : CandidateChrome.rowHeight)
+        if expanded { flowRows(width: max(1, width - 36)) } else { rows = []; gridWidths = [] }
+        preferredSize = NSSize(width: width, height: expanded ? CGFloat(min(5, max(1, rows.count))) * gridRowHeight + 8 : CandidateChrome.rowHeight)
         needsLayout = true
         layoutSubtreeIfNeeded()
         pageMotionGeneration += 1
@@ -225,18 +229,44 @@ final class CandidateView: NSView {
         if expanded { expand.frame = NSRect(x: bounds.width - 29, y: 4, width: 25, height: 28) }
         strip.frame = expanded ? NSRect(x: 4, y: 4, width: max(1, bounds.width - 36), height: max(1, bounds.height - 8))
             : NSRect(x: 4, y: 4, width: max(1, toolbarX - 4), height: 28)
-        let columnWidth = strip.bounds.width / CGFloat(columns)
-        document.frame = NSRect(x: 0, y: 0, width: expanded ? strip.bounds.width : widths.reduce(0, +), height: expanded ? max(strip.bounds.height, ceil(CGFloat(choices.count) / CGFloat(columns)) * gridRowHeight) : 28)
+        document.frame = NSRect(x: 0, y: 0, width: expanded ? strip.bounds.width : widths.reduce(0, +), height: expanded ? max(strip.bounds.height, CGFloat(rows.count) * gridRowHeight) : 28)
         var x: CGFloat = 0
-        for (index, choice) in choices.enumerated() {
-            choice.frame = expanded
-                ? NSRect(x: CGFloat(index % columns) * columnWidth, y: CGFloat(index / columns) * gridRowHeight, width: columnWidth, height: gridRowHeight - 1)
-                : NSRect(x: x, y: 0, width: widths[index], height: 28)
+        for (index, choice) in choices.enumerated() where !expanded {
+            choice.frame = NSRect(x: x, y: 0, width: widths[index], height: 28)
             x += widths[index]
+        }
+        for (row, range) in rows.enumerated() where expanded {
+            var left: CGFloat = 0
+            for index in range where choices.indices.contains(index) {
+                choices[index].frame = NSRect(x: left, y: CGFloat(row) * gridRowHeight, width: gridWidths[index], height: gridRowHeight - 1)
+                left += gridWidths[index]
+            }
         }
         if (!expanded || revealSelection), let selected = choices.first(where: \.selected) { document.scrollToVisible(selected.frame) }
         revealSelection = false
         for (index, offset) in [CGFloat(0), 53, 82].enumerated() { dividers[index].frame = NSRect(x: toolbarX + offset, y: 4, width: 0.5, height: 28) }
+    }
+    /// Packs candidates into rows by their natural width. Full rows are stretched to the
+    /// grid width; a shorter last row keeps its natural widths.
+    private func flowRows(width: CGFloat) {
+        let natural = choices.map { choice in
+            // CandidateChoice draws text from x 24 with 6 pt to spare; an emoji is 21 pt wide.
+            min(width, max(52, ceil(IMEFont.attributed(choice.candidate.text, size: 14.5, language: language, color: theme.textPrimary).size().width) + 32))
+        }
+        rows = []; gridWidths = natural
+        var start = 0, used: CGFloat = 0
+        for index in natural.indices {
+            if index > start, used + natural[index] > width || index - start == 6 {
+                rows.append(start..<index); start = index; used = 0
+            }
+            used += natural[index]
+        }
+        if start < natural.count || rows.isEmpty { rows.append(start..<natural.count) }
+        for (row, range) in rows.enumerated() where !range.isEmpty && (row < rows.count - 1 || range.count == 6) {
+            let extra = (width - range.reduce(CGFloat(0)) { $0 + natural[$1] }) / CGFloat(range.count)
+            for index in range { gridWidths[index] = natural[index] + max(0, extra) }
+        }
+        onRowsChanged?(rows.map(\.lowerBound), natural.count)
     }
     private func scrolled() {
         guard expanded else { return }
@@ -244,14 +274,14 @@ final class CandidateView: NSView {
         // Keyboard navigation numbers the active row. After wheel scrolling
         // moves that row out of view, number the first complete visible row.
         let selected = choices.firstIndex { $0.selected && visible.contains($0.frame) }
-        let first = selected.map { ($0 / columns) * columns }
-            ?? min(choices.count, max(0, Int(ceil(visible.minY / gridRowHeight))) * columns)
+        let numbered = selected.flatMap { item in rows.first { $0.contains(item) } }
+            ?? rows[min(max(0, Int(ceil(visible.minY / gridRowHeight))), max(0, rows.count - 1))]
         for (index, choice) in choices.enumerated() {
-            choice.number = (first..<first + columns).contains(index) ? index - first + 1 : 0
+            choice.number = numbered.contains(index) ? index - numbered.lowerBound + 1 : 0
             choice.setAccessibilityLabel(choice.number > 0 ? "\(choice.number)，\(choice.candidate.text)" : choice.candidate.text)
             choice.needsDisplay = true
         }
-        onViewportChanged?(first, columns)
+        onViewportChanged?(numbered.lowerBound, max(1, numbered.count))
         if hasMore, !loadingMore, strip.contentView.bounds.maxY >= document.bounds.height - 2 * gridRowHeight {
             loadingMore = true
             DispatchQueue.main.async { [weak self] in

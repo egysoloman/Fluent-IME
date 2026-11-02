@@ -123,7 +123,7 @@ public final class InputSession {
         let key = result.rawInput + "\u{0}" + result.preedit + "\u{0}" + appliedOptions.schemaID
         if key != expandedKey {
             expandedKey = key; expandedItems = []; expandedHasMore = true
-            numberedRowStart = ((result.page * result.pageSize + result.highlighted) / expandedColumns) * expandedColumns
+            numberedRowStart = gridRowStart(of: result.page * result.pageSize + result.highlighted)
         }
         let selected = result.page * result.pageSize + result.highlighted
         while expandedItems.count <= selected && expandedHasMore { appendCandidates() }
@@ -144,6 +144,25 @@ public final class InputSession {
     }
     public func setCandidateViewport(start: Int, columns: Int) {
         numberedRowStart = max(0, start); expandedColumns = max(1, min(9, columns))
+    }
+    private var gridRows: [Int] = []
+    private var gridCovered = 0
+    /// Row starts of the expanded grid as the candidate view laid them out (rows hold as
+    /// many candidates as fit). Rows not laid out yet are assumed to hold six.
+    public func setCandidateRows(_ starts: [Int], covering count: Int) { gridRows = starts; gridCovered = count }
+    private func gridStarts(through item: Int) -> [Int] {
+        var starts = gridRows.isEmpty ? [0] : gridRows
+        var next = gridCovered > starts[starts.count - 1] ? gridCovered : starts[starts.count - 1] + 6
+        while next <= item { starts.append(next); next += 6 }
+        return starts
+    }
+    private func gridRowStart(of item: Int) -> Int { gridStarts(through: item).last { $0 <= item } ?? 0 }
+    /// The candidate `rows` rows away, in the same column (or `column`), clamped to that row.
+    private func gridItem(from item: Int, rows: Int, column: Int? = nil) -> Int {
+        let starts = gridStarts(through: item + (abs(rows) + 2) * 6)
+        let row = starts.lastIndex { $0 <= item } ?? 0
+        let target = max(0, min(starts.count - 2, row + rows))
+        return min(starts[target] + (column ?? item - starts[row]), starts[target + 1] - 1)
     }
 
     public init(engine: RimeEngine, keyboard: InputKeyboard = .pinyin, options: @escaping () -> InputOptions = { InputOptions() }, ranker: CandidateReranking? = nil, languageOptions: ((InputMode) -> InputOptions)? = nil, rankingClock: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws {
@@ -223,7 +242,7 @@ public final class InputSession {
             if !current.isContinuous && key == 93 {
                 lockRanking(); changeExpansion(true); publish(); return true
             }
-            if current.isContinuous && key == 91 && numberedRowStart == 0 && current.highlighted < expandedColumns {
+            if current.isContinuous && key == 91 && numberedRowStart == 0 && gridRowStart(of: current.highlighted) == 0 {
                 lockRanking(); changeExpansion(false); publish(); return true
             }
         }
@@ -278,19 +297,19 @@ public final class InputSession {
             if [91, 93, 45, 61].contains(key) {
                 page(backward: key == 91 || key == 45); return true
             }
-            var delta: Int?
+            var target: Int?
             switch key {
-            case RimeKey.left: delta = -1
-            case RimeKey.right: delta = 1
-            case RimeKey.tab: delta = flags.contains(.shift) ? -1 : 1
-            case RimeKey.up: delta = -expandedColumns
-            case RimeKey.down: delta = expandedColumns
-            case RimeKey.pageUp: delta = -expandedColumns * 5
-            case RimeKey.pageDown: delta = expandedColumns * 5
+            case RimeKey.left: target = current.highlighted - 1
+            case RimeKey.right: target = current.highlighted + 1
+            case RimeKey.tab: target = current.highlighted + (flags.contains(.shift) ? -1 : 1)
+            case RimeKey.up: target = gridItem(from: current.highlighted, rows: -1)
+            case RimeKey.down: target = gridItem(from: current.highlighted, rows: 1)
+            case RimeKey.pageUp: target = gridItem(from: current.highlighted, rows: -5)
+            case RimeKey.pageDown: target = gridItem(from: current.highlighted, rows: 5)
             default: break
             }
-            if let delta {
-                moveExpandedSelection(to: current.highlighted + delta); return true
+            if let target {
+                moveExpandedSelection(to: target); return true
             }
         }
         if key == RimeKey.enter, composition.isComposing {
@@ -394,9 +413,8 @@ public final class InputSession {
         lockRanking()
         let before = composition
         if before.isContinuous {
-            let row = max(0, numberedRowStart + (backward ? -expandedColumns : expandedColumns))
-            let column = options().keepCandidateSelectionOnPage ? before.highlighted % expandedColumns : 0
-            moveExpandedSelection(to: row + column)
+            let column = options().keepCandidateSelectionOnPage ? nil : 0
+            moveExpandedSelection(to: gridItem(from: before.highlighted, rows: backward ? -1 : 1, column: column))
             return
         }
         guard backward ? before.page > 0 : !before.isLastPage else { publish(); return }
@@ -418,7 +436,7 @@ public final class InputSession {
         let slot = min(desired, max(0, next.candidates.count - 1))
         if next.candidateIndices.indices.contains(slot) {
             _ = rime.highlightAbsolute(next.candidateIndices[slot])
-            numberedRowStart = (slot / expandedColumns) * expandedColumns
+            numberedRowStart = gridRowStart(of: slot)
         }
         publish()
     }

@@ -296,6 +296,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             guard let self else { return }; (self.input.composition.isComposing ? self.input : self.sampleInput).loadMoreCandidates()
         }
         candidates.onViewportChanged = { [weak self] start, columns in self?.input.setCandidateViewport(start: start, columns: columns) }
+        candidates.onRowsChanged = { [weak self] starts, count in self?.input.setCandidateRows(starts, covering: count) }
         candidates.onInteraction = { [weak self] in self?.input.lockRanking() }
         typeSample()
         sampleInput.onUpdate = { [weak self] _ in self?.refreshCandidates() }

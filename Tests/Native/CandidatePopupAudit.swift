@@ -209,12 +209,16 @@ import FluentIMECore
         panel.present(composition, caret: caret); settle("continuous-open")
         let strip = panel.candidateView.subviews.compactMap { $0 as? NSScrollView }.first!
         precondition(strip.documentView!.subviews.count == 128 && strip.hasVerticalScroller)
-        precondition(visibleColumns == 6)
+        precondition((4...6).contains(visibleColumns), "Short candidates fill a row")
+        // Rows hold as many candidates as fit; the active row is numbered from 1.
+        func numberedRow() -> [CandidateChoice] { strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }.filter { $0.number > 0 } }
+        func index(of choice: CandidateChoice) -> Int { strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }.firstIndex { $0 === choice }! }
         composition.highlighted = 8
         panel.present(composition, caret: caret); settle("continuous-next-row")
-        let activeRow = strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }.filter { $0.number > 0 }
-        precondition(visibleStart == 6 && activeRow.map(\.number) == [1,2,3,4,5,6])
-        precondition(activeRow[2].selected)
+        let activeRow = numberedRow()
+        precondition(activeRow.map(\.number) == Array(1...activeRow.count) && visibleStart == index(of: activeRow[0]) && visibleColumns == activeRow.count)
+        precondition(activeRow.contains(where: \.selected) && (visibleStart...visibleStart + activeRow.count - 1).contains(8))
+        precondition(Set(activeRow.map { $0.frame.minY }).count == 1, "A numbered row is one visual row")
         let rowBitmap = panel.candidateView.bitmapImageRepForCachingDisplay(in: panel.candidateView.bounds)!
         panel.candidateView.cacheDisplay(in: panel.candidateView.bounds, to: rowBitmap)
         try rowBitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("continuous-active-row.png"))
@@ -222,10 +226,10 @@ import FluentIMECore
         panel.present(composition, caret: caret); settle("continuous-first-row")
         strip.contentView.scroll(to: NSPoint(x: 0, y: 280)); strip.reflectScrolledClipView(strip.contentView)
         settle("continuous-scroll")
-        precondition(visibleStart == 60)
-        let numbered = strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }.filter { $0.number > 0 }
-        precondition(numbered.map(\.number) == [1,2,3,4,5,6])
-        numbered[1].performClick(nil); precondition(clicked == 61)
+        let numbered = numberedRow()
+        precondition(numbered.map(\.number) == Array(1...numbered.count) && visibleStart == index(of: numbered[0]))
+        precondition(numbered[0].frame.minY >= strip.contentView.bounds.minY, "Numbering moves to the first visible row")
+        numbered[1].performClick(nil); precondition(clicked == visibleStart + 1)
         let previousOffset = strip.contentView.bounds.minY
         composition.candidates += (128..<192).map { Candidate("字\($0)") }
         panel.present(composition, caret: caret); settle("continuous-append")
@@ -235,8 +239,23 @@ import FluentIMECore
         panel.present(composition, caret: caret); settle("continuous-keyboard-reveal")
         let selected = strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }.first(where: \.selected)!
         precondition(strip.contentView.bounds.contains(selected.frame))
-        precondition(visibleStart == 150 && selected.number == 1)
+        precondition(selected.number == 150 - visibleStart + 1 && visibleStart <= 150)
+        // Long candidates get wide cells instead of being cut to a shared prefix.
+        let long = ["不知道为什么", "不知道为", "不知道我", "霸主地位", "编制单位", "八支队伍", "班子队伍", "标准电位", "别字大王", "不知道哇", "不知道", "🤷", "不值得", "捕捉到", "爆炸的", "不主动", "标准的", "布置的"]
+        composition.rawInput = "bzdwsm"; composition.candidates = long.map { Candidate($0) }; composition.highlighted = 0; composition.hasMoreCandidates = false
+        panel.present(composition, caret: caret); settle("continuous-long")
+        let longCells = strip.documentView!.subviews.compactMap { $0 as? CandidateChoice }
+        for cell in longCells where FluentEmojiImage.image(for: cell.candidate.text, inline: true) == nil {
+            let needed = ceil(IMEFont.attributed(cell.candidate.text, size: 14.5, language: .simplifiedChinese, color: .labelColor).size().width) + 30
+            precondition(cell.frame.width >= needed, "Not cut off: \(cell.candidate.text)")
+        }
+        let firstRow = longCells.filter { $0.frame.minY == 0 }
+        precondition(firstRow.count < 6 && abs(firstRow.map(\.frame.maxX).max()! - strip.documentView!.bounds.width) < 1, "Long rows hold fewer cells and fill the width")
+        let longBitmap = panel.candidateView.bitmapImageRepForCachingDisplay(in: panel.candidateView.bounds)!
+        panel.candidateView.cacheDisplay(in: panel.candidateView.bounds, to: longBitmap)
+        try longBitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("continuous-long.png"))
         Preferences.shared.expandedCandidates = false
+        composition.rawInput = "fa'ka"
         composition.candidates = Array(composition.candidates.prefix(7)); composition.highlighted = 0; composition.isContinuous = false
         panel.present(composition, caret: caret); settle("continuous-collapse")
         print("Continuous grid: 192 items, scroll numbering, selection, append position and keyboard reveal passed")

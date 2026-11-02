@@ -42,6 +42,7 @@ final class FluentInputController: IMKInputController {
         panel.candidateView.onLayoutChange = { [weak self] in self?.input?.publish() }
         panel.candidateView.onLoadMore = { [weak self] in self?.input?.loadMoreCandidates() }
         panel.candidateView.onViewportChanged = { [weak self] start, columns in self?.input?.setCandidateViewport(start: start, columns: columns) }
+        panel.candidateView.onRowsChanged = { [weak self] starts, count in self?.input?.setCandidateRows(starts, covering: count) }
         panel.candidateView.onInteraction = { [weak self] in self?.input?.lockRanking() }
         if preferenceObserver == nil {
             preferenceObserver = NotificationCenter.default.addObserver(forName: Preferences.changed, object: nil, queue: .main) { [weak self] _ in
