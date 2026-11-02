@@ -154,7 +154,8 @@ final class Preferences {
         let appearance = override ?? self.appearance
         return FluentTheme(accent: NSColor(srgbRed: 0, green: 103/255, blue: 192/255, alpha: 1),
                     colorScheme: appearance == "dark" ? .dark : appearance == "light" ? .light : .system,
-                    typography: FluentTypography(fontProvider: IMEFont.provider))
+                    typography: FluentTypography(fontProvider: IMEFont.provider),
+                    materialEffectsEnabled: advancedEffects)
             .with(materialConfiguration: .init(material: .nativeAcrylic, isEnabled: advancedEffects), for: .transient)
     }
     var inputOptions: InputOptions { InputOptions(shiftSwitch: shiftSwitch, englishPunctuation: englishPunctuation, startsInEnglish: startsInEnglish, halfWidth: halfWidth, autoCorrection: autoCorrection, abbreviation: abbreviation, learning: learning, fuzzyPinyinMask: fuzzyPinyinMask, expandedCandidates: expandedCandidates, bracketsExpandCandidates: candidateExpansionEnabled, neuralRanking: neuralRanking, wanxiangGrammar: wanxiangGrammar, keepCandidateSelectionOnPage: keepCandidateSelectionOnPage, enabledModes: enabledInputModes, defaultMode: defaultInputMode) }

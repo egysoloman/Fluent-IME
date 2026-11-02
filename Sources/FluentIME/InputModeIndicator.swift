@@ -6,7 +6,7 @@ import FluentIMECore
 /// A nonactivating cursor accessory. Focus changes and typing dismiss it immediately.
 final class InputModePanel: NSPanel {
     private let surface = NSView()
-    private let material = FluentMaterialView(material: .nativeAcrylic)
+    private let material = IMEAcrylicView(material: .nativeAcrylic)
     private let shadow = CandidateShadowPanel()
     private var timer: Timer?
     private var observation: IMEThemeObservation?

@@ -30,6 +30,63 @@ enum IMEFont {
 
 class IMEFlippedView: NSView { override var isFlipped: Bool { true } }
 
+/// An acrylic surface for nonactivating IME overlay panels (candidate window, mode badge, emoji panel).
+/// Keeps AppKit's visual effect view active even when the overlay window is not the key window.
+final class IMEAcrylicView: NSView {
+    private let visualEffect = NSVisualEffectView()
+    private let fallbackView = NSView()
+
+    var materialStyle: FluentMaterial = .nativeAcrylic { didSet { apply() } }
+    var fluentTheme: FluentTheme? { didSet { apply() } }
+    var isMaterialEnabled: Bool = true { didSet { apply() } }
+    var fallbackColor: NSColor = .windowBackgroundColor { didSet { apply() } }
+    var state: NSVisualEffectView.State {
+        get { visualEffect.state }
+        set { visualEffect.state = .active }
+    }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        visualEffect.material = .hudWindow
+        visualEffect.blendingMode = .behindWindow
+        visualEffect.state = .active
+        visualEffect.wantsLayer = true
+        fallbackView.wantsLayer = true
+        addSubview(visualEffect)
+        addSubview(fallbackView)
+        apply()
+    }
+
+    convenience init(material: FluentMaterial = .nativeAcrylic) {
+        self.init(frame: .zero)
+        self.materialStyle = material
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layout() {
+        super.layout()
+        visualEffect.frame = bounds
+        fallbackView.frame = bounds
+        visualEffect.layer?.cornerRadius = layer?.cornerRadius ?? 0
+        visualEffect.layer?.masksToBounds = layer?.masksToBounds ?? false
+        fallbackView.layer?.cornerRadius = layer?.cornerRadius ?? 0
+        fallbackView.layer?.masksToBounds = layer?.masksToBounds ?? false
+    }
+
+    private func apply() {
+        let active = isMaterialEnabled && !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        visualEffect.isHidden = !active
+        visualEffect.state = .active
+        fallbackView.isHidden = active
+        fallbackView.layer?.backgroundColor = fallbackColor.cgColor
+        if let theme = fluentTheme {
+            visualEffect.appearance = NSAppearance(named: theme.isDark ? .darkAqua : .aqua)
+        }
+    }
+}
+
 struct IMEToolbarStyle: FluentButtonStyle {
     func appearance(for configuration: FluentButtonStyleConfiguration) -> FluentButtonAppearance {
         let theme = configuration.theme

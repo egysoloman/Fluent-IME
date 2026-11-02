@@ -75,7 +75,7 @@ private final class SymbolButton: NSButton {
 }
 
 final class EmojiPanelView: NSView, NSSearchFieldDelegate {
-    private let material = FluentMaterialView(material: .mica)
+    private let material = IMEAcrylicView(material: .nativeAcrylic)
     private let titleLabel = NSTextField(labelWithString: L10n.symbolsTitle)
     private let clipboardHeader = IMEFlippedView()
     private let grip = NSView()

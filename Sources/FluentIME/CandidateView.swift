@@ -54,7 +54,7 @@ final class CandidateChoice: NSButton {
 
 /// Collapsed presentation has one row only. Preedit belongs to the IMK client.
 final class CandidateView: NSView {
-    private let material = FluentMaterialView(material: .nativeAcrylic)
+    private let material = IMEAcrylicView(material: .nativeAcrylic)
     private let strip = NSScrollView()
     private let document = CandidateGridDocument()
     private let previous = makeChromeButton(.previous, label: L10n.candidatePrevious)
