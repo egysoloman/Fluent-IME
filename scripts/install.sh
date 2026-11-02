@@ -12,6 +12,11 @@ else
   SUPPORT="$HOME/Library/Application Support/FluentIME"
 fi
 if ! test -d "$SOURCE"; then bash "$ROOT/scripts/build.sh"; fi
+# An interrupted bundle.py leaves no precompiled Rime data. Installing it makes the
+# input method compile every schema on first use, which blocks typing.
+if ! test -d "$SOURCE/Contents/Resources/Rime/build"; then
+  echo "安装包不完整（缺少预编译 Rime 数据），请重新运行 scripts/build.sh。" >&2; exit 1
+fi
 mkdir -p "$HOME/Library/Input Methods" "$SUPPORT/InstallStaging"
 STAGE="$(mktemp -d "$SUPPORT/InstallStaging/install.XXXXXX")"
 # Copy outside the watched Input Methods directory. macOS can otherwise launch
