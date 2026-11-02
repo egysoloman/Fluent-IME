@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     init(preview: Bool) {
         self.preview = preview
         super.init()
-        DistributedNotificationCenter.default().addObserver(self, selector: #selector(showSettingsNotification), name: Notification.Name("org.fluentime.showSettings"), object: nil)
+        DistributedNotificationCenter.default().addObserver(self, selector: #selector(showSettingsNotification), name: Notification.Name(FluentProduct.current.bundleID + ".showSettings"), object: nil)
     }
     @objc private func showSettingsNotification() { Runtime.shared.showSettings() }
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -61,7 +61,7 @@ if arguments.contains("--audit-clipboard-keychain") {
 if arguments.contains("--diagnose") {
     let controllerExists = NSClassFromString("FluentInputController") != nil
     print("Controller registered: \(controllerExists)")
-    let sources = InputMethodInstallation.inputSources([kTISPropertyBundleID as String: "org.fluentime.inputmethod.FluentIME"])
+    let sources = InputMethodInstallation.inputSources([kTISPropertyBundleID as String: FluentProduct.current.bundleID])
     for source in sources {
         func property(_ key: CFString) -> String {
             guard let pointer = TISGetInputSourceProperty(source, key) else { return "nil" }
@@ -76,9 +76,11 @@ if arguments.count >= 4, arguments[1] == "--deploy" {
     do {
         let engine = try RimeEngine(sharedDirectory: URL(fileURLWithPath: arguments[2]), userDirectory: URL(fileURLWithPath: arguments[3]), fullCheck: true)
         let session = try engine.makeSession()
-        for byte in "nihao".utf8 { session.process(key: Int32(byte)) }
+        // Pinyin types nihao; Zhuyin types ㄋㄧˇㄏㄠˇ on 大千.
+        let probe = FluentProduct.current.keyboard == .zhuyin ? "su3cl3" : "nihao"
+        for byte in probe.utf8 { session.process(key: Int32(byte)) }
         guard session.composition.candidates.contains(where: { $0.text == "你好" }) else { throw EngineError.sessionUnavailable }
-        print("Rime \(engine.version): dictionary deployed; nihao → 你好 verified.")
+        print("Rime \(engine.version): dictionary deployed; \(probe) verified.")
     } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
     exit(0)
 }
@@ -86,7 +88,7 @@ if arguments.count >= 4, arguments[1] == "--deploy" {
 if arguments.contains("--register") {
     let status = TISRegisterInputSource(Bundle.main.bundleURL as CFURL)
     print("TISRegisterInputSource: \(status)")
-    let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: "org.fluentime.inputmethod.FluentIME.Hans"])
+    let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: FluentProduct.current.sourceID])
     for source in sources { print("TISEnableInputSource: \(TISEnableInputSource(source))") }
     if sources.isEmpty { print(L10n.registrationReloginHint) }
     exit(status == noErr ? 0 : 1)
@@ -144,8 +146,8 @@ if !rendering, !installation.isRunningInstalled, Bundle.main.bundleURL.pathExten
     app.run(); exit(0)
 }
 if arguments.contains("--preview"),
-   NSRunningApplication.runningApplications(withBundleIdentifier: "org.fluentime.inputmethod.FluentIME").contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier && $0.bundleURL?.standardizedFileURL == installation.files.application.standardizedFileURL }) {
-    DistributedNotificationCenter.default().postNotificationName(Notification.Name("org.fluentime.showSettings"), object: nil, userInfo: nil, deliverImmediately: true)
+   NSRunningApplication.runningApplications(withBundleIdentifier: FluentProduct.current.bundleID).contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier && $0.bundleURL?.standardizedFileURL == installation.files.application.standardizedFileURL }) {
+    DistributedNotificationCenter.default().postNotificationName(Notification.Name(FluentProduct.current.bundleID + ".showSettings"), object: nil, userInfo: nil, deliverImmediately: true)
     exit(0)
 }
 
@@ -189,5 +191,5 @@ if let index = arguments.firstIndex(of: "--render-preview"), arguments.count > i
 // Retain the server for the whole application lifetime; IMK instantiates controllers by ObjC name.
 var inputServer: IMKServer?
 // Settings and system input share one process. Opening settings must not prevent IMK connections.
-inputServer = IMKServer(name: "FluentIME_Connection", bundleIdentifier: Bundle.main.bundleIdentifier ?? "org.fluentime.inputmethod.FluentIME")
+inputServer = IMKServer(name: FluentProduct.current.connectionName, bundleIdentifier: Bundle.main.bundleIdentifier ?? FluentProduct.current.bundleID)
 app.run()

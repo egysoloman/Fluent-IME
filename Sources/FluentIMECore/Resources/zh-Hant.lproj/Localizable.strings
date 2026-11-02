@@ -64,6 +64,8 @@
 "dictionary.openFolder" = "打開使用者詞庫資料夾";
 "dictionary.transformer" = "上下文智慧重排（實驗性）";
 "dictionary.wanxiang" = "萬象綜合詞庫";
+"dictionary.terra" = "地球拼音詞庫";
+"dictionary.terraContents" = "含聲調的通用詞庫，收錄破音字與輕聲";
 
 /* error */
 "error.gifInvalid" = "所選檔案不是有效的 GIF 動圖。";

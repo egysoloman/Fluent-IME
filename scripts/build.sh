@@ -15,4 +15,5 @@ CONFIG="${CONFIGURATION:-release}"
 swift build -c "$CONFIG" --jobs 8
 BIN="$(swift build -c "$CONFIG" --show-bin-path)"
 python3 scripts/bundle.py "$BIN"
+python3 scripts/bundle-zhuyin.py
 echo "已生成：$ROOT/dist/Fluent IME.app"

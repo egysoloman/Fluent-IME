@@ -45,7 +45,7 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
     var hasLocalDictionary: Bool { files.hasLocalDictionary }
     var isRunningInstalled: Bool { Bundle.main.bundleURL.resolvingSymlinksInPath() == files.application.resolvingSymlinksInPath() }
     static func sources() -> [TISInputSource] {
-        inputSources([kTISPropertyBundleID as String: "org.fluentime.inputmethod.FluentIME"])
+        inputSources([kTISPropertyBundleID as String: FluentProduct.current.bundleID])
     }
     /// TISCreateInputSourceList returns NULL rather than an empty list when nothing
     /// matches, as on a Mac where the input method has never been registered.
@@ -71,7 +71,7 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
         let source = InstallerLifecycle.payload
         selectionBeforeInstall = Self.sources().first { Self.bool($0, kTISPropertyInputSourceIsSelected) }.flatMap(Self.identifier)
         do { try selectFallbackIfNeeded() } catch { completion(.failure(error)); return }
-        let other = NSRunningApplication.runningApplications(withBundleIdentifier: "org.fluentime.inputmethod.FluentIME").filter {
+        let other = NSRunningApplication.runningApplications(withBundleIdentifier: FluentProduct.current.bundleID).filter {
             $0.processIdentifier != getpid() && $0.bundleURL?.standardizedFileURL == files.application.standardizedFileURL
         }
         other.forEach { $0.terminate() }
@@ -94,8 +94,7 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
         try Self.check(TISRegisterInputSource(files.application as CFURL))
         let sources = Self.sources()
         guard !sources.isEmpty else { throw NSError(domain: "FluentIME.Installation", code: 1, userInfo: [NSLocalizedDescriptionKey: L10n.registrationReloginHint]) }
-        // Zhuyin is added by the user in System Settings; installing and updating leave it as it was.
-        for source in sources where Self.identifier(source) != InputKeyboard.zhuyinSourceID { try Self.check(TISEnableInputSource(source)) }
+        for source in sources { try Self.check(TISEnableInputSource(source)) }
     }
     func complete(resetDictionary: Bool, applyPreferences: @escaping () -> Void, completion: @escaping (Result<Void, Error>) -> Void) {
         do {
@@ -125,7 +124,7 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
         try files.backupDictionary(); try relaunchAndQuit()
     }
     private func stopInstalledProcesses() throws {
-        let others = NSRunningApplication.runningApplications(withBundleIdentifier: "org.fluentime.inputmethod.FluentIME").filter { $0.processIdentifier != getpid() && $0.bundleURL?.standardizedFileURL == files.application.standardizedFileURL }
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: FluentProduct.current.bundleID).filter { $0.processIdentifier != getpid() && $0.bundleURL?.standardizedFileURL == files.application.standardizedFileURL }
         others.forEach { $0.terminate() }
         let deadline = Date(timeIntervalSinceNow: 8)
         while others.contains(where: { !$0.isTerminated }), Date() < deadline { RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.05)) }
@@ -144,7 +143,7 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
             try selectFallbackIfNeeded()
             for source in Self.sources() { try Self.check(TISDisableInputSource(source)) }
         } catch { completion(.failure(error)); return }
-        let others = NSRunningApplication.runningApplications(withBundleIdentifier: "org.fluentime.inputmethod.FluentIME").filter {
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: FluentProduct.current.bundleID).filter {
             $0.bundleURL?.standardizedFileURL == files.application.standardizedFileURL
         }
         others.forEach { $0.terminate() }
@@ -155,7 +154,7 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
                 guard !others.contains(where: { kill($0.processIdentifier, 0) == 0 }) else { throw CocoaError(.fileWriteFileExists) }
                 try files.uninstall(keepData: keepData) { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
                 if !keepData {
-                    UserDefaults.standard.removePersistentDomain(forName: "org.fluentime.inputmethod.FluentIME")
+                    UserDefaults.standard.removePersistentDomain(forName: FluentProduct.current.bundleID)
                     UserDefaults.standard.synchronize()
                     // Delete last: a failed application removal must never leave
                     // retained encrypted records without their key.

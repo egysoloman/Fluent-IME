@@ -43,7 +43,7 @@ public final class RimeEngine {
     public var version: String { String(cString: FIMVersion()) }
 
     public init(sharedDirectory: URL, userDirectory: URL, fullCheck: Bool = false) throws {
-        guard FileManager.default.fileExists(atPath: sharedDirectory.appendingPathComponent("fluent_pinyin.schema.yaml").path) else {
+        guard ["fluent_pinyin", "fluent_bopomofo"].contains(where: { FileManager.default.fileExists(atPath: sharedDirectory.appendingPathComponent($0 + ".schema.yaml").path) }) else {
             throw EngineError.missingData(sharedDirectory.path)
         }
         self.sharedDirectory = sharedDirectory

@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Rime Zhuyin (rime-bopomofo)",
+    "author": "佛振 and contributors",
+    "revision": "6085c9a38a4a728047862b33d67eee18aa86f3b9",
+    "license": "LGPL-3.0",
+    "source": "https://github.com/rime/rime-bopomofo",
+    "changes": "zhuyin.yaml spelling algebra unmodified; Fluent's fluent_bopomofo schema is adapted from bopomofo.schema.yaml (Dai-Chien keymap, preedit format and Shift+digit selection kept).",
+    "notices": [
+      "Licenses/rime-bopomofo-LICENSE",
+      "Rime/zhuyin.yaml"
+    ]
+  },
+  {
+    "name": "Terra Pinyin dictionary",
+    "author": "佛振 and contributors; readings partly from CC-CEDICT (MDBG, CC-BY-SA 3.0)",
+    "revision": "723e51bc266cf9464530c1ddedb856aa18e3da34",
+    "license": "LGPL-3.0; CC-CEDICT portions CC-BY-SA-3.0",
+    "source": "https://github.com/rime/rime-terra-pinyin",
+    "changes": "terra_pinyin.dict.yaml unmodified; used by Zhuyin.",
+    "notices": [
+      "Licenses/rime-terra-pinyin-LICENSE",
+      "Rime/terra_pinyin.dict.yaml"
+    ]
+  },
+  {
+    "name": "Rime essay vocabulary",
+    "author": "Rime contributors",
+    "revision": "054920de4f54c9e5994276a96a4fc2a35cb51aa3",
+    "license": "LGPL-3.0",
+    "source": "https://github.com/rime/rime-essay",
+    "changes": "essay.txt unmodified; preset vocabulary and weights for the Zhuyin dictionary.",
+    "notices": [
+      "Licenses/rime-essay-LICENSE"
+    ]
+  }
+]

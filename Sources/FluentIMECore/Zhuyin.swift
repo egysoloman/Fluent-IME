@@ -1,15 +1,13 @@
 import Foundation
 
-/// The keyboard an input source types with. Zhuyin is its own macOS input source
-/// (`Fluent 注音`) and never shares Pinyin's schema or key handling.
+/// The keyboard an input method types with. Fluent 注音 is a separate input method
+/// and never shares Pinyin's schema or key handling.
 public enum InputKeyboard: String {
     case pinyin, zhuyin
-    public static let zhuyinSourceID = "org.fluentime.inputmethod.FluentIME.Bopomofo"
-    public init(sourceID: String) { self = sourceID == Self.zhuyinSourceID ? .zhuyin : .pinyin }
 }
 
-/// The Dai-Chien (大千) layout printed on Zhuyin keycaps, matching
-/// `Resources/fluent_bopomofo.schema.template.yaml`.
+/// The Dai-Chien (大千) layout printed on Zhuyin keycaps, matching the
+/// `preedit_format` in `Resources/Rime/fluent_bopomofo.schema.yaml`.
 public enum ZhuyinLayout {
     static let keys = Array("1qaz2wsxedcrfv5tgbyhnujm8ik,9ol.0p;/-6347")
     static let symbols = Array("ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙㄧㄨㄩㄚㄛㄜㄝㄞㄟㄠㄡㄢㄣㄤㄥㄦˊˇˋ˙")

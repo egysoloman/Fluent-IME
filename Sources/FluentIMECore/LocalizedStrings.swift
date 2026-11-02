@@ -184,6 +184,10 @@ public extension L10n {
     static var dictionaryModelMissing: String { text("dictionary.modelMissing") }
     /// 打开用户词库文件夹
     static var dictionaryOpenFolder: String { text("dictionary.openFolder") }
+    /// 地球拼音词库
+    static var dictionaryTerra: String { text("dictionary.terra") }
+    /// 带声调的通用词库，含多音字与轻声
+    static var dictionaryTerraContents: String { text("dictionary.terraContents") }
     /// 上下文智能重排（实验性）
     static var dictionaryTransformer: String { text("dictionary.transformer") }
     /// 万象综合词库

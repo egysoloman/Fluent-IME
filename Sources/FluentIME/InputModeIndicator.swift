@@ -198,10 +198,12 @@ final class SystemInputModeIndicator {
         previousSource = sourceID
         sourceObserver = DistributedNotificationCenter.default().addObserver(forName: Notification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String), object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
-            let id = self.sourceID, fromFluent = self.previousSource.hasPrefix("org.fluentime.")
+            // Each Fluent input method shows the indicator only around its own source.
+            let own = FluentProduct.current.sourceID
+            let id = self.sourceID, fromFluent = self.previousSource == own
             guard id != self.previousSource else { return }
             self.previousSource = id
-            if fromFluent || id.hasPrefix("org.fluentime.") { self.showCurrent() }
+            if fromFluent || id == own { self.showCurrent() }
             else { self.panel.dismiss() }
         }
         appObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
@@ -216,7 +218,7 @@ final class SystemInputModeIndicator {
     func remember(input: InputSession, caret: NSRect) {
         guard Preferences.shared.showInputModeIndicator else { panel.dismiss(); return }
         self.input = input; self.caret = caret; ownerPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        if sourceID.hasPrefix("org.fluentime."), let mode = requestedMode {
+        if sourceID == FluentProduct.current.sourceID, let mode = requestedMode {
             requestedMode = nil
             input.selectMode(mode)
         }
@@ -224,21 +226,18 @@ final class SystemInputModeIndicator {
     }
     func showCurrent() {
         guard let caret, ownerPID == NSWorkspace.shared.frontmostApplication?.processIdentifier else { panel.dismiss(); return }
-        let isFluent = sourceID.hasPrefix("org.fluentime.")
+        let isFluent = sourceID == FluentProduct.current.sourceID
         if !isFluent {
             guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(), let pointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsASCIICapable),
                   CFBooleanGetValue(Unmanaged<CFBoolean>.fromOpaque(pointer).takeUnretainedValue()) else { panel.dismiss(); return }
         }
-        // Choosing Chinese from another source returns to the last Fluent keyboard.
-        let keyboard = input?.keyboard ?? .pinyin
         panel.present(mode: isFluent ? (requestedMode ?? input?.mode ?? lastMode) : .english, modes: Preferences.shared.enabledInputModes, near: caret) { [weak self] mode in
             guard let self, self.ownerPID == NSWorkspace.shared.frontmostApplication?.processIdentifier else { return }
             self.lastMode = mode
             self.input?.selectMode(mode)
-            if !self.sourceID.hasPrefix("org.fluentime."), mode.isChinese {
+            if self.sourceID != FluentProduct.current.sourceID, mode.isChinese {
                 self.requestedMode = mode
-                let target = keyboard == .zhuyin ? InputKeyboard.zhuyinSourceID : "org.fluentime.inputmethod.FluentIME.Hans"
-                let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: target], includeAllInstalled: false)
+                let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: FluentProduct.current.sourceID], includeAllInstalled: false)
                 if let source = sources.first {
                     if TISSelectInputSource(source) != noErr { self.requestedMode = nil }
                 } else { self.requestedMode = nil }

@@ -51,7 +51,7 @@ public final class InputSession {
     public let rime: RimeSession
     public private(set) var mode: InputMode = .simplifiedChinese
     public var isChinese: Bool { mode.isChinese }
-    public private(set) var keyboard: InputKeyboard
+    public let keyboard: InputKeyboard
     /// The modes Shift and the mode menu cycle through on the current keyboard.
     public var availableModes: [InputMode] { options().modes }
     private var zhuyinListOpen = false
@@ -311,16 +311,6 @@ public final class InputSession {
         return handled
     }
 
-    /// Switches between the Pinyin and Zhuyin input sources, finishing any composition first.
-    public func setKeyboard(_ next: InputKeyboard) {
-        guard next != keyboard else { return }
-        finish(); zhuyinListOpen = false
-        keyboard = next
-        expandedKey = ""; expandedItems = []
-        applyOptions()
-        if !options().modes.contains(mode) { selectMode(options().initialMode) }
-        publish()
-    }
     /// Pinyin's dictionary is Simplified and Zhuyin's Traditional; each converts to the other.
     private func applyScript() {
         if keyboard == .zhuyin { rime.setOption("simplification", mode == .simplifiedChinese) }

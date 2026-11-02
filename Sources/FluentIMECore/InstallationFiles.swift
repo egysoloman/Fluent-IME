@@ -4,12 +4,13 @@ import Foundation
 /// entirely in a temporary home directory without changing the user's installation.
 public struct InstallationFiles {
     public let home: URL
-    public var application: URL { home.appendingPathComponent("Library/Input Methods/Fluent IME.app") }
-    public var support: URL { home.appendingPathComponent("Library/Application Support/FluentIME") }
+    public let product: FluentProduct
+    public var application: URL { home.appendingPathComponent("Library/Input Methods/" + product.appFileName) }
+    public var support: URL { product.support(in: home) }
     public var dictionary: URL { support.appendingPathComponent("Rime") }
     public var isInstalled: Bool {
         guard let info = NSDictionary(contentsOf: application.appendingPathComponent("Contents/Info.plist")) else { return false }
-        return info["CFBundleIdentifier"] as? String == "org.fluentime.inputmethod.FluentIME"
+        return info["CFBundleIdentifier"] as? String == product.bundleID
             && FileManager.default.isExecutableFile(atPath: application.appendingPathComponent("Contents/MacOS/FluentIME").path)
     }
     public var hasLocalDictionary: Bool {
@@ -17,7 +18,9 @@ public struct InstallationFiles {
         for case let file as URL in files where file.lastPathComponent.hasSuffix(".userdb") || file.lastPathComponent == "custom_phrase.txt" { return true }
         return false
     }
-    public init(home: URL = FileManager.default.homeDirectoryForCurrentUser) { self.home = home.standardizedFileURL }
+    public init(home: URL = FileManager.default.homeDirectoryForCurrentUser, product: FluentProduct = .current) {
+        self.home = home.standardizedFileURL; self.product = product
+    }
     private func backupDirectory(_ kind: String) throws -> URL {
         let name = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-") + "-" + UUID().uuidString.prefix(8)
         let target = support.appendingPathComponent(kind).appendingPathComponent(name)
@@ -28,17 +31,17 @@ public struct InstallationFiles {
         let fm = FileManager.default
         if source.resolvingSymlinksInPath() == application.resolvingSymlinksInPath() { return }
         guard let info = NSDictionary(contentsOf: source.appendingPathComponent("Contents/Info.plist")),
-              info["CFBundleIdentifier"] as? String == "org.fluentime.inputmethod.FluentIME",
+              info["CFBundleIdentifier"] as? String == product.bundleID,
               fm.isExecutableFile(atPath: source.appendingPathComponent("Contents/MacOS/FluentIME").path) else { throw CocoaError(.fileReadCorruptFile) }
         let staging = support.appendingPathComponent("InstallStaging/" + UUID().uuidString)
         try fm.createDirectory(at: staging, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         defer { try? fm.removeItem(at: staging) }
-        let staged = staging.appendingPathComponent("Fluent IME.app")
+        let staged = staging.appendingPathComponent(product.appFileName)
         try fm.copyItem(at: source, to: staged)
         try fm.createDirectory(at: application.deletingLastPathComponent(), withIntermediateDirectories: true)
         var previous: URL?
         if fm.fileExists(atPath: application.path) {
-            previous = try backupDirectory("Backups").appendingPathComponent("Fluent IME.app")
+            previous = try backupDirectory("Backups").appendingPathComponent(product.appFileName)
             try fm.moveItem(at: application, to: previous!)
         }
         do { try fm.moveItem(at: staged, to: application) }
@@ -51,7 +54,7 @@ public struct InstallationFiles {
         guard let folders = try? fm.contentsOfDirectory(at: backups, includingPropertiesForKeys: nil) else { return }
         for folder in folders where folder.standardizedFileURL != newest.standardizedFileURL {
             // Only remove folders this installer created: one app copy and nothing else.
-            guard (try? fm.contentsOfDirectory(atPath: folder.path)) == ["Fluent IME.app"] else { continue }
+            guard (try? fm.contentsOfDirectory(atPath: folder.path)) == [product.appFileName] else { continue }
             try? fm.removeItem(at: folder)
         }
     }

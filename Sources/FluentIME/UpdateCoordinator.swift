@@ -86,7 +86,7 @@ extension GitHubUpdateService: IMEUpdateService {}
     }
     private let service: any IMEUpdateService
     init(service: any IMEUpdateService = GitHubUpdateService(), defaults: UserDefaults? = nil) {
-        self.service = service; self.defaults = defaults ?? (InstallerLifecycle.isMaintenance ? UserDefaults(suiteName: "org.fluentime.inputmethod.FluentIME")! : .standard)
+        self.service = service; self.defaults = defaults ?? (InstallerLifecycle.isMaintenance ? UserDefaults(suiteName: FluentProduct.current.bundleID)! : .standard)
         channel = UpdateChannel(rawValue: self.defaults.string(forKey: "updateChannel") ?? "") ?? .stable
         lastChecked = self.defaults.object(forKey: "updateLastChecked") as? Date
         // Until this session checks, show the result of the last check for the same channel.

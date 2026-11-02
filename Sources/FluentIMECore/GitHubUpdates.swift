@@ -74,8 +74,9 @@ public struct GitHubRelease: Codable {
     public var version: String { tag_name.hasPrefix("v") ? String(tag_name.dropFirst()) : tag_name }
     public var installer: Asset? { installer(for: .lite) }
     public var manifest: Asset? { manifest(for: .lite) }
-    public func installer(for edition: ReleaseEdition) -> Asset? { assets.first { $0.name == "Fluent-IME-\(version)\(edition == .full ? "-Full" : "")-Setup.dmg" } }
-    public func manifest(for edition: ReleaseEdition) -> Asset? { assets.first { $0.name == (edition == .full ? "release-full.json" : "release.json") } }
+    /// Each product finds only its own installer and manifest in a shared release.
+    public func installer(for edition: ReleaseEdition, product: FluentProduct = .current) -> Asset? { assets.first { $0.name == product.installerAsset(version: version, edition: edition) } }
+    public func manifest(for edition: ReleaseEdition, product: FluentProduct = .current) -> Asset? { assets.first { $0.name == product.manifestAsset(edition: edition) } }
     public func isNewer(than current: String, channel: UpdateChannel = .stable) -> Bool {
         guard channel.accepts(self), let next = ReleaseVersion(version), let old = ReleaseVersion(current) else { return false }
         return next > old
@@ -196,7 +197,7 @@ public final class GitHubUpdateService {
         config.timeoutIntervalForRequest = 30; config.timeoutIntervalForResource = 1800
         config.httpAdditionalHeaders = ["User-Agent": "Fluent-IME-Updater", "Accept": "application/vnd.github+json"]
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-        self.init(edition: edition, configuration: config, cache: caches?.appendingPathComponent("org.fluentime.inputmethod.FluentIME/release-history.json"))
+        self.init(edition: edition, configuration: config, cache: caches?.appendingPathComponent(FluentProduct.current.bundleID + "/release-history.json"))
     }
     init(edition: ReleaseEdition, configuration: URLSessionConfiguration, cache: URL? = nil) {
         self.edition = edition; self.configuration = configuration; self.cache = cache
@@ -305,7 +306,7 @@ public final class GitHubUpdateService {
         var request: URLRequest
         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
         let base = Self.releasesURL.appendingPathComponent("download").appendingPathComponent(tag)
-        let manifestName = edition == .full ? "release-full.json" : "release.json"
+        let manifestName = FluentProduct.current.manifestAsset(edition: edition)
         let manifestURL = base.appendingPathComponent(manifestName)
         let (data, manifestResponse) = try await session.data(from: manifestURL)
         guard (manifestResponse as? HTTPURLResponse)?.statusCode == 200, data.count < 100_000 else { throw UpdateError.invalidRelease }
@@ -313,7 +314,7 @@ public final class GitHubUpdateService {
         guard manifest.version == version, manifest.edition == edition,
               manifest.installer.dmg_sha256.count == 64,
               manifest.installer.dmg_sha256.allSatisfy(\.isHexDigit) else { throw UpdateError.invalidRelease }
-        let installerName = "Fluent-IME-\(version)\(edition == .full ? "-Full" : "")-Setup.dmg"
+        let installerName = FluentProduct.current.installerAsset(version: version, edition: edition)
         let installerURL = base.appendingPathComponent(installerName)
         request = URLRequest(url: installerURL); request.httpMethod = "HEAD"
         let (_, installerResponse) = try await session.data(for: request)

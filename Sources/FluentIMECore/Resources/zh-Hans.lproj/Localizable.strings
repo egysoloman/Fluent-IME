@@ -64,6 +64,8 @@
 "dictionary.openFolder" = "打开用户词库文件夹";
 "dictionary.transformer" = "上下文智能重排（实验性）";
 "dictionary.wanxiang" = "万象综合词库";
+"dictionary.terra" = "地球拼音词库";
+"dictionary.terraContents" = "带声调的通用词库，含多音字与轻声";
 
 /* error */
 "error.gifInvalid" = "所选文件不是有效的 GIF 动图。";

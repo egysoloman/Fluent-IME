@@ -8,7 +8,7 @@ public enum InstallerCleanup {
         let installer = installer.standardizedFileURL
         guard installer.pathExtension == "app",
               let info = NSDictionary(contentsOf: installer.appendingPathComponent("Contents/Info.plist")),
-              info["CFBundleIdentifier"] as? String == "org.fluentime.installer" else { throw CocoaError(.fileReadCorruptFile) }
+              FluentProduct.all.contains(where: { $0.installerID == info["CFBundleIdentifier"] as? String }) else { throw CocoaError(.fileReadCorruptFile) }
         if !readOnly { return Target(item: installer, mountedVolume: nil) }
         for image in diskImages["images"] as? [[String: Any]] ?? [] {
             guard let path = image["image-path"] as? String, path.hasPrefix("/"), path.hasSuffix(".dmg") else { continue }

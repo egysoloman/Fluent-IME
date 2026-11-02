@@ -3,7 +3,7 @@ import FluentIMECore
 
 enum UserModels {
     private static var isImporting = false
-    static let library = ModelLibrary(root: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("FluentIME/Models", isDirectory: true))
+    static let library = ModelLibrary(root: FluentProduct.current.supportDirectory.appendingPathComponent("Models", isDirectory: true))
     static func download(grammar: Bool) {
         // Downloads remain user-initiated in the browser; importing validates
         // the actual model rather than trusting its file name or source URL.

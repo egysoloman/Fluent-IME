@@ -11,8 +11,9 @@ jobs:
       - name: Build with public dependencies
         run: bash scripts/build.sh
       - name: Test the packaged Rime dictionaries
-        run: FLUENTIME_TEST_PRECOMPILED_DIR="$PWD/dist/Fluent IME.app/Contents/Resources/Rime" swift test --jobs 8
+        run: FLUENTIME_TEST_PRECOMPILED_DIR="$PWD/dist/Fluent IME.app/Contents/Resources/Rime" FLUENTIME_TEST_ZHUYIN_DIR="$PWD/dist/zhuyin/Fluent Zhuyin.app/Contents/Resources/Rime" swift test --jobs 8
       - name: Check localizations and notices
         run: |
           python3 scripts/localize.py --check
           python3 scripts/audit-distribution.py 'dist/Fluent IME.app'
+          python3 scripts/audit-distribution.py 'dist/zhuyin/Fluent Zhuyin.app'

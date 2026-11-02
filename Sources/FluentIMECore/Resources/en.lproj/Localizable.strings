@@ -64,6 +64,8 @@
 "dictionary.openFolder" = "Open user dictionary folder";
 "dictionary.transformer" = "Contextual candidate re-ranking (Experimental)";
 "dictionary.wanxiang" = "Wanxiang comprehensive dictionary";
+"dictionary.terra" = "Terra Pinyin dictionary";
+"dictionary.terraContents" = "General toned vocabulary with heteronyms and the neutral tone";
 
 /* error */
 "error.gifInvalid" = "The selected file is not a valid GIF.";

@@ -27,8 +27,11 @@ bool FIMInitialize(const char *shared_dir, const char *user_dir, bool full_check
     // prisms must never shadow a new bundled table. Isolate compiled caches
     // by release while retaining the same user_data_dir and learned database.
     // Source deployments still use the standard build directory.
-    char *prebuilt_table = NULL;
-    if (asprintf(&prebuilt_table, "%s/build/fluent_pinyin.table.bin", shared_dir) >= 0) {
+    // Fluent 拼音 ships the Wanxiang-based table; Fluent 注音 ships Terra Pinyin.
+    const char *tables[] = { "fluent_pinyin", "terra_pinyin" };
+    for (int i = 0; i < 2 && !traits.staging_dir; ++i) {
+        char *prebuilt_table = NULL;
+        if (asprintf(&prebuilt_table, "%s/build/%s.table.bin", shared_dir, tables[i]) < 0) continue;
         if (access(prebuilt_table, F_OK) == 0 &&
             asprintf(&staging_path, "%s/build-%s", user_dir, FIM_DISTRIBUTION_VERSION) >= 0)
             traits.staging_dir = staging_path;
@@ -58,7 +61,14 @@ const char *FIMVersion(void) { return api ? api->get_version() : "uninitialized"
 FIMSession FIMCreateSession(void) {
     if (!api) return 0;
     FIMSession session = api->create_session();
-    if (session && !api->select_schema(session, "fluent_pinyin")) {
+    // Each input method ships one base schema: fluent_pinyin or fluent_bopomofo.
+    const char *schema = "fluent_pinyin";
+    char *zhuyin_schema = NULL;
+    if (shared_path && asprintf(&zhuyin_schema, "%s/fluent_bopomofo.schema.yaml", shared_path) >= 0) {
+        if (access(zhuyin_schema, F_OK) == 0) schema = "fluent_bopomofo";
+        free(zhuyin_schema);
+    }
+    if (session && !api->select_schema(session, schema)) {
         api->destroy_session(session);
         return 0;
     }

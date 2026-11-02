@@ -1,0 +1,12 @@
+{
+  "source": "https://github.com/BYVoid/OpenCC/tree/ver.1.4.2",
+  "version": "1.4.2",
+  "license": "Apache-2.0",
+  "changes": "Original conversion dictionary bytes; t2s configuration renamed to fluent_t2s.json, with explicit mmseg segmentation for compatibility with the pinned Rime runtime.",
+  "files": {
+    "CJK_Compatibility_Ideographs.ocd2": "4b1faa6649012f524068ec18c0fb520ead343c11cbe0a8e4c8853ca61369d666",
+    "TSCharacters.ocd2": "7a994de7900707925fac9c68728a6bb9cf3059870426f661cf31b601efbf5f2f",
+    "TSCharactersExt.ocd2": "e2b0286801dcd1d26119d19ba8b8a35cde021ec173468255d117c4c0951b2906",
+    "TSPhrases.ocd2": "2b722237cc00a4ac985790deb6a68c99f34de10e980a0029ac82c72b0f7ae22b"
+  }
+}

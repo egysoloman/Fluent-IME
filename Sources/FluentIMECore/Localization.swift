@@ -43,7 +43,12 @@ public enum L10n {
 
     static func text(_ key: String, language: String? = nil) -> String {
         let fallback = bundle(for: "zh-Hans")?.localizedString(forKey: key, value: key, table: "Localizable") ?? key
-        return bundle(for: language ?? interfaceLanguage)?.localizedString(forKey: key, value: fallback, table: "Localizable") ?? fallback
+        let value = bundle(for: language ?? interfaceLanguage)?.localizedString(forKey: key, value: fallback, table: "Localizable") ?? fallback
+        return FluentProduct.current.kind == .zhuyin ? zhuyinNames(value) : value
+    }
+    /// The catalogs name Fluent 拼音; Fluent 注音 shares them under its own name.
+    static func zhuyinNames(_ text: String) -> String {
+        text.replacingOccurrences(of: "Fluent 拼音", with: "Fluent 注音").replacingOccurrences(of: "Fluent Pinyin", with: "Fluent Zhuyin")
     }
 
     static func format(_ key: String, language: String? = nil, arguments: [CVarArg]) -> String {

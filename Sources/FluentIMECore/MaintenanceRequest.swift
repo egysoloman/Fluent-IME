@@ -81,7 +81,7 @@ public struct VerifiedUpdateReceipt: Codable {
         guard receiptFile.standardizedFileURL.path == receiptFile.resolvingSymlinksInPath().path,
               (try receiptFile.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? Int.max < 16_384 else { throw UpdateError.integrity }
         let receipt = try JSONDecoder().decode(Self.self, from: Data(contentsOf: receiptFile))
-        let name = "Fluent-IME-\(version)\(receipt.edition == .full ? "-Full" : "")-Setup.dmg"
+        let name = FluentProduct.current.installerAsset(version: version, edition: receipt.edition)
         guard receipt.version == version, file.lastPathComponent == name, (1...2_000_000_000).contains(receipt.size) else { throw UpdateError.integrity }
         try GitHubUpdateService.verify(file: file, expectedSize: receipt.size, sha256: receipt.sha256)
         return receipt

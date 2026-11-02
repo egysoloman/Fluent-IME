@@ -5,8 +5,8 @@ import FluentIMECore
 /// The settings UI downloads and confirms actions; a separate application owns
 /// installation and removal. Launch Services gives that app its own lifecycle.
 @MainActor enum MaintenanceClient {
-    nonisolated static let identifier = "org.fluentime.maintenance"
-    nonisolated static let relativePath = "Contents/Library/Fluent IME Maintenance.app"
+    nonisolated static let identifier = FluentProduct.current.maintenanceID
+    nonisolated static let relativePath = "Contents/Library/" + FluentProduct.current.maintenanceName + ".app"
 
     static func launch(_ request: MaintenanceRequest) async throws {
         let files = InputMethodInstallation.shared.files

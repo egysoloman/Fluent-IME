@@ -154,7 +154,7 @@ deployment.mkdir(parents=True)
 runtime_default = RESOURCES / "Rime/default.yaml"
 all_schemas = runtime_default.read_text()
 base_only = '\n'.join(line for line in all_schemas.split('\n')
-                      if not re.match(r'  - schema: fluent_(pinyin|bopomofo)_', line))
+                      if not re.match(r'  - schema: fluent_pinyin_', line))
 runtime_default.write_text(base_only)
 run(executable, "--deploy", RESOURCES / "Rime", deployment)
 runtime_default.write_text(all_schemas)

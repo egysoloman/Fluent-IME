@@ -124,12 +124,12 @@ public final class ClipboardVault: ClipboardEncryptionStoring {
     }
     public static func deleteKeychainKey() throws {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "org.fluentime.clipboard.v1", kSecAttrAccount as String: "encryption-key",
+            kSecAttrService as String: FluentProduct.current.clipboardKeychainService, kSecAttrAccount as String: "encryption-key",
             kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail]
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw ClipboardError.storage }
     }
-    public static func keychainKey(create: Bool, service: String = "org.fluentime.clipboard.v1", allowInteraction: Bool = false) throws -> SymmetricKey {
+    public static func keychainKey(create: Bool, service: String = FluentProduct.current.clipboardKeychainService, allowInteraction: Bool = false) throws -> SymmetricKey {
         // This native IMK app is not App Sandbox signed. Use its own login-keychain
         // item instead of claiming Data Protection Keychain / Secure Enclave access.
         let identity: [String: Any] = [kSecClass as String: kSecClassGenericPassword,

@@ -21,7 +21,7 @@ public enum GIFLibraryError: LocalizedError {
 
 /// Owns copies of explicitly selected files, never modifies the originals.
 public final class GIFLibrary {
-    public static let shared = GIFLibrary(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("FluentIME/GIFs"))
+    public static let shared = GIFLibrary(directory: FluentProduct.current.supportDirectory.appendingPathComponent("GIFs"))
     public let directory: URL
     public private(set) var entries: [GIFEntry] = []
     public init(directory: URL) {

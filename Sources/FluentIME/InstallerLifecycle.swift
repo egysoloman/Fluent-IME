@@ -2,25 +2,25 @@ import AppKit
 import FluentIMECore
 
 enum InstallerLifecycle {
-    static let identifier = "org.fluentime.installer"
+    static let identifier = FluentProduct.current.installerID
     static var isInstaller: Bool { Bundle.main.bundleIdentifier == identifier }
-    static var isMaintenance: Bool { isInstaller || Bundle.main.bundleIdentifier == "org.fluentime.maintenance" }
+    static var isMaintenance: Bool { isInstaller || Bundle.main.bundleIdentifier == FluentProduct.current.maintenanceID }
     static var previousInstallers: [String] {
         let args = CommandLine.arguments
         return Array(args.indices.compactMap { i in args[i] == "--previous-installer" && i + 1 < args.count ? args[i + 1] : nil }.prefix(4))
     }
     static var payload: URL {
-        if isInstaller { return Bundle.main.resourceURL!.appendingPathComponent("Payload/Fluent IME.app") }
+        if isInstaller { return Bundle.main.resourceURL!.appendingPathComponent("Payload/" + FluentProduct.current.appFileName) }
         let enclosingApp = Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        if (NSDictionary(contentsOf: enclosingApp.appendingPathComponent("Contents/Info.plist")))?["CFBundleIdentifier"] as? String == "org.fluentime.inputmethod.FluentIME" { return enclosingApp }
+        if (NSDictionary(contentsOf: enclosingApp.appendingPathComponent("Contents/Info.plist")))?["CFBundleIdentifier"] as? String == FluentProduct.current.bundleID { return enclosingApp }
         return InstallationFiles().application
     }
     static func preparePreferences() {
         // Wizard controls are drafts. Read existing preferences without writing them.
-        UserDefaults.standard.addSuite(named: "org.fluentime.inputmethod.FluentIME")
+        UserDefaults.standard.addSuite(named: FluentProduct.current.bundleID)
     }
     static func removeTemporaryMaintenanceCopy() {
-        guard Bundle.main.bundleIdentifier == "org.fluentime.maintenance" else { return }
+        guard Bundle.main.bundleIdentifier == FluentProduct.current.maintenanceID else { return }
         let parent = Bundle.main.bundleURL.deletingLastPathComponent().resolvingSymlinksInPath()
         let prefix = "FluentIME-Maintenance-"
         guard parent.deletingLastPathComponent() == FileManager.default.temporaryDirectory.resolvingSymlinksInPath(),
@@ -29,7 +29,7 @@ enum InstallerLifecycle {
         try? FileManager.default.removeItem(at: parent)
     }
     static func commitPreferences() {
-        let shared = UserDefaults(suiteName: "org.fluentime.inputmethod.FluentIME")!
+        let shared = UserDefaults(suiteName: FluentProduct.current.bundleID)!
         for key in ["enabledInputModes", "defaultInputMode", "clipboardRetention", "clipboardRecording", "advancedEffects", "showInputModeIndicator", "setupCompleted"] {
             if let value = UserDefaults.standard.object(forKey: key) { shared.set(value, forKey: key) }
         }

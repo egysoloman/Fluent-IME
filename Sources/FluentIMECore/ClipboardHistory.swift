@@ -55,7 +55,7 @@ public final class ClipboardHistory {
         if CommandLine.arguments.contains(where: { $0.hasPrefix("--render-") }) {
             return ClipboardHistory(pasteboard: NSPasteboard(name: .init("FluentIME-Render-" + UUID().uuidString)), automaticPolling: false)
         }
-        return ClipboardHistory(storage: ClipboardVault(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("FluentIME/Private/Clipboard"), encrypted: UserDefaults.standard.object(forKey: "clipboardEncryption") as? Bool ?? true), asynchronousStorage: true,
+        return ClipboardHistory(storage: ClipboardVault(directory: FluentProduct.current.supportDirectory.appendingPathComponent("Private/Clipboard"), encrypted: UserDefaults.standard.object(forKey: "clipboardEncryption") as? Bool ?? true), asynchronousStorage: true,
             encryptionChanged: { UserDefaults.standard.set($0, forKey: "clipboardEncryption") })
     }()
     public private(set) var entries: [ClipboardEntry] = []

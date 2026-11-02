@@ -167,7 +167,8 @@ private enum SettingsPage: String, CaseIterable {
         case .updateHistory: return .updateHistory
         }
     }
-    static let categories: [SettingsPage] = [.modes, .keys, .appearance, .models, .clipboard, .updates, .advanced]
+    // The language models serve Pinyin only.
+    static let categories: [SettingsPage] = [.modes, .keys, .appearance] + (FluentProduct.current.keyboard == .pinyin ? [.models] : []) + [.clipboard, .updates, .advanced]
 }
 
 /// Compact native settings: retain the reference content geometry without the Windows sidebar.
@@ -230,8 +231,8 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
 
     init(engine: RimeEngine) throws {
         self.engine = engine
-        input = try InputSession(engine: engine, options: { Preferences.shared.inputOptions }, ranker: NeuralRuntime.shared.ranker, languageOptions: { Preferences.shared.inputOptions(for: $0) })
-        sampleInput = try InputSession(engine: engine, options: {
+        input = try InputSession(engine: engine, keyboard: FluentProduct.current.keyboard, options: { Preferences.shared.inputOptions }, ranker: NeuralRuntime.shared.ranker, languageOptions: { Preferences.shared.inputOptions(for: $0) })
+        sampleInput = try InputSession(engine: engine, keyboard: FluentProduct.current.keyboard, options: {
             var value = Preferences.shared.inputOptions; value.learning = false; value.neuralRanking = false; return value
         })
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 837),
@@ -296,7 +297,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         }
         candidates.onViewportChanged = { [weak self] start, columns in self?.input.setCandidateViewport(start: start, columns: columns) }
         candidates.onInteraction = { [weak self] in self?.input.lockRanking() }
-        for character in "she".utf8 { sampleInput.rime.process(key: Int32(character)) }
+        typeSample()
         sampleInput.onUpdate = { [weak self] _ in self?.refreshCandidates() }
         if let requested = ProcessInfo.processInfo.environment["FLUENTIME_RENDER_PAGE"], let initial = SettingsPage(rawValue: requested) { page = initial }
         root.onLayout = { [weak self] in self?.layout() }
@@ -397,7 +398,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         input.applyOptions()
         sampleInput.applyOptions()
         if !sampleInput.composition.isComposing {
-            for character in "she".utf8 { sampleInput.rime.process(key: Int32(character)) }
+            typeSample()
         }
         refreshCandidates()
         if !Preferences.shared.showInputModeIndicator { modeIndicator.dismiss() }
@@ -488,6 +489,19 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         pageContent.addSubview(button); fitPageWidth(button)
         pageAppearanceUpdates.append { [weak button] theme in button?.theme = theme; button?.image = glyph.image(color: theme.textPrimary); button?.needsDisplay = true }
     }
+    /// The try-input sample: "she" in Pinyin, ㄋㄧˇㄏㄠˇ on 大千 with its list opened as ↓ would.
+    private func typeSample() {
+        guard FluentProduct.current.keyboard == .zhuyin else {
+            for character in "she".utf8 { sampleInput.rime.process(key: Int32(character)) }
+            return
+        }
+        func key(_ characters: String, _ code: UInt16 = 0) -> NSEvent {
+            NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                             characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
+        }
+        for character in "su3cl3" { _ = sampleInput.handle(key(String(character))) }
+        _ = sampleInput.handle(key("", 125))
+    }
     private func showUninstall() { MaintenanceDialogs.uninstall(in: root) }
     private func manageDictionary() { MaintenanceDialogs.dictionary(in: root) }
     private func toggle(_ title: String, y: CGFloat, value: Bool, enabled: Bool = true, changed: @escaping (Bool) -> Void) {
@@ -570,16 +584,20 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             }
             choice(L10n.generalDefaultModeChoice, y: 224, width: 300, options: p.enabledInputModes.map { ($0.rawValue, $0.title) }, selected: p.defaultInputMode.rawValue) { if let mode = InputMode(rawValue: $0) { p.defaultInputMode = mode } }
         case .general:
-            if settingsLanguage.isChinese {
+            // Pinyin spelling options; Zhuyin has its own input method and none of them.
+            let pinyinOptions = settingsLanguage.isChinese && FluentProduct.current.keyboard == .pinyin
+            if pinyinOptions {
                 _ = label(L10n.generalPinyinTitle, y: 0, size: 20)
                 choice(L10n.generalPinyinChoice, y: 48, options: [("pinyin", L10n.generalPinyinFull)], selected: "pinyin") { _ in }
                 toggle(L10n.generalCorrection, y: 136, value: language.autoCorrection) { language.autoCorrection = $0 }
                 toggle(L10n.generalAbbreviation, y: 210, value: language.abbreviation) { language.abbreviation = $0 }
             }
-            let start: CGFloat = settingsLanguage.isChinese ? 302 : 0
+            let start: CGFloat = pinyinOptions ? 302 : 0
             toggle(L10n.generalHalfWidth, y: start, value: language.halfWidth) { language.halfWidth = $0 }
             if settingsLanguage.isChinese {
                 toggle(L10n.generalEnglishPunctuation, y: start + 74, value: language.englishPunctuation) { language.englishPunctuation = $0 }
+            }
+            if pinyinOptions {
                 _ = label(L10n.generalFuzzy, y: start + 174, size: 20)
                 for (index, rule) in FuzzyPinyinRule.allCases.enumerated() {
                     toggle(rule.title, y: start + 222 + CGFloat(index * 74), value: language.fuzzyPinyinMask & rule.rawValue != 0) { enabled in
@@ -628,9 +646,16 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             toggle(L10n.dictionaryLearning, y: 48, value: language.learning) { language.learning = $0 }
             _ = label(L10n.dictionaryLearningHint, y: 118, size: 13, secondary: true)
             _ = label(L10n.dictionaryLocal, y: 192, size: 20)
-            _ = label(L10n.dictionaryWanxiang, y: 238, size: 14)
-            _ = label(L10n.dictionaryContents, y: 270, size: 13, secondary: true)
+            let zhuyin = FluentProduct.current.keyboard == .zhuyin
+            _ = label(zhuyin ? L10n.dictionaryTerra : L10n.dictionaryWanxiang, y: 238, size: 14)
+            _ = label(zhuyin ? L10n.dictionaryTerraContents : L10n.dictionaryContents, y: 270, size: 13, secondary: true)
             _ = action(L10n.dictionaryOpenFolder, y: 318, width: 200) { [weak self] in if let url = self?.engine.userDirectory { NSWorkspace.shared.open(url) } }
+            if zhuyin {
+                // The grammar and Transformer models are trained on Simplified Chinese pinyin text.
+                _ = action(L10n.dictionaryManage, y: 390, width: 300) { [weak self] in self?.manageDictionary() }
+                documentHeight = 470
+                break
+            }
             _ = label(L10n.dictionaryLanguageModel, y: 390, size: 20)
             toggle(L10n.dictionaryGrammar, y: 438, value: language.wanxiangGrammar) { language.wanxiangGrammar = $0 }
             _ = label(L10n.dictionaryGrammarHint, y: 506, size: 13, secondary: true)

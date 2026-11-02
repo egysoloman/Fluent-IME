@@ -9,7 +9,7 @@ final class ZhuyinSessionTests: XCTestCase {
 
     override class func setUp() {
         super.setUp()
-        guard let precompiled = ProcessInfo.processInfo.environment["FLUENTIME_TEST_PRECOMPILED_DIR"] else { return }
+        guard let precompiled = ProcessInfo.processInfo.environment["FLUENTIME_TEST_ZHUYIN_DIR"] else { return }
         do {
             scratch = FileManager.default.temporaryDirectory.appendingPathComponent("FluentZhuyinTests-" + UUID().uuidString)
             let shared = scratch.appendingPathComponent("shared")
@@ -24,7 +24,7 @@ final class ZhuyinSessionTests: XCTestCase {
         super.tearDown()
     }
     override func setUpWithError() throws {
-        guard Self.engine != nil else { throw XCTSkip("Requires FLUENTIME_TEST_PRECOMPILED_DIR with the packaged Zhuyin data") }
+        guard Self.engine != nil else { throw XCTSkip("Requires FLUENTIME_TEST_ZHUYIN_DIR, the Rime data of the packaged Fluent Zhuyin.app") }
     }
 
     private func session(mode: InputMode = .traditionalChinese, keyboard: InputKeyboard = .zhuyin, learning: Bool = false) throws -> (InputSession, () -> String) {
@@ -164,22 +164,5 @@ final class ZhuyinSessionTests: XCTestCase {
         XCTAssertTrue(input.handle(event("<", code: 43, flags: .shift)))
         XCTAssertEqual(committed(), "好，")
         XCTAssertFalse(input.composition.isComposing)
-    }
-
-    func testSwitchingKeyboardsKeepsPinyinIntact() throws {
-        let (input, committed) = try session(mode: .traditionalChinese, keyboard: .pinyin)
-        for character in "nihao" { XCTAssertTrue(input.handle(event(String(character)))) }
-        XCTAssertTrue(input.handle(event(" ", code: 49)))
-        XCTAssertEqual(committed(), "你好")
-        input.setKeyboard(.zhuyin)
-        XCTAssertEqual(input.keyboard, .zhuyin)
-        type("ㄋㄧˇㄏㄠˇ", into: input); enter(input)
-        XCTAssertEqual(committed(), "你好你好")
-        input.setKeyboard(.pinyin)
-        for character in "nihao" { XCTAssertTrue(input.handle(event(String(character)))) }
-        XCTAssertFalse(input.composition.candidates.isEmpty, "Pinyin shows its candidates while typing")
-        XCTAssertEqual(input.composition.candidates.first?.text, "你好")
-        XCTAssertEqual(InputKeyboard(sourceID: "org.fluentime.inputmethod.FluentIME.Bopomofo"), .zhuyin)
-        XCTAssertEqual(InputKeyboard(sourceID: "org.fluentime.inputmethod.FluentIME.Hans"), .pinyin)
     }
 }

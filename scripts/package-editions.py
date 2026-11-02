@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Package both editions from one verified app; Lite omits only the Transformer."""
+"""Package Fluent 拼音 (Lite and Full, from one verified app) and Fluent 注音.
+Lite omits only the Transformer; Zhuyin is its own input method with one edition."""
 from pathlib import Path
 import hashlib, json, os, plistlib, shutil, subprocess, sys
 
@@ -39,7 +40,14 @@ for folder in [lite, dist]:
 version = info['CFBundleShortVersionString']
 shutil.copy2(lite / f'Fluent-IME-{version}-Setup.dmg', dist)
 shutil.copy2(lite / 'release.json', dist)
-files = [dist / f'Fluent-IME-{version}{suffix}-Setup.dmg' for suffix in ['', '-Full']]
-files += [dist / 'release.json', dist / 'release-full.json']
+zhuyin = dist / 'zhuyin'
+run(sys.executable, root / 'scripts/bundle-zhuyin.py')
+env = {**os.environ, 'FLUENTIME_PACKAGE_DIR': str(zhuyin), 'FLUENTIME_SKIP_ZIP': '1', 'FLUENTIME_PRODUCT': 'zhuyin'}
+run(sys.executable, root / 'scripts/package-installer.py', env=env)
+run(dmg_python if dmg_python.exists() else sys.executable, root / 'scripts/package-dmg.py', env=env)
+shutil.copy2(zhuyin / f'Fluent-Zhuyin-{version}-Setup.dmg', dist)
+shutil.copy2(zhuyin / 'release-zhuyin.json', dist)
+files = [dist / f'Fluent-IME-{version}{suffix}-Setup.dmg' for suffix in ['', '-Full']] + [dist / f'Fluent-Zhuyin-{version}-Setup.dmg']
+files += [dist / 'release.json', dist / 'release-full.json', dist / 'release-zhuyin.json']
 (dist / 'SHA256SUMS').write_text(''.join(hashlib.file_digest(file.open('rb'), 'sha256').hexdigest() + '  ' + file.name + '\n' for file in files))
-for file in files[:2]: print(file.name, round(file.stat().st_size / 1024**2, 1), 'MiB')
+for file in files[:3]: print(file.name, round(file.stat().st_size / 1024**2, 1), 'MiB')

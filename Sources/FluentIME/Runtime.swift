@@ -22,7 +22,7 @@ final class Runtime {
         return Result {
             let shared = Bundle.main.resourceURL!.appendingPathComponent("Rime", isDirectory: true)
             var user = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("FluentIME/Rime", isDirectory: true)
+                .appendingPathComponent(FluentProduct.current.supportFolder + "/Rime", isDirectory: true)
             if CommandLine.arguments.contains("--render-preview") || CommandLine.arguments.contains("--render-components") {
                 // Offline rendering must never compete with the active IMK server's LevelDB lock.
                 user = FileManager.default.temporaryDirectory.appendingPathComponent("FluentIME-Preview-" + UUID().uuidString)
