@@ -26,8 +26,10 @@ for path in [resources / 'Rime', resources / 'Models', app / 'Contents/Library' 
 info_path = app / 'Contents/Info.plist'
 info = plistlib.loads(info_path.read_bytes())
 info.pop('FluentIMEEdition', None)  # one edition; the Transformer is Pinyin-only
+# Every identity key must be Zhuyin's own, or the system merges the two input methods.
 info.update(CFBundleIdentifier=product['bundle_id'], CFBundleName=product['names']['zh-Hans'], CFBundleDisplayName=product['names']['zh-Hans'],
-            InputMethodConnectionName=product['connection'], FluentIMEProduct='zhuyin')
+            InputMethodConnectionName=product['connection'], FluentIMEProduct='zhuyin',
+            TISInputSourceID=product['bundle_id'], tsInputMethodIconFileKey='InputMenuIconBopomofo.pdf')
 modes = info['ComponentInputModeDict']['tsInputModeListKey']
 mode = dict(modes['org.fluentime.inputmethod.FluentIME.Hans'])
 mode.update(TISInputSourceID=product['source_id'], TISIntendedLanguage='zh-Hant', tsInputModeCharacterRepertoireKey=['Hant'],
