@@ -85,7 +85,6 @@ extension GitHubUpdateService: IMEUpdateService {}
         }
     }
     private let service: any IMEUpdateService
-    private var updateWindow: NSWindow?
     init(service: any IMEUpdateService = GitHubUpdateService(), defaults: UserDefaults? = nil) {
         self.service = service; self.defaults = defaults ?? (InstallerLifecycle.isMaintenance ? UserDefaults(suiteName: "org.fluentime.inputmethod.FluentIME")! : .standard)
         channel = UpdateChannel(rawValue: self.defaults.string(forKey: "updateChannel") ?? "") ?? .stable
@@ -153,21 +152,5 @@ extension GitHubUpdateService: IMEUpdateService {}
             }
             if request == generation { task = nil }
         }
-    }
-    // The installer uses the same update page in its own window.
-    func present(in root: NSView) {
-        if let updateWindow { updateWindow.makeKeyAndOrderFront(nil); return }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = L10n.updatePageTitle; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
-        window.isReleasedWhenClosed = false; window.styleMask.insert(.fullSizeContentView)
-        for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] { window.standardWindowButton(type)?.isHidden = true }
-        let content = IMEFlippedView(); content.wantsLayer = true; content.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor; window.contentView = content
-        let title = FluentTitleBar(title: L10n.updatePageTitle, heightMode: .compact, backgroundStyle: .transparent, windowControlsStyle: .windows)
-        let bar = title._makeView(in: FluentRenderContext(theme: IMEThemeObservation.current, locale: L10n.locale)); bar.frame = NSRect(x: 0, y: 0, width: 640, height: 40); bar.autoresizingMask = [.width]; content.addSubview(bar)
-        window.minSize = NSSize(width: 600, height: 520)
-        let host = UpdateNavigationView(coordinator: self)
-        host.frame = NSRect(x: 0, y: 52, width: 640, height: 708); host.autoresizingMask = [.width, .height]
-        content.addSubview(host)
-        updateWindow = window; window.center(); window.makeKeyAndOrderFront(nil)
     }
 }

@@ -25,6 +25,7 @@ import FluentIMECore
             for step in 0..<5 {
                 RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.65))
                 root.layoutSubtreeIfNeeded(); root.displayIfNeeded()
+                if step == 0 { precondition(!all(root).contains { ($0 as? FluentButton)?.title == L10n.updateTitle }, "The guide has no update entry") }
                 for label in all(root).compactMap({ $0 as? FluentSelectableLabel }) where !label.stringValue.isEmpty {
                     let needed = label.cell!.cellSize(forBounds: NSRect(x: 0, y: 0, width: label.bounds.width, height: 1000))
                     if needed.height > label.bounds.height + 1 { fputs("Clipped text: \(label.stringValue), needed=\(needed.height), actual=\(label.bounds.height)\n", stderr) }

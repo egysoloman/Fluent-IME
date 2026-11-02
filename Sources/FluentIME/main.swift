@@ -103,25 +103,26 @@ let rendering = arguments.contains(where: { $0.hasPrefix("--render-") })
 let installation = InputMethodInstallation.shared
 if !rendering, InstallerLifecycle.isMaintenance {
     InstallerLifecycle.preparePreferences()
-    let app = NSApplication.shared; app.setActivationPolicy(.regular)
+    let app = NSApplication.shared
     let delegate = MaintenanceAppDelegate(); app.delegate = delegate
+    let tasks = MaintenanceTasks(); delegate.tasks = tasks
+    var request: MaintenanceRequest?, failure: Error?
     if let index = arguments.firstIndex(of: "--maintenance-request"), arguments.count == index + 2 {
-        let controller = MaintenanceWindowController(showSetup: { delegate.showSetup() }); delegate.controller = controller
-        do {
-            let request = try MaintenanceRequestStore(support: installation.files.support).consume(URL(fileURLWithPath: arguments[index + 1]))
-            if case .finishSetup = request { app.setActivationPolicy(.accessory) }
-            else if request == .show, !installation.isPresent, installation.hasInstallerPayload { delegate.showSetup() }
-            else { controller.showWindow(nil) }
-            if request != .show || installation.isPresent || !installation.hasInstallerPayload { controller.handle(request) }
+        do { request = try MaintenanceRequestStore(support: installation.files.support).consume(URL(fileURLWithPath: arguments[index + 1])) }
+        catch { failure = error }
+    }
+    let applyUpdate = arguments.contains("--apply-update")
+        || (request == nil && failure == nil && installation.isPresent && !installation.isInstalled && InstallerLifecycle.launchedByLegacyUpdater)
+    // Update, uninstall and cleanup run without a window. Any other launch is the setup guide.
+    if failure != nil || applyUpdate || (request != nil && request != .show) {
+        app.setActivationPolicy(.accessory)
+        DispatchQueue.main.async {
+            if let failure { tasks.fail(failure) } else if applyUpdate { tasks.applyBundledUpdate() } else if let request { tasks.handle(request) }
         }
-        catch { controller.showFailure(error) }
-    } else if case let applyUpdate = arguments.contains("--apply-update") || (installation.isPresent && !installation.isInstalled && InstallerLifecycle.launchedByLegacyUpdater),
-              applyUpdate || installation.isPresent || !InstallerLifecycle.isInstaller {
-        let controller = MaintenanceWindowController(showSetup: { delegate.showSetup() }); delegate.controller = controller
-        controller.showWindow(nil)
-        if applyUpdate { controller.applyBundledUpdate() }
-    } else { delegate.showSetup() }
-    if app.activationPolicy() != .accessory { app.activate(ignoringOtherApps: true) }
+    } else {
+        app.setActivationPolicy(.regular)
+        delegate.showSetup(); app.activate(ignoringOtherApps: true)
+    }
     withExtendedLifetime(delegate) { app.run() }; exit(0)
 }
 var cleanupInstallers: [URL] = []

@@ -344,26 +344,8 @@ public extension L10n {
     static var languageSimplified: String { text("language.simplified") }
     /// 繁體中文
     static var languageTraditional: String { text("language.traditional") }
-    /// 管理已安装的输入法，或重新运行安装引导。
-    static var maintenanceDetail: String { text("maintenance.detail") }
-    /// 运行此安装包
-    static var maintenanceInstall: String { text("maintenance.install") }
-    /// 打开维护程序
-    static var maintenanceOpen: String { text("maintenance.open") }
-    /// 正在打开维护程序…
-    static var maintenanceOpening: String { text("maintenance.opening") }
-    /// 安装包版本 %1$@
-    static func maintenancePayloadVersion(_ arg1: String) -> String { format("maintenance.payloadVersion", arguments: [arg1]) }
-    /// 输入法及本地数据已移除。
-    static var maintenanceRemoved: String { text("maintenance.removed") }
-    /// 输入法已移除。设置、词库和固定项目已保留。
-    static var maintenanceRemovedKeepingData: String { text("maintenance.removedKeepingData") }
-    /// 正在退出并卸载输入法…
-    static var maintenanceRemoving: String { text("maintenance.removing") }
     /// Fluent IME 维护
     static var maintenanceTitle: String { text("maintenance.title") }
-    /// 正在校验安装包…
-    static var maintenanceVerifying: String { text("maintenance.verifying") }
     /// 拷贝
     static var menuCopy: String { text("menu.copy") }
     /// 剪切

@@ -352,8 +352,10 @@ import CRimeBridge
                 precondition(titles.contains(L10n.updatePageTitle) && titles.contains(L10n.updateHistoryTitle), "History must have an Updates breadcrumb")
             }
             if page == "advanced" {
-                let buttons = all(controller.window!.contentView!).compactMap { $0 as? FluentButton }.filter { [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction, L10n.updatePageTitle].contains($0.title) }
-                precondition(buttons.count == 5 && Set(buttons.map { $0.frame.width }).count == 1, "Advanced actions must align")
+                let all = all(controller.window!.contentView!).compactMap { $0 as? FluentButton }
+                let buttons = all.filter { [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction].contains($0.title) }
+                precondition(buttons.count == 4 && Set(buttons.map { $0.frame.width }).count == 1, "Advanced actions must align")
+                precondition(!all.contains { [L10n.updatePageTitle, L10n.updateTitle].contains($0.title) }, "About keeps only licenses, guide and uninstall")
                 precondition(buttons.first { $0.title == L10n.uninstallAction }?.role == .primary)
             }
             if page == "fonts" {

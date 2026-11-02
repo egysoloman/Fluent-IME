@@ -405,15 +405,6 @@
 
 // Maintenance
 "maintenance.title" = "Fluent IME 维护";
-"maintenance.detail" = "管理已安装的输入法，或重新运行安装引导。";
-"maintenance.open" = "打开维护程序";
-"maintenance.install" = "运行此安装包";
-"maintenance.payloadVersion" = "安装包版本 %1$@";
-"maintenance.opening" = "正在打开维护程序…";
-"maintenance.removing" = "正在退出并卸载输入法…";
-"maintenance.removed" = "输入法及本地数据已移除。";
-"maintenance.removedKeepingData" = "输入法已移除。设置、词库和固定项目已保留。";
-"maintenance.verifying" = "正在校验安装包…";
 
 // Release channels and history
 "update.channelTitle" = "更新渠道";

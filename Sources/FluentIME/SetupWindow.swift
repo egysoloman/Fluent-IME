@@ -104,7 +104,6 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             card(y: 128, height: 116)
             label(installation.isInstalled ? L10n.installInstalled : L10n.installNotInstalled, x: 20, y: 148, width: 504, size: 16, height: 28)
             label(L10n.installLocationHint, x: 20, y: 188, width: 504, size: 13, height: 44, secondary: true)
-            button(L10n.updateTitle, y: 276, width: 196) { [weak self] in if let root = self?.root { UpdateCoordinator.shared.present(in: root) } }
         case 1:
             card(y: 128, height: 76)
             label(installation.isEnabled ? L10n.installEnabled : L10n.installNotEnabled, x: 20, y: 150, width: 504, size: 16, height: 30)

@@ -218,7 +218,6 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         return state.scored == 0 ? L10n.neuralReady : L10n.neuralScored(state.scored, String(format: "%.1f", state.milliseconds))
     }
     private var settingsLanguage = Preferences.shared.enabledInputModes[0]
-    private var setupWindow: SetupWindowController?
     private var documentHeight: CGFloat = 500
     private var editorSurface: NSView?
     private var languageButton: FluentButton?
@@ -489,10 +488,6 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         pageContent.addSubview(button); fitPageWidth(button)
         pageAppearanceUpdates.append { [weak button] theme in button?.theme = theme; button?.image = glyph.image(color: theme.textPrimary); button?.needsDisplay = true }
     }
-    private func showSetup() {
-        setupWindow = SetupWindowController(onComplete: { [weak self] in self?.showWindow(nil) })
-        setupWindow?.showWindow(nil)
-    }
     private func showUninstall() { MaintenanceDialogs.uninstall(in: root) }
     private func manageDictionary() { MaintenanceDialogs.dictionary(in: root) }
     private func toggle(_ title: String, y: CGFloat, value: Bool, enabled: Bool = true, changed: @escaping (Bool) -> Void) {
@@ -669,7 +664,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             paragraph(modelStatus, y: 594, height: 60)
             documentHeight = 674
         case .advanced:
-            let buttonWidth = [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction, L10n.updatePageTitle, L10n.maintenanceOpen].map { FluentButton(title: $0).intrinsicContentSize.width }.reduce(CGFloat(240), max)
+            let buttonWidth = [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction].map { FluentButton(title: $0).intrinsicContentSize.width }.reduce(CGFloat(240), max)
             _ = label(L10n.advancedSystemInput, y: 0, size: 20)
             _ = label(L10n.advancedAddInputHint, y: 48)
             _ = action(L10n.advancedOpenKeyboard, y: 92, width: buttonWidth) { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!) }
@@ -681,16 +676,15 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             _ = action(L10n.advancedLicenses, y: 356, width: buttonWidth) {
                 if let directory = Bundle.main.resourceURL?.appendingPathComponent("Licenses") { NSWorkspace.shared.open(directory) }
             }
-            _ = action(L10n.setupReopen, y: 414, width: buttonWidth) { [weak self] in self?.showSetup() }
-            _ = action(L10n.uninstallAction, y: 476, width: buttonWidth, role: .primary) { [weak self] in self?.showUninstall() }
-            _ = action(L10n.updatePageTitle, y: 534, width: buttonWidth) { [weak self] in self?.navigate(.updates) }
-            _ = action(L10n.maintenanceOpen, y: 592, width: buttonWidth) { [weak self] in
+            // The guide runs in the maintenance program, which reopens the input method when it finishes.
+            _ = action(L10n.setupReopen, y: 414, width: buttonWidth) { [weak self] in
                 Task { @MainActor in
                     do { try await MaintenanceClient.launch(.show) }
                     catch { if let root = self?.root { MaintenanceDialogs.showError(error, in: root) } }
                 }
             }
-            documentHeight = 666
+            _ = action(L10n.uninstallAction, y: 472, width: buttonWidth, role: .primary) { [weak self] in self?.showUninstall() }
+            documentHeight = 546
         case .updates:
             let updates = UpdatePageView()
             updates.onOpenHistory = { [weak self] in self?.navigate(.updateHistory) }

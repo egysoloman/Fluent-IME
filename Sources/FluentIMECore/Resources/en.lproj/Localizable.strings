@@ -405,15 +405,6 @@
 
 // Maintenance
 "maintenance.title" = "Fluent IME Maintenance";
-"maintenance.detail" = "Manage the installed input method or run setup again.";
-"maintenance.open" = "Open maintenance";
-"maintenance.install" = "Run this installer";
-"maintenance.payloadVersion" = "Installer version %1$@";
-"maintenance.opening" = "Opening maintenance…";
-"maintenance.removing" = "Quitting and uninstalling the input method…";
-"maintenance.removed" = "The input method and its local data have been removed.";
-"maintenance.removedKeepingData" = "The input method has been removed. Settings, dictionaries, and pinned items were kept.";
-"maintenance.verifying" = "Verifying the installer…";
 
 // Release channels and history
 "update.channelTitle" = "Update channel";
