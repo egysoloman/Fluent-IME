@@ -4,6 +4,20 @@ import CryptoKit
 @testable import FluentIMECore
 
 final class ClipboardVaultTests: XCTestCase {
+    private final class SlowStorage: ClipboardStoring {
+        let gate = DispatchSemaphore(value: 0)
+        var authorized: (() -> Void)?
+        var pins: [ClipboardEntry] = []
+        var fails = false
+        func authorize() throws {
+            XCTAssertFalse(Thread.isMainThread)
+            authorized?()
+            guard gate.wait(timeout: .now() + 3) == .success, !fails else { throw ClipboardError.storage }
+        }
+        func load() throws -> [ClipboardEntry] { pins }
+        func save(_ entries: [ClipboardEntry]) throws { XCTAssertFalse(Thread.isMainThread); pins = entries }
+        func erase() throws { XCTAssertFalse(Thread.isMainThread); pins = [] }
+    }
     private var board: NSPasteboard!
     private var directory: URL!
     private let key = SymmetricKey(size: .bits256)
@@ -106,5 +120,87 @@ final class ClipboardVaultTests: XCTestCase {
         let third = ClipboardHistory(pasteboard: board, automaticPolling: false, sensitiveInput: { false }, storage: vault())
         XCTAssertNotNil(third.storageError); XCTAssertEqual(try Data(contentsOf: file), tampered)
         try third.clear(); XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+    }
+    func testPinAuthorizationDoesNotBlockTypingOrLoseNewCopies() throws {
+        let storage = SlowStorage()
+        let history = ClipboardHistory(pasteboard: board, automaticPolling: false, sensitiveInput: { false }, storage: storage)
+        history.setRecording(true); text("pin this"); history.poll()
+        let id = history.entries[0].id
+        let authorization = expectation(description: "background authorization")
+        let saved = expectation(description: "saved")
+        storage.authorized = { authorization.fulfill() }
+        history.setPinned(id, true) { result in
+            XCTAssertTrue(Thread.isMainThread); if case .failure(let error) = result { XCTFail(error.localizedDescription) }; saved.fulfill()
+        }
+        XCTAssertTrue(history.isStorageBusy)
+        wait(for: [authorization], timeout: 2)
+        // The main run loop and pasteboard polling keep working during the prompt.
+        text("copied while authorizing"); history.poll()
+        history.clear { result in
+            guard case .failure(ClipboardError.busy) = result else { return XCTFail("clear must not race a pending save") }
+        }
+        history.setPinned(id, true) { result in
+            guard case .failure(ClipboardError.busy) = result else { return XCTFail("duplicate pin must not race") }
+        }
+        storage.gate.signal(); wait(for: [saved], timeout: 2)
+        XCTAssertFalse(history.isStorageBusy)
+        XCTAssertEqual(history.entries.map(\.text), ["pin this", "copied while authorizing"])
+        XCTAssertTrue(history.entries[0].isPinned)
+        let cleared = expectation(description: "clear after save")
+        history.clear { result in if case .failure(let error) = result { XCTFail(error.localizedDescription) }; cleared.fulfill() }
+        wait(for: [cleared], timeout: 2)
+        XCTAssertTrue(history.entries.isEmpty); XCTAssertTrue(storage.pins.isEmpty)
+    }
+    func testRejectedAsyncPinKeepsHistoryAndExistingPins() {
+        let storage = SlowStorage(); storage.fails = true
+        let history = ClipboardHistory(pasteboard: board, automaticPolling: false, sensitiveInput: { false }, storage: storage)
+        history.setRecording(true); text("keep this"); history.poll()
+        let original = history.entries, done = expectation(description: "rejected")
+        history.setPinned(original[0].id, true) { result in
+            if case .success = result { XCTFail("Expected authorization failure") }; done.fulfill()
+        }
+        storage.gate.signal(); wait(for: [done], timeout: 2)
+        XCTAssertEqual(history.entries, original); XCTAssertFalse(history.isStorageBusy)
+        XCTAssertNotNil(history.storageError); XCTAssertTrue(storage.pins.isEmpty)
+    }
+    func testOptionalEncryptionMigratesAtomicallyAndPlainModeNeverReadsKey() throws {
+        var keyReads = 0
+        let storage = ClipboardVault(directory: directory, encrypted: false, key: { [key] _ in keyReads += 1; return key })
+        let history = ClipboardHistory(pasteboard: board, automaticPolling: false, sensitiveInput: { false }, storage: storage)
+        history.setRecording(true); text("optional encryption fixture"); history.poll()
+        try history.setPinned(history.entries[0].id, true)
+        let file = directory.appendingPathComponent("pinned.aesgcm")
+        let plain = try Data(contentsOf: file)
+        XCTAssertNotNil(plain.range(of: Data(Data("optional encryption fixture".utf8).base64EncodedString().utf8)))
+        XCTAssertEqual(keyReads, 0)
+        XCTAssertEqual((try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? NSNumber)?.intValue, 0o600)
+        try storage.setEncryption(true)
+        XCTAssertNil(try Data(contentsOf: file).range(of: Data("optional encryption fixture".utf8)))
+        XCTAssertEqual(try storage.load(), history.entries)
+        try storage.save(history.entries); _ = try storage.load()
+        XCTAssertEqual(keyReads, 1, "Reuse the key after successful authorization")
+        try storage.setEncryption(false)
+        XCTAssertTrue(try Data(contentsOf: file).starts(with: Data("FluentIME.Clipboard.plain.v1\n".utf8)))
+        XCTAssertEqual(try storage.load(), history.entries)
+        // File format wins over a stale preference after an interrupted preference update.
+        let reopened = ClipboardVault(directory: directory, encrypted: true, key: { _ in XCTFail("Plain file must not access Keychain"); throw ClipboardError.storage })
+        try reopened.authorize()
+        XCTAssertEqual(try reopened.load(), history.entries); XCTAssertFalse(reopened.isEncrypted)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path), ["pinned.aesgcm"])
+    }
+    func testFailedEncryptionMigrationLeavesOriginalFileAndMode() throws {
+        let storage = ClipboardVault(directory: directory, encrypted: false, key: { _ in throw ClipboardError.storage })
+        let history = ClipboardHistory(pasteboard: board, automaticPolling: false, sensitiveInput: { false }, storage: storage)
+        history.setRecording(true); text("preserve on failure"); history.poll()
+        try history.setPinned(history.entries[0].id, true)
+        let file = directory.appendingPathComponent("pinned.aesgcm"), original = try Data(contentsOf: file)
+        XCTAssertThrowsError(try storage.setEncryption(true))
+        XCTAssertFalse(storage.isEncrypted); XCTAssertEqual(try Data(contentsOf: file), original)
+        XCTAssertEqual(try storage.load(), history.entries)
+        let encrypted = vault(); try encrypted.save(history.entries)
+        let ciphertext = try Data(contentsOf: file)
+        let locked = ClipboardVault(directory: directory, key: { _ in throw ClipboardError.storage })
+        XCTAssertThrowsError(try locked.setEncryption(false))
+        XCTAssertTrue(locked.isEncrypted); XCTAssertEqual(try Data(contentsOf: file), ciphertext)
     }
 }

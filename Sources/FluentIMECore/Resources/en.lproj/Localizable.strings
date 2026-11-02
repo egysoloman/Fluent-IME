@@ -197,8 +197,7 @@
 
 "font.title" = "Fonts";
 
-"font.hint" = "Customize fonts for each input mode. Falls back to the system font if unavailable.";
-
+"font.hint" = "Choose a display font for each language. System fonts are the default and the fallback when a font is unavailable.";
 "font.system" = "System default";
 
 "font.sampleSimplified" = "Simplified Chinese · 你好，世界";
@@ -245,15 +244,14 @@
 
 "clipboard.pasteHint" = "Click text to insert directly; click images or files to copy, then press ⌘V to paste.";
 
-"clipboard.pinnedHint" = "Unpinned items are kept in memory until quit. Pinned items are stored encrypted on your Mac and never expire.";
-
+"clipboard.pinnedHint" = "Unpinned items stay in memory until you quit. Pinned items are saved on this Mac and do not expire.";
 "clipboard.clearHint" = "Clearing removes all history and pinned items without affecting your current system clipboard.";
 
 "clipboard.cleared" = "Clipboard history cleared.";
 
-"clipboard.storageError" = "Could not access encrypted storage to save pinned items. Check Keychain access and try again.";
+"clipboard.storageError" = "Could not save pinned items. Check file permissions and, if encryption is enabled, Keychain access.";
 
-"clipboard.invalidError" = "Could not read pinned items. Your existing encrypted backup was preserved.";
+"clipboard.invalidError" = "Could not read pinned items. The original file was preserved.";
 
 "clipboard.limitError" = "Pinned items limit reached (50 items or 50 MB). Please remove some older items first.";
 
@@ -291,8 +289,8 @@
 "settings.languagesTitle" = "Input languages";
 "settings.modesTitle" = "Input modes";
 "settings.modesDetail" = "Enabled languages and default mode";
-"settings.languageDetail" = "General, dictionary, and fonts";
-"settings.englishDetail" = "Input options and fonts";
+"settings.languageDetail" = "Input preferences and dictionary";
+"settings.englishDetail" = "Input behavior";
 "install.title" = "Set up Fluent IME";
 "install.welcome" = "Welcome to Fluent IME";
 "install.intro" = "Install and enable the input method, then choose your languages and preferences.";
@@ -378,3 +376,29 @@
 "models.restart" = "Restart input method";
 "models.invalidGrammar" = "Invalid grammar model. Choose a complete Rime Octagram .gram file.";
 "models.invalidTransformer" = "Incompatible model interface or vocabulary. Use the Fluent IME scorer format.";
+
+"clipboard.loading" = "Loading pinned items…";
+"clipboard.saving" = "Saving pinned items…";
+"clipboard.clearing" = "Clearing clipboard history…";
+
+"update.pageTitle" = "Updates";
+
+"update.pageDetail" = "Check versions, download and install";
+
+"update.installedVersion" = "Installed version %1$@";
+
+"update.idle" = "Get new versions from GitHub.";
+
+"update.verifying" = "Verifying the download…";
+
+"update.opening" = "Opening the installer…";
+
+"update.opened" = "The installer is open. Continue there to finish updating.";
+
+"update.cancelled" = "Update cancelled.";
+
+"font.sharedDetail" = "Display fonts for Simplified Chinese, Traditional Chinese and English";
+
+"clipboard.encryption" = "Encrypt pinned items";
+
+"clipboard.encryptionHint" = "Uses a key stored in Keychain when on. When off, files are readable and writable only by your account, including other apps running under it. Changing this converts existing items.";

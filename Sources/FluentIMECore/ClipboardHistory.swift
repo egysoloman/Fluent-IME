@@ -55,11 +55,18 @@ public final class ClipboardHistory {
         if CommandLine.arguments.contains(where: { $0.hasPrefix("--render-") }) {
             return ClipboardHistory(pasteboard: NSPasteboard(name: .init("FluentIME-Render-" + UUID().uuidString)), automaticPolling: false)
         }
-        return ClipboardHistory(storage: ClipboardVault(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("FluentIME/Private/Clipboard")))
+        return ClipboardHistory(storage: ClipboardVault(directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("FluentIME/Private/Clipboard"), encrypted: UserDefaults.standard.object(forKey: "clipboardEncryption") as? Bool ?? true), asynchronousStorage: true,
+            encryptionChanged: { UserDefaults.standard.set($0, forKey: "clipboardEncryption") })
     }()
     public private(set) var entries: [ClipboardEntry] = []
     public private(set) var isRecording = false
+    public enum StorageActivity { case loading, saving, clearing }
+    public private(set) var storageActivity: StorageActivity?
+    public var isStorageBusy: Bool { storageActivity != nil }
+    private let storageQueue = DispatchQueue(label: "org.fluentime.clipboard.storage", qos: .userInitiated)
     public private(set) var storageError: String?
+    public private(set) var storageEncrypted = true
+    private let encryptionChanged: (Bool) -> Void
     private let pasteboard: NSPasteboard
     private let now: () -> Date
     public private(set) var retention: TimeInterval
@@ -71,16 +78,19 @@ public final class ClipboardHistory {
     private let automaticPolling: Bool
     public init(pasteboard: NSPasteboard = .general, retention: TimeInterval = 1800,
                 automaticPolling: Bool = true, now: @escaping () -> Date = Date.init,
-                sensitiveInput: @escaping () -> Bool = { IsSecureEventInputEnabled() }, storage: ClipboardStoring? = nil) {
+                sensitiveInput: @escaping () -> Bool = { IsSecureEventInputEnabled() }, storage: ClipboardStoring? = nil, asynchronousStorage: Bool = false, encryptionChanged: @escaping (Bool) -> Void = { _ in }) {
         self.pasteboard = pasteboard; self.now = now; self.retention = retention
         self.automaticPolling = automaticPolling; lastChange = pasteboard.changeCount
-        self.sensitiveInput = sensitiveInput; self.storage = storage
-        do { try loadPins() } catch { storageError = L10n.clipboardStorageError }
+        self.sensitiveInput = sensitiveInput; self.storage = storage; self.encryptionChanged = encryptionChanged
+        storageEncrypted = (storage as? ClipboardEncryptionStoring)?.isEncrypted ?? true
+        if asynchronousStorage, storage != nil { performStorage(.load) { _ in } }
+        else { do { try loadPins() } catch { storageError = L10n.clipboardStorageError } }
     }
     private func loadPins() throws {
         guard !loaded else { return }
         let pins = try storage?.load() ?? []
         entries = pins + entries.filter { entry in !entry.isPinned && !pins.contains(where: { $0.items == entry.items }) }
+        storageEncrypted = (storage as? ClipboardEncryptionStoring)?.isEncrypted ?? storageEncrypted
         trimUnpinned(); loaded = true; storageError = nil
     }
     public func setRetention(_ seconds: TimeInterval) { retention = max(0, seconds); expire(); maintainTimer(); notify() }
@@ -143,6 +153,7 @@ public final class ClipboardHistory {
         notify()
     }
     public func setPinned(_ id: UUID, _ pinned: Bool) throws {
+        guard !isStorageBusy else { throw ClipboardError.busy }
         do {
             try storage?.authorize(); try loadPins()
             guard let index = entries.firstIndex(where: { $0.id == id }), let storage else { throw ClipboardError.storage }
@@ -152,6 +163,7 @@ public final class ClipboardHistory {
         } catch { storageError = error.localizedDescription; notify(); throw error }
     }
     public func remove(_ id: UUID) throws {
+        guard !isStorageBusy else { throw ClipboardError.busy }
         guard let entry = entries.first(where: { $0.id == id }) else { return }
         if entry.isPinned {
             try storage?.authorize(); try loadPins()
@@ -160,10 +172,90 @@ public final class ClipboardHistory {
         entries.removeAll { $0.id == id }; maintainTimer(); notify()
     }
     public func clear() throws {
+        guard !isStorageBusy else { throw ClipboardError.busy }
         try storage?.erase()
         entries.removeAll(); loaded = true; storageError = nil; lastChange = pasteboard.changeCount
         if !isRecording { timer?.invalidate(); timer = nil }
         notify()
+    }
+    private enum StorageOperation { case load, pin(ClipboardEntry, Bool), remove(UUID), clear, encryption(Bool) }
+
+    /// UI mutations keep authorization, encryption and disk I/O off the IMK thread.
+    public func setPinned(_ id: UUID, _ pinned: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let entry = entries.first(where: { $0.id == id }) else { completion(.failure(ClipboardError.invalid)); return }
+        performStorage(.pin(entry, pinned), completion: completion)
+    }
+    public func remove(_ id: UUID, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard !isStorageBusy else { completion(.failure(ClipboardError.busy)); return }
+        guard let entry = entries.first(where: { $0.id == id }) else { completion(.success(())); return }
+        if !entry.isPinned {
+            entries.removeAll { $0.id == id }; maintainTimer()
+            DispatchQueue.main.async { [weak self] in self?.notify(); completion(.success(())) }
+        } else { performStorage(.remove(id), completion: completion) }
+    }
+    public func clear(completion: @escaping (Result<Void, Error>) -> Void) {
+        performStorage(.clear, completion: completion)
+    }
+    public func setEncryption(_ enabled: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
+        performStorage(.encryption(enabled), completion: completion)
+    }
+    private func performStorage(_ operation: StorageOperation, completion: @escaping (Result<Void, Error>) -> Void) {
+        precondition(Thread.isMainThread)
+        guard !isStorageBusy else { completion(.failure(ClipboardError.busy)); return }
+        switch operation {
+        case .load: storageActivity = .loading
+        case .clear: storageActivity = .clearing
+        default: storageActivity = .saving
+        }
+        // Defer notification until the menu/button action has finished unwinding.
+        DispatchQueue.main.async { [weak self] in self?.notify() }
+        let storage = self.storage
+        storageQueue.async { [self] in
+            let result = Result<[ClipboardEntry], Error> {
+                if case .clear = operation { try storage?.erase(); return [] }
+                guard let storage else { throw ClipboardError.storage }
+                if case .encryption(let enabled) = operation {
+                    guard let configurable = storage as? ClipboardEncryptionStoring else { throw ClipboardError.storage }
+                    try configurable.setEncryption(enabled)
+                    return try storage.load()
+                }
+                if case .load = operation {} else { try storage.authorize() }
+                var pins = try storage.load()
+                switch operation {
+                case .load: return pins
+                case .pin(var entry, let pinned):
+                    pins.removeAll { $0.id == entry.id || $0.items == entry.items }
+                    if pinned { entry.isPinned = true; pins.append(entry) }
+                case .remove(let id): pins.removeAll { $0.id == id }
+                case .clear, .encryption: break
+                }
+                try storage.save(pins)
+                return pins
+            }
+            let encrypted = (storage as? ClipboardEncryptionStoring)?.isEncrypted
+            DispatchQueue.main.async { [self] in
+                storageActivity = nil
+                switch result {
+                case .success(let pins):
+                    if let encrypted { storageEncrypted = encrypted; encryptionChanged(encrypted) }
+                    var temporary = entries.filter { !$0.isPinned }
+                    switch operation {
+                    case .clear: temporary = []; lastChange = pasteboard.changeCount
+                    case .remove(let id): temporary.removeAll { $0.id == id }
+                    case .pin(var entry, false):
+                        entry.isPinned = false
+                        if !temporary.contains(where: { $0.id == entry.id }) { temporary.append(entry) }
+                    default: break
+                    }
+                    // Clipboard polling can add new entries while storage is busy.
+                    entries = pins + temporary.filter { entry in !pins.contains(where: { $0.items == entry.items }) }
+                    loaded = true; storageError = nil; trimUnpinned(); expire(); maintainTimer(); notify()
+                    completion(.success(()))
+                case .failure(let error):
+                    storageError = error.localizedDescription; notify(); completion(.failure(error))
+                }
+            }
+        }
     }
     public func copy(_ entry: ClipboardEntry, to destination: NSPasteboard = .general) -> Bool {
         let objects = entry.items.map { values -> NSPasteboardItem in

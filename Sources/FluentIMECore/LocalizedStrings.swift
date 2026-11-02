@@ -72,6 +72,8 @@ public extension L10n {
     static var clipboardClearHint: String { text("clipboard.clearHint") }
     /// 剪贴板历史记录已清空。
     static var clipboardCleared: String { text("clipboard.cleared") }
+    /// 正在清空剪贴板…
+    static var clipboardClearing: String { text("clipboard.clearing") }
     /// 已复制到剪贴板，按 ⌘V 粘贴。
     static var clipboardCopied: String { text("clipboard.copied") }
     /// 复制
@@ -90,9 +92,13 @@ public extension L10n {
     static var clipboardDisabled: String { text("clipboard.disabled") }
     /// 暂无记录，复制的内容会显示在这里。
     static var clipboardEmpty: String { text("clipboard.empty") }
+    /// 加密固定项目
+    static var clipboardEncryption: String { text("clipboard.encryption") }
+    /// 开启后使用钥匙串中的密钥加密。关闭后以普通文件保存，仅当前账户可读写；同一账户下的其他程序仍可能访问。切换时会转换已有项目。
+    static var clipboardEncryptionHint: String { text("clipboard.encryptionHint") }
     /// 1 小时
     static var clipboardHour1: String { text("clipboard.hour1") }
-    /// 固定记录读取失败，已保留原加密备份文件。
+    /// 无法读取固定项目，原文件已保留。
     static var clipboardInvalidError: String { text("clipboard.invalidError") }
     /// 文件
     static var clipboardKindFiles: String { text("clipboard.kindFiles") }
@@ -106,6 +112,8 @@ public extension L10n {
     static var clipboardKindText: String { text("clipboard.kindText") }
     /// 固定记录已达上限（最多 50 条或 50 MB），请先清理旧记录。
     static var clipboardLimitError: String { text("clipboard.limitError") }
+    /// 正在读取固定项目…
+    static var clipboardLoading: String { text("clipboard.loading") }
     /// 15 分钟
     static var clipboardMinutes15: String { text("clipboard.minutes15") }
     /// 30 分钟
@@ -118,7 +126,7 @@ public extension L10n {
     static var clipboardPause: String { text("clipboard.pause") }
     /// 固定到顶部
     static var clipboardPin: String { text("clipboard.pin") }
-    /// 普通记录仅暂存于内存，退出后自动清空；固定记录将加密保存在本地且不会过期。
+    /// 普通记录只保存在内存，退出后清空；固定项目保存在本机，不会过期。
     static var clipboardPinnedHint: String { text("clipboard.pinnedHint") }
     /// 自动忽略密码框、隐私内容与通用剪贴板，所有数据仅保存在本机。
     static var clipboardPrivacyHint: String { text("clipboard.privacyHint") }
@@ -128,11 +136,13 @@ public extension L10n {
     static var clipboardRetention: String { text("clipboard.retention") }
     /// 未固定的记录将在到期后自动清除。
     static var clipboardRetentionHint: String { text("clipboard.retentionHint") }
+    /// 正在保存固定项目…
+    static var clipboardSaving: String { text("clipboard.saving") }
     /// 仅本次运行期间
     static var clipboardSession: String { text("clipboard.session") }
     /// 开启记录
     static var clipboardStart: String { text("clipboard.start") }
-    /// 无法访问本地加密存储，固定记录保存失败。请检查“钥匙串访问”权限后重试。
+    /// 无法保存固定项目。请检查文件权限；开启加密时，也请检查钥匙串访问权限。
     static var clipboardStorageError: String { text("clipboard.storageError") }
     /// 剪贴板历史
     static var clipboardTitle: String { text("clipboard.title") }
@@ -190,7 +200,7 @@ public extension L10n {
     static var errorSessionUnavailable: String { text("error.sessionUnavailable") }
     /// Fluent 拼音无法启动
     static var errorStartup: String { text("error.startup") }
-    /// 可为不同输入模式分别指定显示字体。默认采用系统字体，所选字体缺失时会自动回退。
+    /// 分别选择三种语言的显示字体。默认使用系统字体；所选字体不可用时会自动回退。
     static var fontHint: String { text("font.hint") }
     /// English · Hello, world
     static var fontSampleEnglish: String { text("font.sampleEnglish") }
@@ -198,6 +208,8 @@ public extension L10n {
     static var fontSampleSimplified: String { text("font.sampleSimplified") }
     /// 繁體中文 · 你好，世界
     static var fontSampleTraditional: String { text("font.sampleTraditional") }
+    /// 简体中文、繁体中文与英文的显示字体
+    static var fontSharedDetail: String { text("font.sharedDetail") }
     /// 系统默认字体
     static var fontSystem: String { text("font.system") }
     /// 字体设置
@@ -436,7 +448,7 @@ public extension L10n {
     static var settingsDictionaryDetail: String { text("settings.dictionary.detail") }
     /// 词库与学习
     static var settingsDictionaryTitle: String { text("settings.dictionary.title") }
-    /// 输入行为与字体
+    /// 输入行为
     static var settingsEnglishDetail: String { text("settings.englishDetail") }
     /// 简拼纠错、默认输入状态、标点与模糊音
     static var settingsGeneralDetail: String { text("settings.general.detail") }
@@ -450,7 +462,7 @@ public extension L10n {
     static var settingsKeysDetail: String { text("settings.keys.detail") }
     /// 按键
     static var settingsKeysTitle: String { text("settings.keys.title") }
-    /// 常规偏好、词库与字体
+    /// 常规偏好与词库
     static var settingsLanguageDetail: String { text("settings.languageDetail") }
     /// 输入语言
     static var settingsLanguagesTitle: String { text("settings.languagesTitle") }
@@ -550,24 +562,40 @@ public extension L10n {
     static var uninstallTitle: String { text("uninstall.title") }
     /// 有新版本 %1$@。
     static func updateAvailable(_ arg1: String) -> String { format("update.available", arguments: [arg1]) }
+    /// 已取消更新。
+    static var updateCancelled: String { text("update.cancelled") }
     /// 正在检查更新…
     static var updateChecking: String { text("update.checking") }
     /// 当前已是最新版本（%1$@）。
     static func updateCurrent(_ arg1: String) -> String { format("update.current", arguments: [arg1]) }
     /// 正在下载安装包，下载完成后会打开安装引导。
     static var updateDownloading: String { text("update.downloading") }
+    /// 从 GitHub 获取新版本。
+    static var updateIdle: String { text("update.idle") }
     /// 这个版本不支持当前 Mac 或 macOS 版本。
     static var updateIncompatible: String { text("update.incompatible") }
     /// 下载并安装
     static var updateInstall: String { text("update.install") }
+    /// 当前版本 %1$@
+    static func updateInstalledVersion(_ arg1: String) -> String { format("update.installedVersion", arguments: [arg1]) }
     /// 安装包校验失败，请重新下载。
     static var updateIntegrity: String { text("update.integrity") }
     /// 发布版本不完整，请稍后重试。
     static var updateInvalid: String { text("update.invalid") }
     /// 暂时没有可用的发布版本。
     static var updateNoRelease: String { text("update.noRelease") }
+    /// 安装引导已打开，请在引导中完成更新。
+    static var updateOpened: String { text("update.opened") }
+    /// 正在打开安装引导…
+    static var updateOpening: String { text("update.opening") }
+    /// 检查版本、下载安装
+    static var updatePageDetail: String { text("update.pageDetail") }
+    /// 更新
+    static var updatePageTitle: String { text("update.pageTitle") }
     /// 检查更新
     static var updateTitle: String { text("update.title") }
     /// 无法获取更新，请稍后重试。
     static var updateUnavailable: String { text("update.unavailable") }
+    /// 正在校验安装包…
+    static var updateVerifying: String { text("update.verifying") }
 }

@@ -119,8 +119,22 @@ import FluentIMECore
         badge.present(mode: .simplifiedChinese, modes: InputMode.allCases,
                       near: NSRect(x: screen.midX, y: screen.midY, width: 1, height: 20)) { selectedMode = $0 }
         precondition(badge.isVisible && !badge.expanded && !badge.isKeyWindow)
+        pump(0.2)
+        badge.present(mode: .english, modes: InputMode.allCases, near: NSRect(x: screen.midX, y: screen.midY, width: 1, height: 20)) { selectedMode = $0 }
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            let button = badge.contentView!.subviews.compactMap { $0 as? FluentButton }.first!
+            precondition(button.layer?.animation(forKey: "FluentIME.Page.Entrance") != nil, "Visible Shift badge must animate")
+        }
+        pump(0.2)
         badge.contentView!.subviews.compactMap { $0 as? NSButton }.first!.performClick(nil)
         precondition(badge.expanded)
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            precondition(badge.frame.width == 38, "Expansion must begin at the badge width")
+            pump(0.06)
+            precondition(badge.frame.width > 38 && badge.frame.width < 134, "Expansion must have intermediate window geometry")
+        }
+        pump(0.3)
+        precondition(badge.frame.width == 134)
         let modeControl = badge.contentView!.subviews.compactMap { $0 as? NSSegmentedControl }.first!
         precondition(modeControl.segmentCount == 3)
         let indicator = modeControl.subviews.first { $0.identifier?.rawValue == "FluentKit.Segmented.SelectionIndicator" }!

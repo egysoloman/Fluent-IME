@@ -51,6 +51,10 @@ public enum UpdateError: Error, LocalizedError {
         }
     }
 }
+public enum UpdateDownloadProgress: Equatable {
+    case downloading(received: Int64, total: Int64)
+    case verifying
+}
 private final class UpdateTransport: NSObject, URLSessionDownloadDelegate {
     let limit: Int64
     init(limit: Int64 = 2_000_000_000) { self.limit = limit }
@@ -60,6 +64,80 @@ private final class UpdateTransport: NSObject, URLSessionDownloadDelegate {
     }
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) { if totalBytesWritten > limit { downloadTask.cancel() } }
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {}
+}
+
+/// Stream to a private temporary file. The serial delegate queue owns file I/O and
+/// byte counts; only cancellation and continuation ownership cross queue boundaries.
+private final class UpdateFileTransfer: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    private let limit: Int64
+    private let progress: (@Sendable (UpdateDownloadProgress) -> Void)?
+    private let lock = NSLock()
+    private var task: URLSessionDataTask?
+    private var continuation: CheckedContinuation<(URL, URLResponse), Error>?
+    private var cancelled = false
+    private let file = FileManager.default.temporaryDirectory.appendingPathComponent("FluentIME-Update-" + UUID().uuidString)
+    private var output: FileHandle?
+    private var response: URLResponse?
+    private var failure: Error?
+    private var received: Int64 = 0
+    private var lastReport: TimeInterval = 0
+    init(limit: Int64, progress: (@Sendable (UpdateDownloadProgress) -> Void)?) { self.limit = limit; self.progress = progress }
+    func fetch(_ url: URL, configuration: URLSessionConfiguration) async throws -> (URL, URLResponse) {
+        try await withTaskCancellationHandler(operation: {
+            try await withCheckedThrowingContinuation { continuation in
+                do {
+                    guard FileManager.default.createFile(atPath: file.path, contents: nil, attributes: [.posixPermissions: 0o600]) else { throw UpdateError.unavailable }
+                    output = try FileHandle(forWritingTo: file)
+                } catch { try? FileManager.default.removeItem(at: file); continuation.resume(throwing: error); return }
+                lock.lock()
+                if cancelled {
+                    lock.unlock(); try? output?.close(); output = nil; try? FileManager.default.removeItem(at: file)
+                    continuation.resume(throwing: CancellationError()); return
+                }
+                let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+                let task = session.dataTask(with: url)
+                self.task = task; self.continuation = continuation
+                lock.unlock(); task.resume()
+            }
+        }, onCancel: { self.cancel() })
+    }
+    private func cancel() {
+        lock.lock(); cancelled = true; let task = task; lock.unlock()
+        task?.cancel()
+    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        let host = request.url?.host?.lowercased() ?? ""
+        completionHandler(request.url?.scheme == "https" && (host == "github.com" || host.hasSuffix(".githubusercontent.com")) ? request : nil)
+    }
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        guard (response as? HTTPURLResponse)?.statusCode == 200, response.expectedContentLength <= limit else {
+            failure = UpdateError.unavailable; completionHandler(.cancel); return
+        }
+        self.response = response; completionHandler(.allow)
+    }
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard failure == nil else { return }
+        do {
+            guard received + Int64(data.count) <= limit, let output else { throw UpdateError.integrity }
+            try output.write(contentsOf: data); received += Int64(data.count)
+            let now = ProcessInfo.processInfo.systemUptime
+            if now - lastReport >= 0.08 || received == limit {
+                lastReport = now; progress?(.downloading(received: received, total: limit))
+            }
+        } catch { failure = error; dataTask.cancel() }
+    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        do { try output?.close() } catch { failure = failure ?? error }; output = nil
+        lock.lock(); let continuation = continuation; self.continuation = nil; self.task = nil; let cancelled = cancelled; lock.unlock()
+        defer { session.finishTasksAndInvalidate() }
+        if let error = failure ?? error ?? (cancelled ? CancellationError() : nil) {
+            try? FileManager.default.removeItem(at: file); continuation?.resume(throwing: error)
+        } else if let response {
+            continuation?.resume(returning: (file, response))
+        } else {
+            try? FileManager.default.removeItem(at: file); continuation?.resume(throwing: UpdateError.unavailable)
+        }
+    }
 }
 /// Checks only the project's public releases; never sends input or clipboard data.
 public final class GitHubUpdateService {
@@ -146,7 +224,7 @@ public final class GitHubUpdateService {
         let tag = String(url.path.dropFirst(prefix.count))
         return ReleaseVersion(tag) == nil ? nil : tag
     }
-    public func download(_ release: GitHubRelease, to directory: URL) async throws -> URL {
+    public func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)? = nil) async throws -> URL {
         guard let asset = release.installer(for: edition), let manifest = release.manifest(for: edition),
               Self.trustedAsset(asset.browser_download_url), Self.trustedAsset(manifest.browser_download_url),
               (1...2_000_000_000).contains(asset.size), manifest.size < 100_000 else { throw UpdateError.invalidRelease }
@@ -155,13 +233,14 @@ public final class GitHubUpdateService {
         let info = try JSONDecoder().decode(UpdateManifest.self, from: metadata)
         guard info.edition == edition else { throw UpdateError.invalidRelease }
         try info.validate(release: release)
-        let transport = UpdateTransport(limit: asset.size)
-        let config = URLSessionConfiguration.ephemeral; config.timeoutIntervalForResource = 1800
-        let downloadSession = URLSession(configuration: config, delegate: transport, delegateQueue: nil)
-        defer { downloadSession.finishTasksAndInvalidate() }
-        let (temporary, result) = try await downloadSession.download(from: asset.browser_download_url)
+        progress?(.downloading(received: 0, total: asset.size))
+        let transfer = UpdateFileTransfer(limit: asset.size, progress: progress)
+        let config = configuration.copy() as! URLSessionConfiguration; config.timeoutIntervalForResource = 1800
+        let (temporary, result) = try await transfer.fetch(asset.browser_download_url, configuration: config)
         defer { try? FileManager.default.removeItem(at: temporary) }
         guard (result as? HTTPURLResponse)?.statusCode == 200 else { throw UpdateError.unavailable }
+        try Task.checkCancellation()
+        progress?(.verifying)
         try Self.verify(file: temporary, expectedSize: asset.size, sha256: info.installer.dmg_sha256)
         try Task.checkCancellation()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])

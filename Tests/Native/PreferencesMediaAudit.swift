@@ -71,6 +71,8 @@ import CRimeBridge
         let labels = all(settings.window!.contentView!).compactMap { ($0 as? NSTextField)?.stringValue }
         precondition(!labels.contains(InputMode.simplifiedChinese.title), "Disabled language must not have a root entry")
         MaintenanceDialogs.uninstall(in: settings.window!.contentView!)
+        pump()
+        precondition(button(L10n.uninstallAction, in: settings.window!.contentView!).role == .destructive)
         try capture(settings.window!.contentView!, "uninstall-dialog")
         settings.window?.orderOut(nil)
         let renderLanguage = ProcessInfo.processInfo.environment["FLUENTIME_RENDER_LANGUAGE"]
@@ -198,17 +200,56 @@ import CRimeBridge
         precondition(all(palette).compactMap { $0 as? ClipboardCard }.count == 3)
         let card = all(palette).compactMap { $0 as? ClipboardCard }.first!
         let originalID = history.entries.first { $0.isPinned }!.id
-        card.onPin?(); precondition(history.entries.first { $0.id == originalID }?.isPinned == false)
+        card.onPin?(); pump(); precondition(!history.isStorageBusy); precondition(history.entries.first { $0.id == originalID }?.isPinned == false)
         try history.setPinned(originalID, true)
         let restored = ClipboardHistory(pasteboard: board, automaticPolling: false, storage: ClipboardVault(directory: dir, key: { _ in key }))
         precondition(restored.entries.count == 1 && restored.entries[0].kind == .image)
-        button(L10n.clipboardClear, in: palette).onClick?(); precondition(history.entries.isEmpty)
+        button(L10n.clipboardClear, in: palette).onClick?(); pump(); precondition(!history.isStorageBusy); precondition(history.entries.isEmpty)
         let cleared = try ClipboardVault(directory: dir, key: { _ in key }).load(); precondition(cleared.isEmpty)
         try capture(palette, "clipboard-cleared"); panel.orderOut(nil)
-        for page in ["fonts", "clipboard", "models"] {
+        final class FakeUpdateService: IMEUpdateService {
+            func latest() async throws -> GitHubRelease? {
+                try await Task.sleep(nanoseconds: 1_200_000_000)
+                return try JSONDecoder().decode(GitHubRelease.self, from: Data(#"{"tag_name":"v99.0.0","draft":false,"prerelease":false,"assets":[]}"#.utf8))
+            }
+            func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)?) async throws -> URL {
+                progress?(.downloading(received: 0, total: 100_000_000))
+                try await Task.sleep(nanoseconds: 100_000_000)
+                progress?(.downloading(received: 50_000_000, total: 100_000_000))
+                try await Task.sleep(nanoseconds: 30_000_000_000)
+                throw CancellationError()
+            }
+        }
+        let updater = UpdateCoordinator(service: FakeUpdateService()), updateView = UpdatePageView(coordinator: updater)
+        let updateWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 290), styleMask: [.titled], backing: .buffered, defer: false)
+        updateView.wantsLayer = true; updateView.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
+        updateWindow.contentView = updateView; updateWindow.makeKeyAndOrderFront(nil)
+        updater.check(); pump()
+        let bar = all(updateView).compactMap { $0 as? FluentProgressBar }.first!
+        precondition(!bar.isHidden && bar.isIndeterminate)
+        try capture(updateView, "update-checking")
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.65))
+        precondition(updater.canInstall)
+        updater.install(); pump()
+        try capture(updateView, "update-downloading")
+        precondition(!bar.isIndeterminate && bar.value == 50 && !bar.isHidden)
+        updater.cancel(); pump()
+        if case .cancelled = updater.state {} else { preconditionFailure("Cancellation did not settle the update page") }
+        precondition(bar.isHidden)
+        updateWindow.orderOut(nil)
+        for page in ["fonts", "clipboard", "models", "updates", "advanced"] {
             setenv("FLUENTIME_RENDER_PAGE", page, 1)
             let controller = try SettingsWindowController(engine: engine)
             try controller.render(to: output.appendingPathComponent("settings-" + page + ".png"))
+            if page == "advanced" {
+                let buttons = all(controller.window!.contentView!).compactMap { $0 as? FluentButton }.filter { [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction, L10n.updatePageTitle].contains($0.title) }
+                precondition(buttons.count == 5 && Set(buttons.map { $0.frame.width }).count == 1, "Advanced actions must align")
+                precondition(buttons.first { $0.title == L10n.uninstallAction }?.role == .destructive)
+            }
+            if page == "fonts" {
+                let titles = all(controller.window!.contentView!).compactMap { ($0 as? NSTextField)?.stringValue }
+                precondition(InputMode.allCases.allSatisfy { titles.contains($0.title) }, "Fonts are shared across all display languages")
+            }
             controller.window?.orderOut(nil)
         }
         try JSONSerialization.data(withJSONObject: ["passed": true, "fontStates": fontRows, "wizardDraftIsolation": true, "clipboardCardsPinRestoreClear": true, "editingMenuThemeAndSelection": true, "singleLinePasteUndoRedoReturn": true], options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("validation.json"))

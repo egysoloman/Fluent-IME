@@ -325,15 +325,26 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
         heading.frame = NSRect(x: 0, y: 3, width: 180, height: 26); clipboardHeader.addSubview(heading)
         let clear = FluentButton(title: L10n.clipboardClear); clear.theme = theme; clear.fluentStyle = IMEToolbarStyle()
         clear.frame = NSRect(x: 214, y: 0, width: 114, height: 28)
-        clear.isEnabled = !clipboard.entries.isEmpty || clipboard.storageError != nil
+        clear.isEnabled = !clipboard.isStorageBusy && (!clipboard.entries.isEmpty || clipboard.storageError != nil)
         clear.onClick = { [weak self] in
             guard let self else { return }
-            do { try self.clipboard.clear(); self.mediaStatus = L10n.clipboardCleared }
-            catch { self.mediaStatus = L10n.clipboardStorageError }
-            self.reload()
+            self.mediaStatus = ""
+            self.clipboard.clear { [weak self] result in
+                switch result {
+                case .success: self?.mediaStatus = L10n.clipboardCleared
+                case .failure(let error): self?.mediaStatus = error.localizedDescription
+                }
+                self?.reload()
+            }
         }
         clipboardHeader.addSubview(clear)
-        let status = mediaStatus.isEmpty ? clipboard.storageError ?? "" : mediaStatus
+        let status: String
+        switch clipboard.storageActivity {
+        case .loading: status = L10n.clipboardLoading
+        case .saving: status = L10n.clipboardSaving
+        case .clearing: status = L10n.clipboardClearing
+        case nil: status = mediaStatus.isEmpty ? clipboard.storageError ?? "" : mediaStatus
+        }
         if !status.isEmpty { label(status, y: 0, size: 12) }
         var cardY: CGFloat = status.isEmpty ? 2 : 62
         if clipboard.entries.isEmpty {
@@ -346,6 +357,7 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
         if !entries.contains(where: { $0.id == clipboardSelection }) { clipboardSelection = entries.first?.id }
         for entry in entries {
             let card = ClipboardCard(entry); card.theme = theme; card.toolTip = L10n.clipboardPasteHint
+            card.storageBusy = clipboard.isStorageBusy
             card.selectionHighlighted = entry.id == clipboardSelection
             card.frame = NSRect(x: 2, y: cardY, width: 324, height: entry.kind == .files ? 76 : 96)
             cardY += card.frame.height + 10
@@ -363,15 +375,19 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
             }
             card.onPin = { [weak self] in
                 guard let self else { return }
-                do { try self.clipboard.setPinned(entry.id, !entry.isPinned); self.mediaStatus = "" }
-                catch { self.mediaStatus = L10n.clipboardStorageError }
-                self.reload(resetScroll: false)
+                self.mediaStatus = ""
+                self.clipboard.setPinned(entry.id, !entry.isPinned) { [weak self] result in
+                    if case .failure(let error) = result { self?.mediaStatus = error.localizedDescription }
+                    self?.reload(resetScroll: false)
+                }
             }
             card.onRemove = { [weak self] in
                 guard let self else { return }
-                do { try self.clipboard.remove(entry.id); self.mediaStatus = "" }
-                catch { self.mediaStatus = L10n.clipboardStorageError }
-                self.reload(resetScroll: false)
+                self.mediaStatus = ""
+                self.clipboard.remove(entry.id) { [weak self] result in
+                    if case .failure(let error) = result { self?.mediaStatus = error.localizedDescription }
+                    self?.reload(resetScroll: false)
+                }
             }
             document.addSubview(card)
         }

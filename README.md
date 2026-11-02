@@ -39,7 +39,7 @@
 
 ### 5. 隐私优先的剪贴板历史
 - **多种格式与期限管理**：默认关闭；开启后支持记录纯文本、富文本、图片、网页链接与文件引用（上限 50 条或 50 MB）。文本点击可直接上屏，图片与文件点击复制后按 `⌘V` 粘贴。
-- **内存暂存与本机加密**：未固定的记录仅暂存于内存，支持设置 15 分钟、30 分钟、1 小时、24 小时、7 天或退出时自动清除；固定记录使用 **AES-256-GCM** 加密保存在本机，密钥托管于 macOS 登录钥匙串。
+- **内存暂存与本机加密**：未固定的记录仅暂存于内存，支持设置 15 分钟、30 分钟、1 小时、24 小时、7 天或退出时自动清除；固定记录默认使用 **AES-256-GCM** 加密，密钥由 macOS 登录钥匙串管理。可在剪贴板设置中关闭加密；关闭后仅通过当前账户的文件权限保护记录。
 - **严格隐私过滤**：自动跳过安全输入状态（密码框）、隐私标记内容与跨设备通用剪贴板。
 
 ---
@@ -61,7 +61,7 @@ Transformer 也可单独下载 `Fluent-IME-Transformer.zip`，解压后在 **输
 ### 卸载输入法
 前往 **Fluent 拼音设置 → 高级 → 卸载输入法**：
 - 默认勾选“保留个人设置、词库与剪贴板固定内容”；
-- 若取消勾选，卸载时将一并清理所有偏好设置、个人学习词库、备份、收藏的 GIF 与剪贴板加密文件。
+- 若取消勾选，卸载时将一并清理所有偏好设置、个人学习词库、备份、收藏的 GIF 与剪贴板固定文件。
 
 ---
 
@@ -98,7 +98,7 @@ Transformer 也可单独下载 `Fluent-IME-Transformer.zip`，解压后在 **输
 - **系统输入法安装位置**：`~/Library/Input Methods/Fluent IME.app`
 - **个人词库与学习数据**：`~/Library/Application Support/FluentIME/Rime`
 - **词库归档备份目录**：`~/Library/Application Support/FluentIME/DictionaryBackups`
-- **剪贴板固定项加密存储**：`~/Library/Application Support/FluentIME/Private/Clipboard/pinned.aesgcm`
+- **剪贴板固定项存储**：`~/Library/Application Support/FluentIME/Private/Clipboard/pinned.aesgcm`
 - **偏好设置存储域**：`org.fluentime.inputmethod.FluentIME`（UserDefaults）
 - *注：Fluent 拼音完全独立维护数据目录，不读取、修改或复用鼠须管（Squirrel）、微信输入法等其他输入法的任何配置与词库。*
 

@@ -197,8 +197,7 @@
 
 "font.title" = "字体设置";
 
-"font.hint" = "可为不同输入模式分别指定显示字体。默认采用系统字体，所选字体缺失时会自动回退。";
-
+"font.hint" = "分别选择三种语言的显示字体。默认使用系统字体；所选字体不可用时会自动回退。";
 "font.system" = "系统默认字体";
 
 "font.sampleSimplified" = "简体中文 · 你好，世界";
@@ -245,15 +244,14 @@
 
 "clipboard.pasteHint" = "点击文本可直接上屏；图片与文件点击复制后按 ⌘V 粘贴。";
 
-"clipboard.pinnedHint" = "普通记录仅暂存于内存，退出后自动清空；固定记录将加密保存在本地且不会过期。";
-
+"clipboard.pinnedHint" = "普通记录只保存在内存，退出后清空；固定项目保存在本机，不会过期。";
 "clipboard.clearHint" = "清空操作会移除所有历史与固定记录，但不会影响当前系统剪贴板。";
 
 "clipboard.cleared" = "剪贴板历史记录已清空。";
 
-"clipboard.storageError" = "无法访问本地加密存储，固定记录保存失败。请检查“钥匙串访问”权限后重试。";
+"clipboard.storageError" = "无法保存固定项目。请检查文件权限；开启加密时，也请检查钥匙串访问权限。";
 
-"clipboard.invalidError" = "固定记录读取失败，已保留原加密备份文件。";
+"clipboard.invalidError" = "无法读取固定项目，原文件已保留。";
 
 "clipboard.limitError" = "固定记录已达上限（最多 50 条或 50 MB），请先清理旧记录。";
 
@@ -291,8 +289,8 @@
 "settings.languagesTitle" = "输入语言";
 "settings.modesTitle" = "输入模式";
 "settings.modesDetail" = "已启用的语言及默认输入模式";
-"settings.languageDetail" = "常规偏好、词库与字体";
-"settings.englishDetail" = "输入行为与字体";
+"settings.languageDetail" = "常规偏好与词库";
+"settings.englishDetail" = "输入行为";
 "install.title" = "安装与设置 Fluent 拼音";
 "install.welcome" = "欢迎使用 Fluent 拼音";
 "install.intro" = "完成安装并启用输入法后，即可配置输入语言与个人偏好。";
@@ -378,3 +376,29 @@
 "models.restart" = "重启输入法";
 "models.invalidGrammar" = "无法读取此语法模型，请选择完整的 Rime Octagram .gram 文件。";
 "models.invalidTransformer" = "模型接口或词表不兼容。请使用 Fluent IME 评分模型格式。";
+
+"clipboard.loading" = "正在读取固定项目…";
+"clipboard.saving" = "正在保存固定项目…";
+"clipboard.clearing" = "正在清空剪贴板…";
+
+"update.pageTitle" = "更新";
+
+"update.pageDetail" = "检查版本、下载安装";
+
+"update.installedVersion" = "当前版本 %1$@";
+
+"update.idle" = "从 GitHub 获取新版本。";
+
+"update.verifying" = "正在校验安装包…";
+
+"update.opening" = "正在打开安装引导…";
+
+"update.opened" = "安装引导已打开，请在引导中完成更新。";
+
+"update.cancelled" = "已取消更新。";
+
+"font.sharedDetail" = "简体中文、繁体中文与英文的显示字体";
+
+"clipboard.encryption" = "加密固定项目";
+
+"clipboard.encryptionHint" = "开启后使用钥匙串中的密钥加密。关闭后以普通文件保存，仅当前账户可读写；同一账户下的其他程序仍可能访问。切换时会转换已有项目。";

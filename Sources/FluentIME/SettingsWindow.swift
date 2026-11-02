@@ -116,7 +116,7 @@ final class PreviewTextView: NSTextView {
 }
 
 private enum SettingsPage: String, CaseIterable {
-    case home, language, modes, general, keys, appearance, dictionary, models, advanced, preview, fonts, clipboard
+    case home, language, modes, general, keys, appearance, dictionary, models, advanced, preview, fonts, clipboard, updates
     var title: String {
         switch self {
         case .home: return L10n.settingsInputMethod
@@ -130,6 +130,7 @@ private enum SettingsPage: String, CaseIterable {
         case .advanced: return L10n.settingsAdvancedTitle
         case .preview: return L10n.previewTitle
         case .fonts: return L10n.fontTitle
+        case .updates: return L10n.updatePageTitle
         case .clipboard: return L10n.clipboardTitle
         }
     }
@@ -146,6 +147,7 @@ private enum SettingsPage: String, CaseIterable {
         case .advanced: return L10n.settingsAdvancedDetail
         case .preview: return L10n.previewTitle
         case .fonts: return L10n.fontHint
+        case .updates: return L10n.updatePageDetail
         case .clipboard: return L10n.clipboardDetail
         }
     }
@@ -156,10 +158,10 @@ private enum SettingsPage: String, CaseIterable {
         case .appearance, .fonts: return .appearance
         case .dictionary, .models: return .dictionary
         case .clipboard: return .clipboard
-        case .advanced: return .advanced
+        case .advanced, .updates: return .advanced
         }
     }
-    static let categories: [SettingsPage] = [.modes, .keys, .appearance, .models, .clipboard, .advanced]
+    static let categories: [SettingsPage] = [.modes, .keys, .appearance, .models, .clipboard, .updates, .advanced]
 }
 
 /// Compact native settings: retain the reference content geometry without the Windows sidebar.
@@ -192,6 +194,12 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     private var sample: Composition { sampleInput.composition }
     private var fontSignature = FontPreferences.signature
     private var clipboardStatus = ""
+    private var clipboardObserver: NSObjectProtocol?
+    private var clipboardStamp = ""
+    private func refreshClipboardPage() {
+        guard page == .clipboard else { return }
+        buildPage(); layout()
+    }
     private var modelStatus = ""
     private weak var neuralStatusLabel: NSTextField?
     private var neuralObserver: NSObjectProtocol?
@@ -228,6 +236,13 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         window.setFrame(NSRect(x: 0, y: 0, width: 640, height: 837), display: false)
         super.init(window: window)
         neuralObserver = NotificationCenter.default.addObserver(forName: CoreMLCandidateRanker.statusChanged, object: nil, queue: .main) { [weak self] _ in self?.neuralStatusLabel?.stringValue = self?.neuralStatusText() ?? "" }
+        clipboardObserver = NotificationCenter.default.addObserver(forName: ClipboardHistory.changed, object: ClipboardHistory.shared, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            let history = ClipboardHistory.shared
+            let stamp = "\(String(describing: history.storageActivity))|\(history.storageEncrypted)|\(history.storageError ?? "")"
+            guard self.clipboardStamp != stamp else { return }
+            self.clipboardStamp = stamp; self.refreshClipboardPage()
+        }
         root.fluentSetLocalization(locale: L10n.locale)
         window.contentView = root
         for view in [material, breadcrumbs, scroll] { root.addSubview(view) }
@@ -285,6 +300,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     deinit {
+        if let clipboardObserver { NotificationCenter.default.removeObserver(clipboardObserver) }
         if let neuralObserver { NotificationCenter.default.removeObserver(neuralObserver) }
         previewMotionTimer?.invalidate()
         if let observer { NotificationCenter.default.removeObserver(observer) }
@@ -380,7 +396,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         pageAppearanceUpdates.forEach { $0(updated) }
     }
     private func navigate(_ destination: SettingsPage) {
-        if [.language, .general, .dictionary, .fonts].contains(destination), !Preferences.shared.enabledInputModes.contains(settingsLanguage) { navigate(.home); return }
+        if [.language, .general, .dictionary].contains(destination), !Preferences.shared.enabledInputModes.contains(settingsLanguage) { navigate(.home); return }
         if search.currentEditor() != nil || window?.firstResponder === search {
             guard window?.makeFirstResponder(root) == true else { return }
         }
@@ -411,8 +427,8 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         if parent == nil { fitPageWidth(label) }
         return label
     }
-    private func action(_ title: String, x: CGFloat = 0, y: CGFloat, width: CGFloat = 180, parent: NSView? = nil, invoke: @escaping () -> Void) -> FluentButton {
-        let button = FluentButton(title: title); button.theme = theme; button.onClick = invoke
+    private func action(_ title: String, x: CGFloat = 0, y: CGFloat, width: CGFloat = 180, role: FluentButtonRole = .standard, parent: NSView? = nil, invoke: @escaping () -> Void) -> FluentButton {
+        let button = FluentButton(title: title, role: role); button.theme = theme; button.onClick = invoke
         button.frame = NSRect(x: x, y: y, width: max(width, button.intrinsicContentSize.width), height: 32)
         pageAppearanceUpdates.append { [weak button] theme in button?.theme = theme }
         (parent ?? pageContent).addSubview(button); return button
@@ -420,7 +436,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     private func buildBreadcrumbs() {
         breadcrumbAppearanceUpdates.removeAll()
         breadcrumbs.subviews.forEach { $0.removeFromSuperview() }
-        let parts = page == .home ? [L10n.settingsInputMethod] : isLanguagePage ? ([L10n.settingsInputMethod, settingsLanguage.title] + (page == .language ? [] : [page.title])) : [L10n.settingsInputMethod, page.title]
+        let parts = page == .home ? [L10n.settingsInputMethod] : isLanguagePage ? ([L10n.settingsInputMethod, settingsLanguage.title] + (page == .language ? [] : [page.title])) : page == .fonts ? [L10n.settingsInputMethod, L10n.settingsAppearanceTitle, page.title] : [L10n.settingsInputMethod, page.title]
         // Longer translations share the same breadcrumb row without clipping.
         var pointSize: CGFloat = 28
         func totalWidth() -> CGFloat {
@@ -448,10 +464,10 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         }
         updateTitleBar()
     }
-    @objc private func breadcrumbClicked(_ sender: NSButton) { navigate(sender.tag == 1 && isLanguagePage ? .language : .home) }
+    @objc private func breadcrumbClicked(_ sender: NSButton) { navigate(sender.tag == 1 ? (isLanguagePage ? .language : page == .fonts ? .appearance : .home) : .home) }
 
-    private var isLanguagePage: Bool { [.language, .general, .dictionary, .fonts].contains(page) }
-    private func goBack() { navigate(isLanguagePage && page != .language ? .language : .home) }
+    private var isLanguagePage: Bool { [.language, .general, .dictionary].contains(page) }
+    private func goBack() { navigate(page == .fonts ? .appearance : isLanguagePage && page != .language ? .language : .home) }
     private func navigationRow(_ title: String, detail: String, glyph: SettingsGlyph, y: CGFloat, invoke: @escaping () -> Void) {
         let button = SettingsNavigationButton(title: title, detail: detail, glyph: glyph, theme: theme)
         button.frame = NSRect(x: -8, y: y, width: 570, height: 58); button.invoke = invoke
@@ -525,7 +541,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             pageAppearanceUpdates.append(alignPreview); alignPreview(theme)
             documentHeight = y + 96
         case .language:
-            let destinations: [SettingsPage] = settingsLanguage.isChinese ? [.general, .dictionary, .fonts] : [.general, .fonts]
+            let destinations: [SettingsPage] = settingsLanguage.isChinese ? [.general, .dictionary] : [.general]
             for (index, destination) in destinations.enumerated() {
                 navigationRow(destination.title, detail: destination.detail, glyph: destination.icon, y: CGFloat(index * 62)) { [weak self] in self?.navigate(destination) }
             }
@@ -581,21 +597,22 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         case .appearance:
             choice(L10n.appearanceInterfaceLanguage, y: 0, options: [("system", L10n.appearanceSystem), ("zh-Hans", L10n.languageSimplified), ("zh-Hant", L10n.languageTraditional), ("en", L10n.languageEnglish)], selected: p.interfaceLanguage) { p.interfaceLanguage = $0 }
             _ = label(L10n.appearanceInterfaceLanguageHint, y: 84, size: 13, secondary: true)
-            _ = label(L10n.appearanceCandidates, y: 130, size: 20)
-            _ = label(L10n.appearanceCandidateCount(7), y: 178, size: 13, secondary: true)
-            toggle(L10n.appearancePopupAnimation, y: 214, value: p.candidatePopupAnimation) { p.candidatePopupAnimation = $0 }
-            toggle(L10n.appearancePageAnimation, y: 292, value: p.candidatePageAnimation) { p.candidatePageAnimation = $0 }
-            toggle(L10n.appearanceExpansionAnimation, y: 370, value: p.candidateExpansionAnimation) { p.candidateExpansionAnimation = $0 }
-            _ = label(L10n.appearanceTheme, y: 480, size: 20)
-            choice(L10n.appearanceThemeChoice, y: 528, options: [("system", L10n.appearanceSystem), ("light", L10n.appearanceLight), ("dark", L10n.appearanceDark)], selected: p.appearance) { p.appearance = $0 }
-            _ = label(L10n.symbolsEmoji, y: 636, size: 20)
-            _ = label(L10n.appearanceSymbolsHint, y: 682, size: 13, secondary: true)
-            _ = action(L10n.previewTitle, y: 726) { [weak self] in self?.navigate(.preview) }
-            toggle(L10n.appearanceAdvancedEffects, y: 806, value: p.advancedEffects) { p.advancedEffects = $0 }
-            _ = label(L10n.appearanceAdvancedEffectsHint, y: 876, size: 13, secondary: true)
-            toggle(L10n.modeIndicator, y: 934, value: p.showInputModeIndicator) { p.showInputModeIndicator = $0 }
-            _ = label(L10n.modeIndicatorHint, y: 1004, size: 13, secondary: true)
-            documentHeight = 1070
+            navigationRow(L10n.fontTitle, detail: L10n.fontSharedDetail, glyph: .appearance, y: 120) { [weak self] in self?.navigate(.fonts) }
+            _ = label(L10n.appearanceCandidates, y: 210, size: 20)
+            _ = label(L10n.appearanceCandidateCount(7), y: 258, size: 13, secondary: true)
+            toggle(L10n.appearancePopupAnimation, y: 294, value: p.candidatePopupAnimation) { p.candidatePopupAnimation = $0 }
+            toggle(L10n.appearancePageAnimation, y: 372, value: p.candidatePageAnimation) { p.candidatePageAnimation = $0 }
+            toggle(L10n.appearanceExpansionAnimation, y: 450, value: p.candidateExpansionAnimation) { p.candidateExpansionAnimation = $0 }
+            _ = label(L10n.appearanceTheme, y: 560, size: 20)
+            choice(L10n.appearanceThemeChoice, y: 608, options: [("system", L10n.appearanceSystem), ("light", L10n.appearanceLight), ("dark", L10n.appearanceDark)], selected: p.appearance) { p.appearance = $0 }
+            _ = label(L10n.symbolsEmoji, y: 716, size: 20)
+            _ = label(L10n.appearanceSymbolsHint, y: 762, size: 13, secondary: true)
+            _ = action(L10n.previewTitle, y: 806) { [weak self] in self?.navigate(.preview) }
+            toggle(L10n.appearanceAdvancedEffects, y: 886, value: p.advancedEffects) { p.advancedEffects = $0 }
+            _ = label(L10n.appearanceAdvancedEffectsHint, y: 956, size: 13, secondary: true)
+            toggle(L10n.modeIndicator, y: 1014, value: p.showInputModeIndicator) { p.showInputModeIndicator = $0 }
+            _ = label(L10n.modeIndicatorHint, y: 1084, size: 13, secondary: true)
+            documentHeight = 1150
         case .dictionary:
             _ = label(L10n.settingsDictionaryTitle, y: 0, size: 20)
             toggle(L10n.dictionaryLearning, y: 48, value: language.learning) { language.learning = $0 }
@@ -637,38 +654,66 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             paragraph(modelStatus, y: 594, height: 60)
             documentHeight = 674
         case .advanced:
+            let buttonWidth = [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction, L10n.updatePageTitle].map { FluentButton(title: $0).intrinsicContentSize.width }.reduce(CGFloat(240), max)
             _ = label(L10n.advancedSystemInput, y: 0, size: 20)
             _ = label(L10n.advancedAddInputHint, y: 48)
-            _ = action(L10n.advancedOpenKeyboard, y: 92, width: 200) { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!) }
+            _ = action(L10n.advancedOpenKeyboard, y: 92, width: buttonWidth) { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!) }
             _ = label(L10n.advancedAbout, y: 192, size: 20)
             let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? L10n.advancedDevelopment
             _ = label(L10n.advancedVersion(L10n.appName, version), y: 240)
             _ = label(L10n.advancedComponents(engine.version), y: 274, size: 13, secondary: true)
             _ = label(L10n.advancedOfflineHint, y: 306, size: 13, secondary: true)
-            _ = action(L10n.advancedLicenses, y: 356, width: 180) {
+            _ = action(L10n.advancedLicenses, y: 356, width: buttonWidth) {
                 if let directory = Bundle.main.resourceURL?.appendingPathComponent("Licenses") { NSWorkspace.shared.open(directory) }
             }
-            _ = action(L10n.setupReopen, y: 414) { [weak self] in self?.showSetup() }
-            _ = action(L10n.uninstallAction, y: 476) { [weak self] in self?.showUninstall() }
-            _ = action(L10n.updateTitle, y: 534, width: 220) { [weak self] in if let root = self?.root { UpdateCoordinator.shared.present(in: root) } }
+            _ = action(L10n.setupReopen, y: 414, width: buttonWidth) { [weak self] in self?.showSetup() }
+            _ = action(L10n.uninstallAction, y: 476, width: buttonWidth, role: .destructive) { [weak self] in self?.showUninstall() }
+            _ = action(L10n.updatePageTitle, y: 534, width: buttonWidth) { [weak self] in self?.navigate(.updates) }
             documentHeight = 610
+        case .updates:
+            let updates = UpdatePageView()
+            updates.frame = NSRect(x: 0, y: 0, width: 540, height: 320)
+            pageContent.addSubview(updates); fitPageWidth(updates)
+            documentHeight = 360
         case .fonts:
             buildFonts()
             documentHeight = 600
         case .clipboard:
+            let history = ClipboardHistory.shared
             _ = label(L10n.clipboardTitle, y: 0, size: 20)
             toggle(L10n.clipboardRecording, y: 54, value: p.clipboardRecording) { p.clipboardRecording = $0 }
             choice(L10n.clipboardRetention, y: 142, width: 300, options: retentionChoices, selected: String(p.clipboardRetention)) { p.clipboardRetention = Int($0) ?? 1800 }
-            paragraph(L10n.clipboardPinnedHint, y: 228, height: 64)
-            paragraph(L10n.clipboardPrivacyHint, y: 310, height: 52)
-            paragraph(L10n.clipboardClearHint, y: 380, height: 58)
-            _ = action(L10n.clipboardClear, y: 464) { [weak self] in
-                do { try ClipboardHistory.shared.clear(); self?.clipboardStatus = L10n.clipboardCleared }
-                catch { self?.clipboardStatus = L10n.clipboardStorageError }
-                self?.buildPage(); self?.layout()
+            paragraph(L10n.clipboardPinnedHint, y: 228, height: 54)
+            toggle(L10n.clipboardEncryption, y: 302, value: history.storageEncrypted, enabled: !history.isStorageBusy) { [weak self] enabled in
+                self?.clipboardStatus = ""
+                history.setEncryption(enabled) { [weak self] result in
+                    if case .failure(let error) = result { self?.clipboardStatus = error.localizedDescription }
+                    self?.refreshClipboardPage()
+                }
             }
-            paragraph(clipboardStatus, y: 510, height: 58)
-            documentHeight = 600
+            paragraph(L10n.clipboardEncryptionHint, y: 374, height: 70)
+            paragraph(L10n.clipboardPrivacyHint, y: 466, height: 52)
+            paragraph(L10n.clipboardClearHint, y: 538, height: 58)
+            let clear = action(L10n.clipboardClear, y: 618) { [weak self] in
+                self?.clipboardStatus = ""
+                history.clear { [weak self] result in
+                    switch result {
+                    case .success: self?.clipboardStatus = L10n.clipboardCleared
+                    case .failure(let error): self?.clipboardStatus = error.localizedDescription
+                    }
+                    self?.refreshClipboardPage()
+                }
+            }
+            clear.isEnabled = !history.isStorageBusy
+            let status: String
+            switch history.storageActivity {
+            case .loading: status = L10n.clipboardLoading
+            case .saving: status = L10n.clipboardSaving
+            case .clearing: status = L10n.clipboardClearing
+            case nil: status = clipboardStatus.isEmpty ? history.storageError ?? "" : clipboardStatus
+            }
+            paragraph(status, y: 666, height: 58)
+            documentHeight = 740
         case .preview:
             _ = label(L10n.previewTitle, y: 0, size: 20)
             let surface = IMEFlippedView(frame: NSRect(x: 0, y: 48, width: 850, height: 88))
@@ -696,14 +741,16 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         field.frame.size.height = height
     }
     private func buildFonts() {
-        paragraph(L10n.fontHint, y: 0, height: 70)
-        let mode = settingsLanguage
-        choice(mode.title, y: 90, width: 380, options: FontPreferences.choices, selected: FontPreferences.selected(mode)) { [weak self] value in
-            FontPreferences.set(value, for: mode); self?.buildPage(); self?.layout()
+        paragraph(L10n.fontHint, y: 0, height: 60)
+        for (index, mode) in InputMode.allCases.enumerated() {
+            let y = CGFloat(80 + index * 160)
+            choice(mode.title, y: y, width: 380, options: FontPreferences.choices, selected: FontPreferences.selected(mode)) { [weak self] value in
+                FontPreferences.set(value, for: mode); self?.buildPage(); self?.layout()
+            }
+            let sample = mode == .simplifiedChinese ? L10n.fontSampleSimplified : mode == .traditionalChinese ? L10n.fontSampleTraditional : L10n.fontSampleEnglish
+            let preview = label(sample, y: y + 78, size: 19)
+            preview.frame.size.height = 46; preview.font = FontPreferences.font(size: 19, weight: .regular, language: mode)
         }
-        let sample = mode == .simplifiedChinese ? L10n.fontSampleSimplified : mode == .traditionalChinese ? L10n.fontSampleTraditional : L10n.fontSampleEnglish
-        let preview = label(sample, y: 180, size: 19)
-        preview.frame.size.height = 46; preview.font = FontPreferences.font(size: 19, weight: .regular, language: mode)
     }
     private func refreshCandidates() {
         guard page == .preview else { return }

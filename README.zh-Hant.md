@@ -39,7 +39,7 @@
 
 ### 5. 隱私優先的剪貼簿記錄
 - **多元格式與保留時間管理**：預設關閉；開啟後支援記錄純文字、RTF 格式文字、圖片、網頁連結與檔案（上限 50 筆或 50 MB）。點一下文字可直接送出，圖片與檔案點一下拷貝後按 `⌘V` 貼上。
-- **記憶體暫存與本機加密**：未釘選的記錄僅暫存於記憶體，支援設定 15 分鐘、30 分鐘、1 小時、24 小時、7 天或結束輸入法時自動清除；釘選記錄採用 **AES-256-GCM** 加密儲存於本機，金鑰由 macOS 登入鑰匙圈管理。
+- **記憶體暫存與本機加密**：未釘選的記錄僅暫存於記憶體，支援設定 15 分鐘、30 分鐘、1 小時、24 小時、7 天或結束輸入法時自動清除；釘選記錄預設使用 **AES-256-GCM** 加密，金鑰由 macOS 登入鑰匙圈管理。可在剪貼簿設定中關閉加密；關閉後僅透過目前帳戶的檔案權限保護記錄。
 - **嚴格隱私過濾**：自動略過安全輸入狀態（密碼欄位）、私密標記內容與跨裝置通用剪貼簿。
 
 ---
@@ -61,7 +61,7 @@ Transformer 也可單獨下載 `Fluent-IME-Transformer.zip`，解壓縮後在 **
 ### 解除安裝輸入法
 前往 **Fluent 拼音設定 → 進階 → 解除安裝輸入法**：
 - 預設勾選「保留個人設定、詞庫與剪貼簿釘選內容」；
-- 若取消勾選，解除安裝時將一併清除所有偏好設定、個人學習詞庫、備份、收藏的 GIF 與剪貼簿加密檔案。
+- 若取消勾選，解除安裝時將一併清除所有偏好設定、個人學習詞庫、備份、收藏的 GIF 與剪貼簿釘選檔案。
 
 ---
 
@@ -98,7 +98,7 @@ Transformer 也可單獨下載 `Fluent-IME-Transformer.zip`，解壓縮後在 **
 - **系統輸入法安裝路徑**：`~/Library/Input Methods/Fluent IME.app`
 - **個人詞庫與學習資料**：`~/Library/Application Support/FluentIME/Rime`
 - **詞庫封存備份目錄**：`~/Library/Application Support/FluentIME/DictionaryBackups`
-- **剪貼簿釘選項目加密檔案**：`~/Library/Application Support/FluentIME/Private/Clipboard/pinned.aesgcm`
+- **剪貼簿釘選項目檔案**：`~/Library/Application Support/FluentIME/Private/Clipboard/pinned.aesgcm`
 - **偏好設定儲存域**：`org.fluentime.inputmethod.FluentIME`（UserDefaults）
 - *註：Fluent 拼音完全獨立維護資料目錄，不會讀取、修改或共用鼠鬚管（Squirrel）、微信輸入法等其他輸入法的任何設定與詞庫。*
 

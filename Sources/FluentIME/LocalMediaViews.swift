@@ -90,6 +90,7 @@ final class ClipboardCard: NSView {
     private let body: ClipboardCardBody
     private let more = makeChromeButton(.more, label: L10n.clipboardMore)
     private let pin: FluentButton
+    var storageBusy = false { didSet { pin.isEnabled = !storageBusy; more.isEnabled = !storageBusy } }
     var selectionHighlighted = false { didSet { applyTheme() } }
     var onSelect: (() -> Void)?
     var onCopy: (() -> Void)?
@@ -129,6 +130,7 @@ final class ClipboardCard: NSView {
          FluentMenuItem(id: "delete", L10n.clipboardDeleteEntry) { [weak self] in self?.onRemove?() }]
     }
     private func showActions() {
+        guard !storageBusy else { return }
         flyout = FluentMenuFlyout(items: menuItems(), theme: theme, matchesAnchorWidth: false)
         flyout?.present(relativeTo: more)
     }

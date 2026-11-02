@@ -39,7 +39,7 @@
 
 ### 5. Privacy-First Clipboard History
 - **Rich Formats & Flexible Expiration**: Disabled by default. When enabled, captures plain text, rich text, images, links, and file references (up to 50 items or 50 MB). Click text entries to insert directly, or click images and files to copy and paste with `⌘V`.
-- **In-Memory & Encrypted Storage**: Unpinned items remain strictly in memory and expire automatically after 15 minutes, 30 minutes, 1 hour, 24 hours, 7 days, or on quit. Pinned items are encrypted on disk with **AES-256-GCM** using a key stored in your macOS login Keychain.
+- **In-Memory & Encrypted Storage**: Unpinned items remain strictly in memory and expire automatically after 15 minutes, 30 minutes, 1 hour, 24 hours, 7 days, or on quit. Pinned items use **AES-256-GCM** by default, with a key stored in your macOS login Keychain. Encryption can be turned off in Clipboard settings; files then rely on permissions for the current account.
 - **Automatic Privacy Filtering**: Automatically ignores secure password fields, private pasteboard markers, and Universal Clipboard items from other devices.
 
 ---
@@ -61,7 +61,7 @@ Open `dist/Fluent-IME-<version>-Setup.dmg` and double-click **Fluent IME Setup**
 ### Uninstalling
 Go to **Fluent Pinyin Settings → Advanced → Uninstall input method**:
 - By default, *Keep settings, dictionaries, and pinned items* is checked.
-- Unchecking it will permanently remove all preferences, learned user dictionaries, backups, saved GIFs, and encrypted clipboard items before quitting.
+- Unchecking it will permanently remove all preferences, learned user dictionaries, backups, saved GIFs, and pinned clipboard items before quitting.
 
 ---
 

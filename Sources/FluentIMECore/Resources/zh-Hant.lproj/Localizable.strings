@@ -197,8 +197,7 @@
 
 "font.title" = "字型設定";
 
-"font.hint" = "可為不同輸入模式分別指定顯示字型。預設採用系統字型，所選字型無法使用時會自動回復。";
-
+"font.hint" = "分別選擇三種語言的顯示字型。預設使用系統字型；所選字型無法使用時會自動回復。";
 "font.system" = "系統預設字型";
 
 "font.sampleSimplified" = "簡體中文 · 你好，世界";
@@ -245,15 +244,14 @@
 
 "clipboard.pasteHint" = "點一下文字可直接送出；圖片與檔案點一下拷貝後按 ⌘V 貼上。";
 
-"clipboard.pinnedHint" = "一般記錄僅暫存於記憶體，結束後自動清除；釘選記錄將加密儲存在本機且不會過期。";
-
+"clipboard.pinnedHint" = "一般記錄只保存在記憶體，結束後清空；釘選項目保存在本機，不會到期。";
 "clipboard.clearHint" = "全部清除會移除所有歷史與釘選記錄，但不會影響目前系統剪貼簿。";
 
 "clipboard.cleared" = "剪貼簿歷史記錄已清除。";
 
-"clipboard.storageError" = "無法存取本機加密儲存空間，釘選記錄儲存失敗。請檢查「鑰匙圈存取」權限後重試。";
+"clipboard.storageError" = "無法儲存釘選項目。請檢查檔案權限；開啟加密時，也請檢查鑰匙圈存取權限。";
 
-"clipboard.invalidError" = "無法讀取釘選記錄，已保留原有的加密備份檔案。";
+"clipboard.invalidError" = "無法讀取釘選項目，原有檔案已保留。";
 
 "clipboard.limitError" = "釘選記錄已達上限（最多 50 筆或 50 MB），請先清理舊記錄。";
 
@@ -291,8 +289,8 @@
 "settings.languagesTitle" = "輸入語言";
 "settings.modesTitle" = "輸入模式";
 "settings.modesDetail" = "已啟用的語言及預設輸入模式";
-"settings.languageDetail" = "一般偏好、詞庫與字型";
-"settings.englishDetail" = "輸入行為與字型";
+"settings.languageDetail" = "一般偏好與詞庫";
+"settings.englishDetail" = "輸入行為";
 "install.title" = "安裝與設定 Fluent 拼音";
 "install.welcome" = "歡迎使用 Fluent 拼音";
 "install.intro" = "完成安裝並啟用輸入法後，即可設定輸入語言與個人偏好。";
@@ -378,3 +376,29 @@
 "models.restart" = "重新啟動輸入法";
 "models.invalidGrammar" = "無法讀取此語法模型，請選擇完整的 Rime Octagram .gram 檔案。";
 "models.invalidTransformer" = "模型介面或詞表不相容。請使用 Fluent IME 評分模型格式。";
+
+"clipboard.loading" = "正在讀取釘選項目…";
+"clipboard.saving" = "正在儲存釘選項目…";
+"clipboard.clearing" = "正在清空剪貼簿…";
+
+"update.pageTitle" = "更新";
+
+"update.pageDetail" = "檢查版本、下載安裝";
+
+"update.installedVersion" = "目前版本 %1$@";
+
+"update.idle" = "從 GitHub 取得新版本。";
+
+"update.verifying" = "正在驗證安裝套件…";
+
+"update.opening" = "正在開啟安裝引導…";
+
+"update.opened" = "安裝引導已開啟，請在引導中完成更新。";
+
+"update.cancelled" = "已取消更新。";
+
+"font.sharedDetail" = "簡體中文、繁體中文與英文的顯示字型";
+
+"clipboard.encryption" = "加密釘選項目";
+
+"clipboard.encryptionHint" = "開啟後使用鑰匙圈中的金鑰加密。關閉後以一般檔案保存，僅目前帳戶可讀寫；同一帳戶下的其他程式仍可能存取。切換時會轉換既有項目。";
