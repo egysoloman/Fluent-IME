@@ -81,8 +81,8 @@ final class MaintenanceAppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { tasks?.canTerminate == false ? .terminateCancel : .terminateNow }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) { InstallerLifecycle.removeTemporaryMaintenanceCopy() }
-    func showSetup() {
-        if setup == nil { setup = SetupWindowController() }
+    func showSetup(checkingForUpdates: Bool = false) {
+        if setup == nil { setup = SetupWindowController(updates: checkingForUpdates ? GitHubUpdateService() : nil) }
         setup?.showWindow(nil); NSApp.activate(ignoringOtherApps: true)
     }
 }

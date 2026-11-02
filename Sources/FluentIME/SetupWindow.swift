@@ -9,11 +9,20 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     private let pageMotion = IMEPageMotion()
     private var lastInstallState: [Bool] = []
     private let installation: SetupInstallation
+    private let updates: (any IMEUpdateService)?
     private let onComplete: () -> Void
+    private var checking = false
+    private var dialog: NSView?
     private var theme = Preferences.shared.theme
     private var appearance: IMEThemeObservation?
     private var activeObserver: NSObjectProtocol?
     private var step = 0
+    /// The dictionary choice only appears when there is a local dictionary to keep or reset.
+    private var pages: [Int] { installation.hasLocalDictionary ? [0, 1, 2, 3, 4] : [0, 1, 3, 4] }
+    private func page(_ offset: Int) -> Int {
+        let list = pages, index = list.firstIndex(of: step) ?? 0
+        return list[max(0, min(list.count - 1, index + offset))]
+    }
     private var resetDictionary = false
     private var busy = false
     private var completed = false
@@ -24,18 +33,46 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     private var retention = Preferences.shared.clipboardRetention
     private var effects = Preferences.shared.advancedEffects
     private var indicator = Preferences.shared.showInputModeIndicator
-    init(installation: SetupInstallation = InputMethodInstallation.shared, onComplete: @escaping () -> Void = {}) {
-        self.installation = installation; self.onComplete = onComplete
+    /// With `updates`, as when the installer is opened directly, the guide first checks
+    /// whether a newer installer exists; only then does it look at the local installation.
+    init(installation: SetupInstallation = InputMethodInstallation.shared, updates: (any IMEUpdateService)? = nil, onComplete: @escaping () -> Void = {}) {
+        self.installation = installation; self.updates = updates; self.onComplete = onComplete
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 612), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = L10n.installTitle; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self; window.contentView = root; root.wantsLayer = true
         root.fluentSetLocalization(locale: L10n.locale)
         appearance = IMEThemeObservation { [weak self] theme in self?.theme = theme; self?.build() }
-        activeObserver = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in guard let self, self.step <= 1, !self.busy else { return }; if self.lastInstallState != [self.installation.isInstalled, self.installation.isEnabled] { self.build() } }
+        activeObserver = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in guard let self, self.step <= 1, !self.busy, !self.checking else { return }; if self.lastInstallState != [self.installation.isInstalled, self.installation.isEnabled] { self.build() } }
         build(); window.center()
+        if updates != nil { checkForUpdates() }
     }
     required init?(coder: NSCoder) { fatalError() }
+    private func checkForUpdates() {
+        guard let updates else { return }
+        checking = true; build()
+        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+        Task { @MainActor [weak self] in
+            do {
+                let release = try await updates.latest(channel: .stable)
+                guard let self else { return }
+                if let release, release.isNewer(than: current) {
+                    self.ask(title: L10n.setupOutdatedTitle, message: L10n.setupOutdated(current, release.version), primary: L10n.setupDownloadLatest) {
+                        NSWorkspace.shared.open(release.pageURL); NSApp.terminate(nil)
+                    }
+                } else { self.checking = false; self.build() }
+            } catch {
+                guard let self else { return }
+                let offline = error is URLError
+                self.ask(title: offline ? L10n.setupOfflineTitle : L10n.updateCheckFailed, message: offline ? L10n.setupOffline : L10n.setupCheckFailed, primary: L10n.setupRetry) { [weak self] in self?.checkForUpdates() }
+            }
+        }
+    }
+    private func ask(title: String, message: String, primary: String, onPrimary: @escaping () -> Void) {
+        dialog = MaintenanceDialogs.choose(in: root, title: title, message: message, primary: primary, close: L10n.setupContinue,
+            onPrimary: { [weak self] in self?.dialog = nil; onPrimary() },
+            onClose: { [weak self] in self?.dialog = nil; self?.checking = false; self?.build() })
+    }
     deinit { if let activeObserver { NotificationCenter.default.removeObserver(activeObserver) } }
     func windowShouldClose(_ sender: NSWindow) -> Bool { !busy }
     func windowWillClose(_ notification: Notification) {
@@ -82,12 +119,13 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         let titlebar = FluentTitleBar(title: L10n.installTitle, heightMode: .compact, backgroundStyle: .transparent, windowControlsStyle: .windows,
             leftHeader: { FluentEmptyView() }, content: { FluentEmptyView() }, rightHeader: { FluentEmptyView() })
         let bar = titlebar._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale)); bar.frame = NSRect(x: 0, y: 0, width: 640, height: 40); root.addSubview(bar)
-        let stages = [L10n.setupStageInstall, L10n.installEnable, L10n.setupStageDictionary, L10n.setupStageModes, L10n.setupStagePreferences]
-        label(L10n.setupStep(step + 1, stages.count), x: 48, y: 62, width: 220, size: 12, height: 20, secondary: true, parent: root)
-        for index in stages.indices {
-            let marker = NSView(frame: NSRect(x: 48 + CGFloat(index) * 111, y: 94, width: 100, height: 3))
+        let shown = pages, position = shown.firstIndex(of: step) ?? 0
+        label(L10n.setupStep(position + 1, shown.count), x: 48, y: 62, width: 220, size: 12, height: 20, secondary: true, parent: root)
+        let markerWidth = (544 - 11 * CGFloat(shown.count - 1)) / CGFloat(shown.count)
+        for index in shown.indices {
+            let marker = NSView(frame: NSRect(x: 48 + CGFloat(index) * (markerWidth + 11), y: 94, width: markerWidth, height: 3))
             marker.wantsLayer = true; marker.layer?.cornerRadius = 1.5
-            marker.layer?.backgroundColor = (index <= step ? theme.accent : theme.surfaceStrokeFlyout).cgColor; root.addSubview(marker)
+            marker.layer?.backgroundColor = (index <= position ? theme.accent : theme.surfaceStrokeFlyout).cgColor; root.addSubview(marker)
         }
         viewport.frame = NSRect(x: 48, y: 124, width: 544, height: 378)
         viewport.wantsLayer = true; viewport.layer?.masksToBounds = true; root.addSubview(viewport)
@@ -102,8 +140,15 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         switch step {
         case 0:
             card(y: 128, height: 116)
-            label(installation.isInstalled ? L10n.installInstalled : L10n.installNotInstalled, x: 20, y: 148, width: 504, size: 16, height: 28)
-            label(L10n.installLocationHint, x: 20, y: 188, width: 504, size: 13, height: 44, secondary: true)
+            if checking {
+                label(L10n.updateChecking, x: 20, y: 148, width: 504, size: 16, height: 28)
+                let progress = FluentProgressBar(value: 0); progress.theme = theme; progress.isIndeterminate = true
+                progress.frame = NSRect(x: 20, y: 196, width: 504, height: 4); content.addSubview(progress)
+            } else {
+                let state = installation.newerInstalledVersion.map(L10n.installNewerInstalled) ?? (installation.isInstalled ? L10n.installInstalled : L10n.installNotInstalled)
+                label(state, x: 20, y: 148, width: 504, size: 16, height: 28)
+                label(L10n.installLocationHint, x: 20, y: 188, width: 504, size: 13, height: 44, secondary: true)
+            }
         case 1:
             card(y: 128, height: 76)
             label(installation.isEnabled ? L10n.installEnabled : L10n.installNotEnabled, x: 20, y: 150, width: 504, size: 16, height: 30)
@@ -145,9 +190,10 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         }
         label(status, x: 48, y: 506, width: 544, size: 12, height: 36, secondary: true, parent: root)
         let separator = NSView(frame: NSRect(x: 0, y: 548, width: 640, height: 0.5)); separator.wantsLayer = true; separator.layer?.backgroundColor = theme.surfaceStrokeFlyout.cgColor; root.addSubview(separator)
-        if step > 0 { button(L10n.setupPrevious, x: 48, y: 564, width: 124, parent: root) { [weak self] in guard let self else { return }; self.navigate(self.step - 1) } }
+        if step > 0 { button(L10n.setupPrevious, x: 48, y: 564, width: 124, parent: root) { [weak self] in guard let self else { return }; self.navigate(self.page(-1)) } }
         let actionTitle = step == 0 && !installation.isInstalled ? (busy ? L10n.installBusy : L10n.installAction) : step == 1 && !installation.isEnabled ? L10n.installEnable : step == 4 ? L10n.installFinish : L10n.setupNext
-        button(actionTitle, x: 352, y: 564, width: 240, primary: true, parent: root) { [weak self] in self?.advance() }
+        button(actionTitle, x: 352, y: 564, width: 240, enabled: !checking, primary: true, parent: root) { [weak self] in self?.advance() }
+        if let dialog { dialog.frame = root.bounds; root.addSubview(dialog) }
         root.layoutSubtreeIfNeeded()
     }
     private func advance() {
@@ -167,9 +213,9 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             catch { status = L10n.installFailure(error.localizedDescription); build(); return }
             guard installation.isEnabled else { status = L10n.installEnableHint; build(); return }
         }
-        guard step == 4 else { navigate(step + 1); return }
+        guard step == 4 else { navigate(page(1)); return }
         busy = true; build()
-        installation.complete(resetDictionary: resetDictionary, applyPreferences: { [self] in
+        installation.complete(resetDictionary: resetDictionary && installation.hasLocalDictionary, applyPreferences: { [self] in
             let p = Preferences.shared
             p.enabledInputModes = modes; p.defaultInputMode = defaultMode
             p.clipboardRetention = retention; p.clipboardRecording = recording

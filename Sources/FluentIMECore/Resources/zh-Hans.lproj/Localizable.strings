@@ -298,6 +298,15 @@
 "install.enable" = "启用输入法";
 "install.installed" = "已安装到系统";
 "install.notInstalled" = "尚未安装或需要更新";
+"setup.outdatedTitle" = "有新版本可用";
+"setup.outdated" = "你正在使用的安装程序（%1$@）不是最新版本，GitHub 上已有 %2$@。可以前往 GitHub 下载新的安装包，或继续使用此安装程序。";
+"setup.downloadLatest" = "前往 GitHub 下载";
+"setup.continue" = "继续";
+"setup.retry" = "重试";
+"setup.offlineTitle" = "当前未连接";
+"setup.offline" = "无法连接 GitHub，暂时无法确认此安装程序是否为最新版本。可以重试，或继续安装。";
+"setup.checkFailed" = "无法确认此安装程序是否为最新版本。可以重试，或继续安装。";
+"install.newerInstalled" = "已安装更高版本 %1$@";
 "install.enabled" = "输入法已启用";
 "install.notEnabled" = "输入法尚未启用";
 "install.enableHint" = "若系统输入法列表未自动刷新，请前往“系统设置 → 键盘 → 输入法”手动添加。";
@@ -353,10 +362,6 @@
 "neural.ready" = "模型已就绪，等待上文";
 "neural.scored" = "已评分 %1$ld 次，最近一次 %2$@ 毫秒";
 
-"setup.stageInstall" = "安装";
-"setup.stageDictionary" = "词库";
-"setup.stageModes" = "输入模式";
-"setup.stagePreferences" = "偏好设置";
 
 /* Model management */
 "models.title" = "语言模型";

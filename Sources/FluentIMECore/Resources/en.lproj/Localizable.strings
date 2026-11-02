@@ -298,6 +298,15 @@
 "install.enable" = "Enable input method";
 "install.installed" = "Input method installed";
 "install.notInstalled" = "Not installed or needs update";
+"setup.outdatedTitle" = "A newer version is available";
+"setup.outdated" = "This installer (%1$@) is not the latest version; %2$@ is available on GitHub. Download the new installer from GitHub, or continue with this one.";
+"setup.downloadLatest" = "Download from GitHub";
+"setup.continue" = "Continue";
+"setup.retry" = "Retry";
+"setup.offlineTitle" = "Not connected";
+"setup.offline" = "Couldn’t reach GitHub to confirm this installer is the latest version. Retry, or continue installing.";
+"setup.checkFailed" = "Couldn’t confirm this installer is the latest version. Retry, or continue installing.";
+"install.newerInstalled" = "A newer version (%1$@) is already installed";
 "install.enabled" = "Input method enabled";
 "install.notEnabled" = "Input method not enabled";
 "install.enableHint" = "If the system list has not refreshed, add Fluent Pinyin in System Settings → Keyboard → Input Sources.";
@@ -353,10 +362,6 @@
 "neural.ready" = "Model ready; waiting for context";
 "neural.scored" = "Scored %1$ld times; last score %2$@ ms";
 
-"setup.stageInstall" = "Install";
-"setup.stageDictionary" = "Dictionary";
-"setup.stageModes" = "Input modes";
-"setup.stagePreferences" = "Preferences";
 
 /* Model management */
 "models.title" = "Language models";

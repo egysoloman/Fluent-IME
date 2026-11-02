@@ -7,6 +7,7 @@ protocol SetupInstallation: AnyObject {
     var isInstalled: Bool { get }
     var isEnabled: Bool { get }
     var hasLocalDictionary: Bool { get }
+    var newerInstalledVersion: String? { get }
     func install(completion: @escaping (Result<Void, Error>) -> Void)
     func enable() throws
     func complete(resetDictionary: Bool, applyPreferences: @escaping () -> Void, completion: @escaping (Result<Void, Error>) -> Void)
@@ -31,6 +32,14 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
         let target = targetInfo?["CFBundleVersion"] as? String ?? "0"
         let payload = payloadInfo?["CFBundleVersion"] as? String ?? "999999"
         return (Int(target) ?? 0) >= (Int(payload) ?? 999999)
+    }
+    /// The installed version when it is newer than this installer's payload.
+    var newerInstalledVersion: String? {
+        guard InstallerLifecycle.isInstaller, hasInstallerPayload, files.isInstalled else { return nil }
+        let target = NSDictionary(contentsOf: files.application.appendingPathComponent("Contents/Info.plist"))
+        let payload = NSDictionary(contentsOf: InstallerLifecycle.payload.appendingPathComponent("Contents/Info.plist"))
+        guard (Int(target?["CFBundleVersion"] as? String ?? "0") ?? 0) > (Int(payload?["CFBundleVersion"] as? String ?? "0") ?? 0) else { return nil }
+        return target?["CFBundleShortVersionString"] as? String
     }
     var isEnabled: Bool { Self.sources().contains { Self.bool($0, kTISPropertyInputSourceIsEnabled) } }
     var hasLocalDictionary: Bool { files.hasLocalDictionary }

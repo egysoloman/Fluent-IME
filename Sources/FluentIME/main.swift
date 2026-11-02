@@ -121,7 +121,8 @@ if !rendering, InstallerLifecycle.isMaintenance {
         }
     } else {
         app.setActivationPolicy(.regular)
-        delegate.showSetup(); app.activate(ignoringOtherApps: true)
+        // Opening the installer checks for a newer one first; the guide from settings does not.
+        delegate.showSetup(checkingForUpdates: request == nil); app.activate(ignoringOtherApps: true)
     }
     withExtendedLifetime(delegate) { app.run() }; exit(0)
 }

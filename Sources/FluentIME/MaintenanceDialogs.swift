@@ -40,6 +40,26 @@ enum MaintenanceDialogs {
         present(in: root, title: L10n.dictionaryManage, message: L10n.dictionaryManageHint + "\n\n" + L10n.installResetHint,
                 primary: L10n.installReset) { _ in try InputMethodInstallation.shared.resetDictionaryAndRestart() }
     }
+    /// A two-way choice. Dismissing the dialog counts as the close choice.
+    @discardableResult static func choose(in root: NSView, title: String, message: String, primary: String, close: String,
+                                          onPrimary: @escaping () -> Void, onClose: @escaping () -> Void) -> NSView {
+        var visible = true
+        weak var mounted: NSView?
+        let description = FluentSelectableLabel(wrappingLabelWithString: message)
+        description.font = IMEFont.font(ofSize: 14); description.textColor = Preferences.shared.theme.textPrimary
+        let height = ceil(description.cell?.cellSize(forBounds: NSRect(x: 0, y: 0, width: 380, height: 1000)).height ?? 60)
+        let content = IMEFlippedView(frame: NSRect(x: 0, y: 0, width: 380, height: height))
+        description.frame = content.bounds; content.addSubview(description)
+        let dialog = FluentContentDialog(isPresented: FluentBinding(get: { visible }, set: { visible = $0 }),
+            configuration: .init(title: title, primaryButtonText: primary, closeButtonText: close, defaultButton: .primary),
+            onClosed: { result in
+                mounted?.removeFromSuperview()
+                if result == .primary { onPrimary() } else { onClose() }
+            }, content: { FluentEmptyView() }, dialogContent: { FluentNativeView(content).frame(width: 380, height: height) })
+        let host = dialog._makeView(in: FluentRenderContext(theme: Preferences.shared.theme, locale: L10n.locale))
+        mounted = host; host.frame = root.bounds; host.autoresizingMask = [.width, .height]; root.addSubview(host)
+        return host
+    }
     static func showError(_ error: Error, in root: NSView) {
         var visible = true
         weak var mounted: NSView?

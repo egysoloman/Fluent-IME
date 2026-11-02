@@ -89,6 +89,12 @@ extension GitHubUpdateService: IMEUpdateService {}
         self.service = service; self.defaults = defaults ?? (InstallerLifecycle.isMaintenance ? UserDefaults(suiteName: "org.fluentime.inputmethod.FluentIME")! : .standard)
         channel = UpdateChannel(rawValue: self.defaults.string(forKey: "updateChannel") ?? "") ?? .stable
         lastChecked = self.defaults.object(forKey: "updateLastChecked") as? Date
+        // Until this session checks, show the result of the last check for the same channel.
+        if lastChecked != nil, self.defaults.string(forKey: "updateLatestChannel") == channel.rawValue,
+           let data = self.defaults.data(forKey: "updateLatestRelease"), let cached = try? JSONDecoder().decode(GitHubRelease.self, from: data) {
+            latestRelease = cached
+            if cached.isNewer(than: currentVersion, channel: channel) { release = cached; state = .available(cached.version) } else { state = .current }
+        }
     }
     var currentVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0" }
     var busy: Bool {
@@ -106,6 +112,7 @@ extension GitHubUpdateService: IMEUpdateService {}
                 let latest = try await service.latest(channel: channel); try Task.checkCancellation()
                 guard request == generation else { return }
                 latestRelease = latest; lastChecked = Date(); defaults.set(lastChecked, forKey: "updateLastChecked")
+                defaults.set(latest.flatMap { try? JSONEncoder().encode($0) }, forKey: "updateLatestRelease"); defaults.set(channel.rawValue, forKey: "updateLatestChannel")
                 if let latest, latest.isNewer(than: currentVersion, channel: channel) || (InstallerLifecycle.isMaintenance && !InputMethodInstallation.shared.isPresent) { release = latest; state = .available(latest.version) }
                 else { state = latest == nil ? .failed(L10n.updateNoRelease) : .current }
             } catch { if request == generation, !Task.isCancelled { connectionFailed = Self.isConnectionFailure(error); state = .failed(Self.message(error)) } }

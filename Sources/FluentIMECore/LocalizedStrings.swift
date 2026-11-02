@@ -294,6 +294,8 @@ public extension L10n {
     static var installMerge: String { text("install.merge") }
     /// 保留历史词库，与全新内置词库合并使用。
     static var installMergeHint: String { text("install.mergeHint") }
+    /// 已安装更高版本 %1$@
+    static func installNewerInstalled(_ arg1: String) -> String { format("install.newerInstalled", arguments: [arg1]) }
     /// 输入法尚未启用
     static var installNotEnabled: String { text("install.notEnabled") }
     /// 尚未安装或需要更新
@@ -486,6 +488,12 @@ public extension L10n {
     static var settingsTitle: String { text("settings.title") }
     /// Fluent IME 设置
     static var settingsWindowTitle: String { text("settings.windowTitle") }
+    /// 无法确认此安装程序是否为最新版本。可以重试，或继续安装。
+    static var setupCheckFailed: String { text("setup.checkFailed") }
+    /// 继续
+    static var setupContinue: String { text("setup.continue") }
+    /// 前往 GitHub 下载
+    static var setupDownloadLatest: String { text("setup.downloadLatest") }
     /// 完成并试一试
     static var setupFinish: String { text("setup.finish") }
     /// 请前往系统设置“键盘 → 文字输入 → 编辑”中添加“Fluent 拼音”，随后即可从右上角菜单栏切换使用。
@@ -500,20 +508,22 @@ public extension L10n {
     static var setupModes: String { text("setup.modes") }
     /// 下一步
     static var setupNext: String { text("setup.next") }
+    /// 无法连接 GitHub，暂时无法确认此安装程序是否为最新版本。可以重试，或继续安装。
+    static var setupOffline: String { text("setup.offline") }
+    /// 当前未连接
+    static var setupOfflineTitle: String { text("setup.offlineTitle") }
+    /// 你正在使用的安装程序（%1$@）不是最新版本，GitHub 上已有 %2$@。可以前往 GitHub 下载新的安装包，或继续使用此安装程序。
+    static func setupOutdated(_ arg1: String, _ arg2: String) -> String { format("setup.outdated", arguments: [arg1, arg2]) }
+    /// 有新版本可用
+    static var setupOutdatedTitle: String { text("setup.outdatedTitle") }
     /// 上一步
     static var setupPrevious: String { text("setup.previous") }
     /// 剪贴板与视觉外观
     static var setupPrivacy: String { text("setup.privacy") }
     /// 重新运行初始向导
     static var setupReopen: String { text("setup.reopen") }
-    /// 词库
-    static var setupStageDictionary: String { text("setup.stageDictionary") }
-    /// 安装
-    static var setupStageInstall: String { text("setup.stageInstall") }
-    /// 输入模式
-    static var setupStageModes: String { text("setup.stageModes") }
-    /// 偏好设置
-    static var setupStagePreferences: String { text("setup.stagePreferences") }
+    /// 重试
+    static var setupRetry: String { text("setup.retry") }
     /// 第 %1$ld / %2$ld 步
     static func setupStep(_ arg1: Int, _ arg2: Int) -> String { format("setup.step", arguments: [arg1, arg2]) }
     /// 初始向导

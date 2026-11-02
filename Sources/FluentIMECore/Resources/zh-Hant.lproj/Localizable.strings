@@ -298,6 +298,15 @@
 "install.enable" = "啟用輸入法";
 "install.installed" = "已安裝至系統";
 "install.notInstalled" = "尚未安裝或需要更新";
+"setup.outdatedTitle" = "有新版本可用";
+"setup.outdated" = "你正在使用的安裝程式（%1$@）不是最新版本，GitHub 上已有 %2$@。可以前往 GitHub 下載新的安裝套件，或繼續使用此安裝程式。";
+"setup.downloadLatest" = "前往 GitHub 下載";
+"setup.continue" = "繼續";
+"setup.retry" = "重試";
+"setup.offlineTitle" = "目前未連線";
+"setup.offline" = "無法連線 GitHub，暫時無法確認此安裝程式是否為最新版本。可以重試，或繼續安裝。";
+"setup.checkFailed" = "無法確認此安裝程式是否為最新版本。可以重試，或繼續安裝。";
+"install.newerInstalled" = "已安裝較新版本 %1$@";
 "install.enabled" = "輸入法已啟用";
 "install.notEnabled" = "輸入法尚未啟用";
 "install.enableHint" = "若系統輸入法列表未自動重新整理，請前往「系統設定 → 鍵盤 → 輸入來源」手動新增。";
@@ -353,10 +362,6 @@
 "neural.ready" = "模型已就緒，等待前文";
 "neural.scored" = "已評分 %1$ld 次，最近一次 %2$@ 毫秒";
 
-"setup.stageInstall" = "安裝";
-"setup.stageDictionary" = "詞庫";
-"setup.stageModes" = "輸入模式";
-"setup.stagePreferences" = "偏好設定";
 
 /* Model management */
 "models.title" = "語言模型";

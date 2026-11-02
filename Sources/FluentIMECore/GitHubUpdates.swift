@@ -52,8 +52,8 @@ public struct ReleaseVersion: Comparable, Equatable {
         return lhs.prerelease.count < rhs.prerelease.count
     }
 }
-public struct GitHubRelease: Decodable {
-    public struct Asset: Decodable {
+public struct GitHubRelease: Codable {
+    public struct Asset: Codable {
         public let name: String
         public let size: Int64
         public let browser_download_url: URL

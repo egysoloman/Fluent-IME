@@ -31,6 +31,7 @@ import CRimeBridge
         defer { FIMFinalize() }
         final class FakeInstallation: SetupInstallation {
             var isInstalled = false, isEnabled = false, hasLocalDictionary = true
+            var newerInstalledVersion: String?
             var finished = false
             func install(completion: @escaping (Result<Void, Error>) -> Void) { isInstalled = true; completion(.success(())) }
             func enable() throws { isEnabled = true }
@@ -281,6 +282,10 @@ import CRimeBridge
         precondition(updater.channel == .preview && updater.latestRelease?.prerelease == true)
         precondition(updater.history.first?.prerelease == true)
         try capture(updateView, "update-preview-channel")
+        // A new page shows the last result for this channel until it checks again.
+        let cachedPage = UpdateCoordinator(service: OfflineUpdateService(), defaults: updateDefaults)
+        if case .available(let version) = cachedPage.state { precondition(version == updater.latestRelease?.version && cachedPage.canInstall && cachedPage.latestRelease?.body != nil) }
+        else { preconditionFailure("The update page must show the last check until it checks again") }
         updater.checkAutomaticallyIfDue()
         precondition(!updater.busy, "Automatic checks must respect the 24-hour interval")
         updater.automaticChecks = false
