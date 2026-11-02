@@ -273,6 +273,11 @@ import CRimeBridge
         updater.install(); pump()
         try capture(updateView, "update-downloading")
         precondition(!bar.isIndeterminate && bar.value == 50 && !bar.isHidden)
+        // The readout sits on the status line, right-aligned to the bar's end, with fixed decimals.
+        let readout = all(updateView).compactMap { $0 as? NSTextField }.first { $0.stringValue.hasPrefix("50%") }!
+        let barFrame = bar.convert(bar.bounds, to: updateView), readoutFrame = readout.convert(readout.bounds, to: updateView)
+        precondition(readout.stringValue == "50% · 50.0 MB / 100.0 MB" && readout.alignment == .right)
+        precondition(abs(readoutFrame.maxX - barFrame.maxX) < 1 && readoutFrame.maxY <= barFrame.minY, "Readout above the bar's right end")
         updater.cancel(); pump()
         if case .cancelled = updater.state {} else { preconditionFailure("Cancellation did not settle the update page") }
         precondition(bar.isHidden)

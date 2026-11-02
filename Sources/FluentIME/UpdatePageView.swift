@@ -181,8 +181,8 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     convenience init() { self.init(coordinator: .shared) }
     init(coordinator: UpdateCoordinator) {
         self.coordinator = coordinator; super.init(frame: .zero)
-        for view in [icon, version, status, progress, lastCheck, primary, cancel, notesCard, more, preview, automatic, history] { addSubview(view) }
-        for view in [releaseTitle, detail, notesTitle, notes] { notesCard.addSubview(view) }
+        for view in [icon, version, status, detail, progress, lastCheck, primary, cancel, notesCard, more, preview, automatic, history] { addSubview(view) }
+        for view in [releaseTitle, notesTitle, notes] { notesCard.addSubview(view) }
         primary.onClick = { [weak coordinator] in guard let coordinator else { return }; if coordinator.canInstall { coordinator.install() } else { coordinator.check() } }
         cancel.onClick = { [weak coordinator] in coordinator?.cancel() }
         preview.toggle.onValueChanged = { [weak coordinator] value in coordinator?.selectChannel(value ? .preview : .stable) }
@@ -206,6 +206,8 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         version.stringValue = L10n.updateInstalledVersion(coordinator.currentVersion)
         updateLabel(version, size: 12, secondary: true); updateLabel(status, size: 18, bold: true); status.theme = theme
         updateLabel(lastCheck, size: 12, secondary: true); updateLabel(detail, size: 12, secondary: true)
+        // Equal-width digits keep the right-aligned progress from shifting as it counts.
+        detail.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular); detail.alignment = .right
         lastCheck.stringValue = coordinator.lastChecked.map { L10n.updateLastChecked(DateFormatter.localizedString(from: $0, dateStyle: .short, timeStyle: .short)) } ?? L10n.updateNotChecked
         for button in [primary, cancel] { button.theme = theme }
         progress.theme = theme; progress.isHidden = !coordinator.busy
@@ -221,8 +223,9 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         case .downloading(let received, let total):
             status.stringValue = L10n.updateDownloadStatus
             progress.value = total > 0 ? min(100, Double(received) / Double(total) * 100) : 0
-            let format = ByteCountFormatter(); format.countStyle = .file
-            detail.stringValue = total > 0 ? "\(Int(progress.value))% · \(format.string(fromByteCount: received)) / \(format.string(fromByteCount: total))" : format.string(fromByteCount: received)
+            // One fixed decimal, so 92 MB and 92.5 MB take the same width.
+            func megabytes(_ bytes: Int64) -> String { String(format: "%.1f MB", Double(bytes) / 1_000_000) }
+            detail.stringValue = total > 0 ? "\(Int(progress.value))% · \(megabytes(received)) / \(megabytes(total))" : megabytes(received)
         case .verifying: status.stringValue = L10n.updateVerifying
         case .opening: status.stringValue = L10n.updateOpening
         case .opened: status.stringValue = L10n.updateOpened
@@ -255,20 +258,22 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         let width = max(1, bounds.width), actionWidth = max(152, primary.intrinsicContentSize.width)
         let textX: CGFloat = 104
         let textWidth = max(1, width - textX - actionWidth - 20)
-        let statusHeight = updateTextHeight(status, width: textWidth)
+        // Download progress sits at the right end of the status line, above the bar's end.
+        let detailWidth: CGFloat = detail.stringValue.isEmpty ? 0 : 200
+        let statusHeight = updateTextHeight(status, width: max(1, textWidth - detailWidth))
         // Like Windows Update, a running check or download shows its bar under the status, up to the action button.
         let progressSpace: CGFloat = progress.isHidden ? 0 : 14
         let headerHeight = max(92, statusHeight + 52 + progressSpace)
         let textY = (headerHeight - statusHeight - 46 - progressSpace) / 2
         icon.frame = NSRect(x: 0, y: (headerHeight - 84) / 2, width: 84, height: 84)
-        status.frame = NSRect(x: textX, y: textY, width: textWidth, height: statusHeight)
+        status.frame = NSRect(x: textX, y: textY, width: max(1, textWidth - detailWidth), height: statusHeight)
         progress.frame = NSRect(x: textX, y: status.frame.maxY + 8, width: max(1, width - actionWidth - 16 - textX), height: 4)
+        detail.frame = NSRect(x: progress.frame.maxX - detailWidth, y: status.frame.maxY - 20, width: detailWidth, height: 18)
         lastCheck.frame = NSRect(x: textX, y: status.frame.maxY + 8 + progressSpace, width: width - textX, height: 18)
         version.frame = NSRect(x: textX, y: lastCheck.frame.maxY + 2, width: width - textX, height: 18)
         primary.frame = NSRect(x: width - actionWidth, y: (headerHeight - 32) / 2, width: actionWidth, height: 32)
         cancel.frame = primary.frame; primary.isHidden = coordinator.busy
-        releaseTitle.frame = NSRect(x: 16, y: 14, width: width - (detail.stringValue.isEmpty ? 32 : 232), height: 24)
-        detail.frame = NSRect(x: width - 212, y: 16, width: 196, height: 22); detail.alignment = .right
+        releaseTitle.frame = NSRect(x: 16, y: 14, width: width - 32, height: 24)
         var y: CGFloat = releaseTitle.frame.maxY + 8
         notesTitle.frame = NSRect(x: 16, y: y, width: width - 32, height: 20)
         if !notesTitle.stringValue.isEmpty { y += 28 }
