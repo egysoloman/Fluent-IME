@@ -85,9 +85,26 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
                 try verify.run(); verify.waitUntilExit()
                 guard verify.terminationStatus == 0 else { throw CocoaError(.fileReadCorruptFile) }
                 try files.install(from: source)
+                // macOS can relaunch the input method from the old binary while it is
+                // being replaced. That instance keeps running old code; quit it as well.
+                let stale = Self.staleInstances(of: files)
+                DispatchQueue.main.sync { stale.forEach { $0.terminate() } }
+                let staleDeadline = Date(timeIntervalSinceNow: 8)
+                while stale.contains(where: { kill($0.processIdentifier, 0) == 0 }), Date() < staleDeadline { Thread.sleep(forTimeInterval: 0.05) }
                 try Self.check(TISRegisterInputSource(files.application as CFURL))
             }
             DispatchQueue.main.async { completion(result) }
+        }
+    }
+    /// Instances still running a replaced binary: an update moves the old app into
+    /// Backups, and the executable of a running process moves with it.
+    static func staleInstances(of files: InstallationFiles) -> [NSRunningApplication] {
+        let backups = files.support.appendingPathComponent("Backups").resolvingSymlinksInPath().path + "/"
+        return NSRunningApplication.runningApplications(withBundleIdentifier: FluentProduct.current.bundleID).filter { app in
+            guard app.processIdentifier != getpid() else { return false }
+            var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+            guard proc_pidpath(app.processIdentifier, &buffer, UInt32(buffer.count)) > 0 else { return false }
+            return URL(fileURLWithPath: String(cString: buffer)).resolvingSymlinksInPath().path.hasPrefix(backups)
         }
     }
     func enable() throws {

@@ -145,10 +145,27 @@ if !rendering, !installation.isRunningInstalled, Bundle.main.bundleURL.pathExten
     }
     app.run(); exit(0)
 }
-if arguments.contains("--preview"),
-   NSRunningApplication.runningApplications(withBundleIdentifier: FluentProduct.current.bundleID).contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier && $0.bundleURL?.standardizedFileURL == installation.files.application.standardizedFileURL }) {
-    DistributedNotificationCenter.default().postNotificationName(Notification.Name(FluentProduct.current.bundleID + ".showSettings"), object: nil, userInfo: nil, deliverImmediately: true)
-    exit(0)
+if arguments.contains("--preview") {
+    // An instance left running from a replaced binary is not the current input method.
+    let stale = InputMethodInstallation.staleInstances(of: installation.files)
+    stale.forEach { $0.terminate() }
+    let deadline = Date(timeIntervalSinceNow: 8)
+    while stale.contains(where: { kill($0.processIdentifier, 0) == 0 }), Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+    let current = NSRunningApplication.runningApplications(withBundleIdentifier: FluentProduct.current.bundleID).filter {
+        $0.processIdentifier != ProcessInfo.processInfo.processIdentifier && !$0.isTerminated && kill($0.processIdentifier, 0) == 0
+            && $0.bundleURL?.standardizedFileURL == installation.files.application.standardizedFileURL
+    }
+    if !current.isEmpty {
+        DistributedNotificationCenter.default().postNotificationName(Notification.Name(FluentProduct.current.bundleID + ".showSettings"), object: nil, userInfo: nil, deliverImmediately: true)
+        guard !cleanupInstallers.isEmpty else { exit(0) }
+        // Settings open in the running instance; this launch still finishes the update's cleanup.
+        let helper = NSApplication.shared; helper.setActivationPolicy(.accessory)
+        Task { @MainActor in
+            do { try await MaintenanceClient.launch(.finishSetup(installers: cleanupInstallers)) } catch { NSLog("Fluent IME: %@", error.localizedDescription) }
+            exit(0)
+        }
+        helper.run(); exit(0)
+    }
 }
 
 let app = NSApplication.shared
