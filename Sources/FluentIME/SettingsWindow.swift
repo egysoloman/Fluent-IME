@@ -437,7 +437,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     private func applyTheme() {
         window?.appearance = NSAppearance(named: theme.isDark ? .darkAqua : .aqua)
         material.fluentTheme = theme
-        material.isMaterialEnabled = Preferences.shared.advancedEffects
+        material.isMaterialEnabled = false
         material.fallbackColor = theme.isDark ? NSColor(srgbRed: 0.125, green: 0.125, blue: 0.125, alpha: 1) : NSColor(srgbRed: 240/255, green: 243/255, blue: 249/255, alpha: 1)
         search.theme = theme
         updateTitleBar()
@@ -463,7 +463,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         if !Preferences.shared.showInputModeIndicator { modeIndicator.dismiss() }
     }
     private func appearanceChanged(_ updated: FluentTheme) {
-        guard updated != theme || material.isMaterialEnabled != Preferences.shared.advancedEffects else { return }
+        guard updated != theme else { return }
         pageMotion.cancel(); titleBarMotion.cancel()
         theme = updated; applyTheme()
         breadcrumbAppearanceUpdates.forEach { $0(updated) }
