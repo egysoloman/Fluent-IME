@@ -8,6 +8,9 @@ import CRimeBridge
     @MainActor static func main() throws {
         _ = NSApplication.shared; NSApp.setActivationPolicy(.accessory); NSApp.finishLaunching()
         NSApp.appearance = NSAppearance(named: .aqua)
+        for asset in UpdateArtwork.allCases {
+            precondition(asset.url.flatMap { NSImage(contentsOf: $0) } != nil, "Missing update artwork: " + asset.rawValue)
+        }
         let output = URL(fileURLWithPath: CommandLine.arguments[1]); try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         func all(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(all) }
         func pump() { RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.16)) }
@@ -290,7 +293,7 @@ import CRimeBridge
         let offlineView = UpdatePageView(coordinator: offline)
         offlineView.wantsLayer = true; offlineView.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
         updateWindow.contentView = offlineView; offline.check(); pump()
-        if case .failed(let message) = offline.state { precondition(message == L10n.updateConnectionFailed) }
+        if case .failed(let message) = offline.state { precondition(message == L10n.updateConnectionFailed && offline.connectionFailed) }
         else { preconditionFailure("Offline lookup must show an error, not an empty release or current state") }
         try capture(offlineView, "update-offline")
         let offlineHistory = UpdateHistoryPageView(coordinator: offline)
@@ -299,6 +302,27 @@ import CRimeBridge
         precondition(offline.historyError == L10n.updateConnectionFailed)
         precondition(!button(L10n.updateHistoryRetry, in: offlineHistory).isHidden)
         try capture(offlineHistory, "update-history-offline")
+        final class StatusUpdateService: IMEUpdateService {
+            let fail: Bool
+            init(fail: Bool) { self.fail = fail }
+            func latest(channel: UpdateChannel) async throws -> GitHubRelease? {
+                if fail { throw UpdateError.invalidRelease }
+                return GitHubRelease(tag_name: "v0.0.0", draft: false, prerelease: false, assets: [])
+            }
+            func history(channel: UpdateChannel) async throws -> [GitHubRelease] { [] }
+            func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)?) async throws -> URL { throw UpdateError.integrity }
+        }
+        for failed in [false, true] {
+            let state = UpdateCoordinator(service: StatusUpdateService(fail: failed), defaults: updateDefaults)
+            let view = UpdatePageView(coordinator: state)
+            view.wantsLayer = true; view.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
+            updateWindow.contentView = view; state.check(); pump()
+            precondition(!state.connectionFailed)
+            let icons = all(view).compactMap { $0 as? NSImageView }
+            let expected = failed ? L10n.updateCheckFailed : L10n.updateCurrent(state.currentVersion)
+            precondition(icons.contains { $0.accessibilityLabel() == expected }, "Wrong status artwork")
+            try capture(view, failed ? "update-warning-artwork" : "update-current-artwork")
+        }
         updateWindow.orderOut(nil)
         for page in ["fonts", "clipboard", "models", "updates", "updateHistory", "advanced"] {
             setenv("FLUENTIME_RENDER_PAGE", page, 1)

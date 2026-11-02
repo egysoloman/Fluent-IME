@@ -14,6 +14,7 @@ extension GitHubUpdateService: IMEUpdateService {}
     static let changed = Notification.Name("FluentIMEUpdateStateChanged")
     enum State { case idle, checking, available(String), current, downloading(Int64, Int64), verifying, opening, opened, cancelled, failed(String) }
     private(set) var state: State = .idle { didSet { NotificationCenter.default.post(name: Self.changed, object: self) } }
+    private(set) var connectionFailed = false
     private var task: Task<Void, Never>?
     private var generation = 0
     private var release: GitHubRelease?
@@ -44,6 +45,10 @@ extension GitHubUpdateService: IMEUpdateService {}
               defaults.object(forKey: "updateLastAttempt").flatMap({ $0 as? Date }).map({ now.timeIntervalSince($0) >= 86400 }) ?? true else { return }
         channel = UpdateChannel(rawValue: defaults.string(forKey: "updateChannel") ?? "") ?? .stable
         check()
+    }
+    private static func isConnectionFailure(_ error: Error) -> Bool {
+        guard let error = error as? URLError else { return false }
+        return [.notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .timedOut, .dataNotAllowed].contains(error.code)
     }
     private static func message(_ error: Error) -> String {
         if error is URLError { return L10n.updateConnectionFailed }
@@ -104,7 +109,7 @@ extension GitHubUpdateService: IMEUpdateService {}
                 latestRelease = latest; lastChecked = Date(); defaults.set(lastChecked, forKey: "updateLastChecked")
                 if let latest, latest.isNewer(than: currentVersion, channel: channel) || (InstallerLifecycle.isMaintenance && !InputMethodInstallation.shared.isPresent) { release = latest; state = .available(latest.version) }
                 else { state = latest == nil ? .failed(L10n.updateNoRelease) : .current }
-            } catch { if request == generation, !Task.isCancelled { state = .failed(Self.message(error)) } }
+            } catch { if request == generation, !Task.isCancelled { connectionFailed = Self.isConnectionFailure(error); state = .failed(Self.message(error)) } }
             if request == generation { task = nil }
         }
     }
@@ -144,7 +149,7 @@ extension GitHubUpdateService: IMEUpdateService {}
                 if waitForParent { NSApp.terminate(nil) }
             } catch {
                 try? FileManager.default.removeItem(at: directory)
-                if request == generation, !Task.isCancelled { state = .failed(Self.message(error)) }
+                if request == generation, !Task.isCancelled { connectionFailed = Self.isConnectionFailure(error); state = .failed(Self.message(error)) }
             }
             if request == generation { task = nil }
         }

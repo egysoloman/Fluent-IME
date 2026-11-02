@@ -123,6 +123,12 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     }
 }
 
+@MainActor private enum UpdateStatusImages {
+    static let images: [UpdateArtwork: NSImage] = Dictionary(uniqueKeysWithValues: UpdateArtwork.allCases.compactMap { asset in
+        asset.url.flatMap { NSImage(contentsOf: $0) }.map { (asset, $0) }
+    })
+}
+
 @MainActor final class UpdatePageView: NSView {
     private let coordinator: UpdateCoordinator
     private let icon = NSImageView()
@@ -165,7 +171,14 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     required init?(coder: NSCoder) { fatalError() }
     func refresh() {
         let theme = IMEThemeObservation.current
-        icon.image = SettingsGlyph.updates.image(color: theme.accent); icon.imageScaling = .scaleProportionallyUpOrDown
+        let artwork: UpdateArtwork
+        switch coordinator.state {
+        case .current: artwork = .current
+        case .failed: artwork = coordinator.connectionFailed ? .offline : .warning
+        default: artwork = .available
+        }
+        icon.image = UpdateStatusImages.images[artwork]; icon.imageScaling = .scaleProportionallyUpOrDown
+        icon.setAccessibilityLabel(artwork == .offline ? L10n.updateConnectionFailed : artwork == .warning ? L10n.updateCheckFailed : artwork == .current ? L10n.updateCurrent(coordinator.currentVersion) : L10n.updatePageTitle)
         version.stringValue = L10n.updateInstalledVersion(coordinator.currentVersion)
         updateLabel(version, size: 12, secondary: true); updateLabel(status, size: 18, bold: true); status.theme = theme
         updateLabel(lastCheck, size: 12, secondary: true); updateLabel(detail, size: 12, secondary: true)

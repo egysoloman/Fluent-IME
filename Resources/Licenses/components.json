@@ -181,7 +181,8 @@
     "source": "https://github.com/microsoft/fluentui-emoji",
     "notices": [
       "Licenses/Fluent-Emoji-MIT.txt",
-      "FluentEmoji/sources.json"
+      "FluentEmoji/sources.json",
+      "Licenses/update-artwork.json"
     ]
   },
   {
@@ -233,5 +234,15 @@
       "Licenses/Unicode-CLDR-LICENSE.txt",
       "Licenses/cldr-sources.json"
     ]
+  },
+  {
+    "name": "Fluent System Icons",
+    "license": "MIT",
+    "source": "https://github.com/microsoft/fluentui-system-icons",
+    "notices": [
+      "Licenses/Fluent-System-Icons-MIT.txt",
+      "Licenses/update-artwork.json"
+    ],
+    "changes": "Arrow Sync and History SVGs bundled as vector PDFs; original SVG sources retained in Resources/Icons."
   }
 ]

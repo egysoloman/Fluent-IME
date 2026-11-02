@@ -1,0 +1,34 @@
+[
+  {
+    "file": "warning_3d.png",
+    "source": "https://github.com/microsoft/fluentui-emoji/tree/main/assets/Warning/3D/warning_3d.png",
+    "sha256": "318f534c5d93100443f6e48defc47d76140473d797087af5821587f0feb8003c"
+  },
+  {
+    "file": "globe_with_meridians_3d.png",
+    "source": "https://github.com/microsoft/fluentui-emoji/tree/main/assets/Globe%20with%20meridians/3D/globe_with_meridians_3d.png",
+    "sha256": "4a9f820aa69194995d91c6a23432814d67ea6740acc9939eadcc8d6ad1b90546"
+  },
+  {
+    "file": "check_mark_button_3d.png",
+    "source": "https://github.com/microsoft/fluentui-emoji/tree/main/assets/Check%20mark%20button/3D/check_mark_button_3d.png",
+    "sha256": "256e3dd950cf1705ab72511ab242472b4bd7db519aa402a6182c1aaf8c58def9"
+  },
+  {
+    "file": "counterclockwise_arrows_button_3d.png",
+    "source": "https://github.com/microsoft/fluentui-emoji/tree/main/assets/Counterclockwise%20arrows%20button/3D/counterclockwise_arrows_button_3d.png",
+    "sha256": "f43c7b042dfef8a3a288e9ee54119caaca68f3b3a85493bfaf53abfa436d471c"
+  },
+  {
+    "file": "update-sync.pdf",
+    "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/assets/Arrow%20Sync/SVG/ic_fluent_arrow_sync_24_regular.svg",
+    "svg_sha256": "9537e4dc984b915d1d67bf2ed61c1fdf713c69d0b293a4dc12b2520d57ab55b7",
+    "sha256": "f7994f7db76d74c567deb94f98cbd031c077b5501d35f51978e614150844d37a"
+  },
+  {
+    "file": "update-history.pdf",
+    "source": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/main/assets/History/SVG/ic_fluent_history_24_regular.svg",
+    "svg_sha256": "07d75bb67b1b81cf504b86952cf90fc7af2de44ee6b335595ee3806047fc45b4",
+    "sha256": "c5d0b58aef8178ca9ea440f93ca00934c0aa7b7ddda3bc965a400b3c24eaa2ef"
+  }
+]

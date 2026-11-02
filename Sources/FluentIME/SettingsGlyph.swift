@@ -1,10 +1,17 @@
 import AppKit
+import FluentKit
+import FluentIMECore
 
 /// Reference-style symbols drawn in a common 22 pt em square, with unscaled stroke widths.
 /// The caller uses FluentIconSource's aspect-fit rendering instead of stretching NSImage.
 enum SettingsGlyph {
     case general, keyboard, appearance, dictionary, advanced, clipboard, updates, updatePreview, updateHistory
     func image(color: NSColor) -> NSImage {
+        if self == .updates || self == .updateHistory {
+            let asset: UpdateArtwork = self == .updates ? .sync : .history
+            if let url = asset.url, let image = NSImage(contentsOf: url),
+               let tinted = FluentIconSource.image(image, tint: .template).image(pointSize: 22, color: color) { return tinted }
+        }
         if self == .clipboard { return IMEGlyph.clipboard.image(color: color) }
         return NSImage(size: NSSize(width: 22, height: 22), flipped: true) { _ in
             color.setFill(); color.setStroke()
@@ -15,19 +22,7 @@ enum SettingsGlyph {
                 p.move(to: NSPoint(x: 3, y: 8)); p.line(to: NSPoint(x: 9, y: 8)); p.line(to: NSPoint(x: 18, y: 3))
                 p.line(to: NSPoint(x: 18, y: 18)); p.line(to: NSPoint(x: 9, y: 13)); p.line(to: NSPoint(x: 3, y: 13)); p.close()
                 p.move(to: NSPoint(x: 6, y: 13)); p.line(to: NSPoint(x: 7.5, y: 19)); p.line(to: NSPoint(x: 10, y: 19)); p.line(to: NSPoint(x: 9, y: 13)); p.stroke()
-            case .updateHistory:
-                p.move(to: NSPoint(x: 3, y: 8)); p.curve(to: NSPoint(x: 19, y: 8), controlPoint1: NSPoint(x: 5, y: -1), controlPoint2: NSPoint(x: 18, y: 0))
-                p.curve(to: NSPoint(x: 3, y: 15), controlPoint1: NSPoint(x: 25, y: 23), controlPoint2: NSPoint(x: 5, y: 24))
-                p.move(to: NSPoint(x: 2, y: 3)); p.line(to: NSPoint(x: 2, y: 8)); p.line(to: NSPoint(x: 7, y: 8))
-                p.move(to: NSPoint(x: 11, y: 6)); p.line(to: NSPoint(x: 11, y: 12)); p.line(to: NSPoint(x: 15, y: 14)); p.stroke()
-            case .updates:
-                p.lineWidth = 1.5
-                p.move(to: NSPoint(x: 3, y: 8))
-                p.curve(to: NSPoint(x: 19, y: 7), controlPoint1: NSPoint(x: 5, y: -1), controlPoint2: NSPoint(x: 16, y: 0))
-                p.move(to: NSPoint(x: 19, y: 2)); p.line(to: NSPoint(x: 19, y: 7)); p.line(to: NSPoint(x: 14, y: 7))
-                p.move(to: NSPoint(x: 19, y: 14))
-                p.curve(to: NSPoint(x: 3, y: 15), controlPoint1: NSPoint(x: 17, y: 23), controlPoint2: NSPoint(x: 6, y: 22))
-                p.move(to: NSPoint(x: 3, y: 20)); p.line(to: NSPoint(x: 3, y: 15)); p.line(to: NSPoint(x: 8, y: 15)); p.stroke()
+            case .updates, .updateHistory: break
             case .general:
                 ("A" as NSString).draw(at: NSPoint(x: 0, y: 5), withAttributes: [.font: NSFont.systemFont(ofSize: 17, weight: .regular), .foregroundColor: color])
                 ("字" as NSString).draw(at: NSPoint(x: 11, y: -1), withAttributes: [.font: IMEFont.font(ofSize: 11), .foregroundColor: color])
