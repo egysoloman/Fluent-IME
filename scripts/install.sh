@@ -32,4 +32,4 @@ fi
 rmdir "$STAGE"
 codesign --verify --deep --strict "$TARGET"
 "$TARGET/Contents/MacOS/FluentIME" --register
-echo "已安装 $NAME。未改变当前输入法。若输入法列表尚未显示，请注销并重新登录。"
+echo "已安装 ${NAME}。未改变当前输入法。若输入法列表尚未显示，请注销并重新登录。"
