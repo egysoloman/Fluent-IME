@@ -49,7 +49,33 @@ public final class RimeEngine {
         self.sharedDirectory = sharedDirectory
         self.userDirectory = userDirectory
         try FileManager.default.createDirectory(at: userDirectory, withIntermediateDirectories: true)
-        FIMInitialize(sharedDirectory.path, userDirectory.path, fullCheck)
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        FIMInitialize(sharedDirectory.path, userDirectory.path, fullCheck, version)
+        repairDamagedUserDictionaries()
+        removeOutdatedCaches(keeping: "build-" + version)
+    }
+
+    /// LevelDB stops accepting writes once it meets a corrupted block, so learning would
+    /// silently stop. Rebuild such a dictionary from what can still be read; the damaged
+    /// database and the export are kept in DictionaryBackups next to the Rime folder.
+    private func repairDamagedUserDictionaries() {
+        let fm = FileManager.default
+        guard let items = try? fm.contentsOfDirectory(at: userDirectory, includingPropertiesForKeys: nil) else { return }
+        for database in items where database.pathExtension == "userdb" {
+            let logs = ["LOG", "LOG.old"].compactMap { try? String(contentsOf: database.appendingPathComponent($0), encoding: .utf8) }
+            guard logs.contains(where: { $0.contains("Corruption:") }) else { continue }
+            let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+            let backup = userDirectory.deletingLastPathComponent().appendingPathComponent("DictionaryBackups/\(stamp)-repair")
+            guard (try? fm.createDirectory(at: backup, withIntermediateDirectories: true)) != nil else { continue }
+            let entries = FIMRebuildUserDict(database.deletingPathExtension().lastPathComponent, backup.path)
+            NSLog("Fluent IME: rebuilt damaged %@ (%d entries kept)", database.lastPathComponent, entries)
+        }
+    }
+    /// Compiled user data is isolated per release; earlier releases' copies are only caches.
+    private func removeOutdatedCaches(keeping current: String) {
+        let fm = FileManager.default
+        guard let items = try? fm.contentsOfDirectory(at: userDirectory, includingPropertiesForKeys: nil) else { return }
+        for cache in items where cache.lastPathComponent.hasPrefix("build-") && cache.lastPathComponent != current { try? fm.removeItem(at: cache) }
     }
 
     public func makeSession() throws -> RimeSession { try RimeSession(engine: self) }

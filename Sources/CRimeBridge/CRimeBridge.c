@@ -1,28 +1,29 @@
 #include "CRimeBridge.h"
 #include <rime_api.h>
+#include <rime_levers_api.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#define FIM_DISTRIBUTION_VERSION "0.6.4"
-
 static RimeApi *api;
 static char *shared_path;
 static char *user_path;
 static char *staging_path;
+static char *distribution_version;
 
-bool FIMInitialize(const char *shared_dir, const char *user_dir, bool full_check) {
+bool FIMInitialize(const char *shared_dir, const char *user_dir, bool full_check, const char *version) {
     if (api) return true;
     api = rime_get_api();
     shared_path = strdup(shared_dir);
     user_path = strdup(user_dir);
+    distribution_version = strdup(version && *version ? version : "dev");
     RIME_STRUCT(RimeTraits, traits);
     traits.shared_data_dir = shared_path;
     traits.user_data_dir = user_path;
     traits.distribution_name = "Fluent IME";
     traits.distribution_code_name = "fluent_ime";
-    traits.distribution_version = FIM_DISTRIBUTION_VERSION;
+    traits.distribution_version = distribution_version;
     // A prism encodes syllable IDs from its matching table. Old user/build
     // prisms must never shadow a new bundled table. Isolate compiled caches
     // by release while retaining the same user_data_dir and learned database.
@@ -33,7 +34,7 @@ bool FIMInitialize(const char *shared_dir, const char *user_dir, bool full_check
         char *prebuilt_table = NULL;
         if (asprintf(&prebuilt_table, "%s/build/%s.table.bin", shared_dir, tables[i]) < 0) continue;
         if (access(prebuilt_table, F_OK) == 0 &&
-            asprintf(&staging_path, "%s/build-%s", user_dir, FIM_DISTRIBUTION_VERSION) >= 0)
+            asprintf(&staging_path, "%s/build-%s", user_dir, distribution_version) >= 0)
             traits.staging_dir = staging_path;
         free(prebuilt_table);
     }
@@ -56,6 +57,7 @@ void FIMFinalize(void) {
     free(shared_path); shared_path = NULL;
     free(user_path); user_path = NULL;
     free(staging_path); staging_path = NULL;
+    free(distribution_version); distribution_version = NULL;
 }
 const char *FIMVersion(void) { return api ? api->get_version() : "uninitialized"; }
 FIMSession FIMCreateSession(void) {
@@ -154,3 +156,19 @@ void FIMFreeContext(FIMContext *context) {
 void FIMFreeString(char *string) { free(string); }
 
 bool FIMHasGrammar(void) { return api && api->find_module("grammar") != NULL; }
+
+int FIMRebuildUserDict(const char *dict_name, const char *backup_dir) {
+    RimeModule *module = api ? api->find_module("levers") : NULL;
+    RimeLeversApi *levers = module && module->get_api ? (RimeLeversApi *)module->get_api() : NULL;
+    if (!levers || !user_path) return -1;
+    char *text = NULL, *database = NULL, *moved = NULL;
+    int result = -1;
+    if (asprintf(&text, "%s/%s.userdb.txt", backup_dir, dict_name) >= 0 &&
+        asprintf(&database, "%s/%s.userdb", user_path, dict_name) >= 0 &&
+        asprintf(&moved, "%s/%s.userdb", backup_dir, dict_name) >= 0 &&
+        levers->export_user_dict(dict_name, text) >= 0 &&
+        rename(database, moved) == 0)
+        result = levers->import_user_dict(dict_name, text);
+    free(text); free(database); free(moved);
+    return result;
+}

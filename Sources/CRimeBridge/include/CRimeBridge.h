@@ -25,7 +25,11 @@ typedef struct {
     char **comments;
 } FIMCandidateBatch;
 
-bool FIMInitialize(const char *shared_dir, const char *user_dir, bool full_check);
+/// `version` names the per-release cache of compiled user data (build-<version>).
+bool FIMInitialize(const char *shared_dir, const char *user_dir, bool full_check, const char *version);
+/// Exports what a damaged user dictionary still holds into backup_dir, moves the
+/// database there and imports the export into a new one. Returns imported entries, or -1.
+int FIMRebuildUserDict(const char *dict_name, const char *backup_dir);
 void FIMFinalize(void);
 const char *FIMVersion(void);
 bool FIMHasGrammar(void);
