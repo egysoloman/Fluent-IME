@@ -74,6 +74,15 @@ final class FluentInputController: IMKInputController {
         if event.type == .leftMouseDown || event.type == .rightMouseDown { input?.finish(); input?.resetContext(); return false }
         if input == nil { activateServer(sender) }
         activeClient = sender as? IMKTextInput
+        // Panel shortcuts take precedence over the composition; pressing one again closes the panel.
+        if event.type == .keyDown {
+            let preferences = Preferences.shared
+            for (shortcut, tab) in [(preferences.emojiShortcut, 0), (preferences.clipboardShortcut, EmojiPanelView.clipboardTab)] {
+                guard let shortcut, shortcut.matches(event) else { continue }
+                if emojiPanel.isVisible { emojiPanel.dismiss() } else { showEmoji(tab: tab) }
+                return true
+            }
+        }
         return input?.handle(event) ?? false
     }
 
@@ -212,7 +221,7 @@ final class FluentInputController: IMKInputController {
     }
     @objc private func openSettings(_ sender: Any?) { input?.finish(); Runtime.shared.showSettings() }
     @objc private func openEmoji(_ sender: Any?) { attachMenuClient(InputMethodMenuCommand(sender).client); showEmoji() }
-    private func showEmoji() {
+    private func showEmoji(tab: Int = 0) {
         guard let target = activeClient ?? client() else { return }
         var caret = NSRect.zero
         _ = target.attributes(forCharacterIndex: 0, lineHeightRectangle: &caret)
@@ -220,7 +229,7 @@ final class FluentInputController: IMKInputController {
         input?.finish()
         // The nonactivating palette keeps the origin application active. Its callback is
         // invalidated on dismissal/app switching, and never re-targets a different IMK client.
-        emojiPanel.present(near: caret) { text in
+        emojiPanel.present(near: caret, tab: tab) { text in
             target.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
         }
     }

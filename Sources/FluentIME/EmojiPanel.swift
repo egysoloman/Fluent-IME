@@ -138,9 +138,10 @@ final class EmojiPanelView: NSView, NSSearchFieldDelegate {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func prepare() {
+    static let clipboardTab = 5
+    func prepare(tab: Int = 0) {
         clipboard.poll()
-        mediaStatus = ""; selectedTab = 0; searchField.stringValue = ""; searchField.isEnabled = true
+        mediaStatus = ""; selectedTab = tab; searchField.stringValue = ""; searchField.isEnabled = tab != Self.clipboardTab
         applyTheme(); reload(); needsLayout = true
     }
     func applyTheme() {
@@ -498,10 +499,10 @@ final class EmojiPanel: NSPanel, NSWindowDelegate {
             insert?(text)
         }
     }
-    func present(near anchor: NSRect, onInsert: @escaping (String) -> Void, onDismiss: (() -> Void)? = nil) {
+    func present(near anchor: NSRect, tab: Int = 0, onInsert: @escaping (String) -> Void, onDismiss: (() -> Void)? = nil) {
         dismiss()
         insertAction = onInsert; dismissAction = onDismiss
-        paletteView.prepare()
+        paletteView.prepare(tab: tab)
         let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main
         if let screen { setFrame(PanelPlacement.frame(size: NSSize(width: 360, height: 400), caret: anchor, screen: screen.visibleFrame), display: true) }
         let originalPID = NSWorkspace.shared.frontmostApplication?.processIdentifier

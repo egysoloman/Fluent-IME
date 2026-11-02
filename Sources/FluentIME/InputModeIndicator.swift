@@ -66,10 +66,11 @@ final class InputModePanel: NSPanel {
         material.fallbackColor = expanded ? theme.flyoutSurfaceFill : .clear; material.state = .active
         surface.layer?.borderWidth = expanded ? 0.5 : 0
         surface.layer?.borderColor = theme.surfaceStrokeFlyout.cgColor
-        surface.layer?.cornerRadius = expanded ? 8 : 4
-        let size = NSSize(width: expanded ? CGFloat(modes.count) * 42 + 8 : 38, height: expanded ? 36 : 28)
+        let small = Preferences.shared.modeIndicatorSize == "small"
+        surface.layer?.cornerRadius = expanded ? 8 : small ? 6 : 4
+        let size = expanded ? NSSize(width: CGFloat(modes.count) * 42 + 8, height: 36) : small ? NSSize(width: 28, height: 20) : NSSize(width: 38, height: 28)
         guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) ?? NSScreen.main else { return frame }
-        let target = PanelPlacement.frame(size: size, caret: anchor, screen: screen.visibleFrame, gap: 5)
+        let target = PanelPlacement.frame(size: size, caret: anchor, screen: screen.visibleFrame, gap: 5, centered: true)
         if resize { setFrame(target, display: false) }
         material.frame = surface.bounds
         if expanded {
@@ -93,7 +94,8 @@ final class InputModePanel: NSPanel {
             surface.subviews.compactMap { $0 as? FluentButton }.forEach { $0.removeFromSuperview() }
             let button = FluentButton(title: mode.badge, role: .primary)
             button.theme = theme; button.refusesFirstResponder = true
-            button.frame = NSRect(x: 1, y: 0, width: 36, height: 28)
+            if small { button.fluentControlSize = .small }
+            button.frame = NSRect(x: 1, y: 0, width: size.width - 2, height: size.height)
             button.setAccessibilityLabel(L10n.modeIndicatorAccessibility(mode.title))
             button.onClick = { [weak self] in
                 guard let self else { return }

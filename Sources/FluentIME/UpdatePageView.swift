@@ -306,7 +306,7 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         retry.onClick = { [weak coordinator] in coordinator?.loadHistory() }
         observer = NotificationCenter.default.addObserver(forName: UpdateCoordinator.changed, object: coordinator, queue: .main) { [weak self] _ in Task { @MainActor in self?.refresh() } }
         themeObservation = IMEThemeObservation { [weak self] _ in self?.refresh() }
-        refresh(); coordinator.loadHistory()
+        refresh(); coordinator.loadHistoryIfStale()
     }
     required init?(coder: NSCoder) { fatalError() }
     func refresh() {

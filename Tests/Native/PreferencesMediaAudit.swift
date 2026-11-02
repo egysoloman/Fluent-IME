@@ -348,13 +348,17 @@ import CRimeBridge
         precondition(longCard.frame.height > wideHeight && longView.preferredHeight > widePageHeight, "Wrapped notes must reflow when the window narrows: width=\(longView.bounds.width), card=\(wideHeight)→\(longCard.frame.height), page=\(widePageHeight)→\(longView.preferredHeight)")
         precondition(abs(longCard.bounds.height - longScroll.frame.maxY - 16) < 1)
         updateWindow.orderOut(nil)
-        for page in ["fonts", "clipboard", "models", "updates", "updateHistory", "advanced"] {
+        for page in ["fonts", "clipboard", "models", "updates", "updateHistory", "advanced", "keys"] {
             setenv("FLUENTIME_RENDER_PAGE", page, 1)
             let controller = try SettingsWindowController(engine: engine)
             try controller.render(to: output.appendingPathComponent("settings-" + page + ".png"))
             if page == "updateHistory" {
                 let titles = all(controller.window!.contentView!).compactMap { ($0 as? NSButton)?.title }
                 precondition(titles.contains(L10n.updatePageTitle) && titles.contains(L10n.updateHistoryTitle), "History must have an Updates breadcrumb")
+            }
+            if page == "keys" {
+                let titles = all(controller.window!.contentView!).compactMap { ($0 as? FluentButton)?.title }
+                precondition(titles.contains(KeyShortcut.emojiDefault.display) && titles.contains(KeyShortcut.clipboardDefault.display), "Both panel shortcuts are listed with their defaults")
             }
             if page == "advanced" {
                 let all = all(controller.window!.contentView!).compactMap { $0 as? FluentButton }

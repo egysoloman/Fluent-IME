@@ -344,6 +344,20 @@ public extension L10n {
     static var keysPaging: String { text("keys.paging") }
     /// 单按 Shift 键切换输入模式
     static var keysShift: String { text("keys.shift") }
+    /// 打开剪贴板
+    static var keysShortcutClipboard: String { text("keys.shortcutClipboard") }
+    /// 打开表情与符号面板
+    static var keysShortcutEmoji: String { text("keys.shortcutEmoji") }
+    /// 点击快捷键后按下新的组合键，需包含 ⌃ 或 ⌘。按 Esc 取消，按 Delete 关闭该快捷键。仅在使用 Fluent 输入法时生效。
+    static var keysShortcutHint: String { text("keys.shortcutHint") }
+    /// 未设置
+    static var keysShortcutOff: String { text("keys.shortcutOff") }
+    /// 请按下新的快捷键…
+    static var keysShortcutRecording: String { text("keys.shortcutRecording") }
+    /// 恢复默认
+    static var keysShortcutReset: String { text("keys.shortcutReset") }
+    /// 快捷键
+    static var keysShortcutsTitle: String { text("keys.shortcutsTitle") }
     /// English
     static var languageEnglish: String { text("language.english") }
     /// 简体中文
@@ -392,6 +406,12 @@ public extension L10n {
     static var modeSwitchToChinese: String { text("mode.switchToChinese") }
     /// 切换为英文
     static var modeSwitchToEnglish: String { text("mode.switchToEnglish") }
+    /// 提示大小
+    static var modeIndicatorSize: String { text("modeIndicator.size") }
+    /// 标准
+    static var modeIndicatorSizeRegular: String { text("modeIndicator.sizeRegular") }
+    /// 小
+    static var modeIndicatorSizeSmall: String { text("modeIndicator.sizeSmall") }
     /// 内置模型
     static var modelsBundled: String { text("models.bundled") }
     /// 已选择导入的模型
@@ -534,6 +554,16 @@ public extension L10n {
     static var setupTitle: String { text("setup.title") }
     /// 欢迎使用 Fluent 拼音
     static var setupWelcome: String { text("setup.welcome") }
+    /// %1$@ 是常用的应用快捷键，请换一个。
+    static func shortcutCommon(_ arg1: String) -> String { format("shortcut.common", arguments: [arg1]) }
+    /// %1$@ 已用于另一个 Fluent 快捷键。
+    static func shortcutDuplicate(_ arg1: String) -> String { format("shortcut.duplicate", arguments: [arg1]) }
+    /// 请至少包含 ⌃ 或 ⌘，否则会与打字冲突。
+    static var shortcutNeedsModifier: String { text("shortcut.needsModifier") }
+    /// %1$@ 已被 macOS 快捷键占用（系统设置 → 键盘 → 键盘快捷键）。
+    static func shortcutSystem(_ arg1: String) -> String { format("shortcut.system", arguments: [arg1]) }
+    /// ⌥ 组合会输入特殊字符，请加上 ⌃ 或 ⌘。
+    static var shortcutTypesCharacters: String { text("shortcut.typesCharacters") }
     /// 关
     static var stateOff: String { text("state.off") }
     /// 开

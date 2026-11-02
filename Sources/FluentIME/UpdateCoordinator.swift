@@ -1,4 +1,5 @@
 import AppKit
+import Network
 import FluentKit
 import FluentIMECore
 
@@ -8,6 +9,26 @@ protocol IMEUpdateService {
     func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)?) async throws -> URL
 }
 extension GitHubUpdateService: IMEUpdateService {}
+
+/// The system's view of the network. Until the first report it counts as online, so a
+/// missing report never blocks a check the user asked for.
+@MainActor final class NetworkStatus {
+    static let shared = NetworkStatus()
+    static let changed = Notification.Name("FluentIMENetworkStatusChanged")
+    private(set) var isOnline = true
+    private let monitor = NWPathMonitor()
+    private init() {
+        monitor.pathUpdateHandler = { path in
+            let online = path.status == .satisfied
+            Task { @MainActor in
+                let shared = NetworkStatus.shared
+                guard shared.isOnline != online else { return }
+                shared.isOnline = online; NotificationCenter.default.post(name: Self.changed, object: shared)
+            }
+        }
+        monitor.start(queue: .main)
+    }
+}
 
 @MainActor final class UpdateCoordinator {
     static let shared = UpdateCoordinator()
@@ -34,14 +55,19 @@ extension GitHubUpdateService: IMEUpdateService {}
     }
     func startAutomaticChecks() {
         guard automaticTimer == nil else { return }
+        // A check that came due while offline runs once the network is back.
+        networkObserver = NotificationCenter.default.addObserver(forName: NetworkStatus.changed, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in if NetworkStatus.shared.isOnline { self?.checkAutomaticallyIfDue() } }
+        }
         automaticTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.checkAutomaticallyIfDue() }
         }
         automaticTimer?.tolerance = 300
         checkAutomaticallyIfDue()
     }
+    private var networkObserver: NSObjectProtocol?
     func checkAutomaticallyIfDue(now: Date = Date()) {
-        guard automaticChecks, !busy,
+        guard automaticChecks, !busy, NetworkStatus.shared.isOnline,
               defaults.object(forKey: "updateLastAttempt").flatMap({ $0 as? Date }).map({ now.timeIntervalSince($0) >= 86400 }) ?? true else { return }
         channel = UpdateChannel(rawValue: defaults.string(forKey: "updateChannel") ?? "") ?? .stable
         check()
@@ -69,6 +95,12 @@ extension GitHubUpdateService: IMEUpdateService {}
         history = []; historyError = nil; historyLoading = false; latestRelease = nil; release = nil; state = .idle
         check(); loadHistory()
     }
+    private var historyLoadedAt: Date?
+    /// Opening the pages reuses a recent list, and an offline Mac keeps the one it has.
+    func loadHistoryIfStale() {
+        guard !history.isEmpty, let loaded = historyLoadedAt else { loadHistory(); return }
+        if NetworkStatus.shared.isOnline, Date().timeIntervalSince(loaded) > 3600 { loadHistory() }
+    }
     func loadHistory() {
         guard !historyLoading else { return }
         historyGeneration += 1; let request = historyGeneration; let channel = channel
@@ -78,7 +110,7 @@ extension GitHubUpdateService: IMEUpdateService {}
             do {
                 let records = try await service.history(channel: channel); try Task.checkCancellation()
                 guard request == historyGeneration else { return }
-                history = records
+                history = records; historyLoadedAt = Date()
             } catch { if request == historyGeneration, !Task.isCancelled { historyError = Self.message(error) } }
             guard request == historyGeneration else { return }
             historyLoading = false; historyTask = nil; notify()
@@ -104,8 +136,11 @@ extension GitHubUpdateService: IMEUpdateService {}
     func check() {
         guard !busy else { return }
         defaults.set(Date(), forKey: "updateLastAttempt")
-        generation += 1; let request = generation; let channel = channel; release = nil; state = .checking
-        loadHistory()
+        generation += 1; let request = generation; let channel = channel; release = nil
+        // No request while the system reports no network; say so at once.
+        guard NetworkStatus.shared.isOnline else { connectionFailed = true; state = .failed(L10n.updateConnectionFailed); return }
+        state = .checking
+        loadHistoryIfStale()
         task = Task { [weak self] in
             guard let self else { return }
             do {

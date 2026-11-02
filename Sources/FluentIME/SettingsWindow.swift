@@ -312,6 +312,64 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         if let neuralObserver { NotificationCenter.default.removeObserver(neuralObserver) }
         previewMotionTimer?.invalidate()
         if let observer { NotificationCenter.default.removeObserver(observer) }
+        if let shortcutMonitor { NSEvent.removeMonitor(shortcutMonitor) }
+    }
+    // MARK: Panel shortcuts
+    private enum ShortcutSlot { case emoji, clipboard }
+    private var recordingShortcut: ShortcutSlot?
+    private var shortcutMonitor: Any?
+    private var shortcutStatus = ""
+    private func shortcutRow(_ title: String, slot: ShortcutSlot, y: CGFloat) {
+        _ = label(title, y: y + 6, width: 300)
+        let current = slot == .emoji ? Preferences.shared.emojiShortcut : Preferences.shared.clipboardShortcut
+        let value = recordingShortcut == slot ? L10n.keysShortcutRecording : current?.display ?? L10n.keysShortcutOff
+        let button = action(value, x: 320, y: y, width: 200, role: recordingShortcut == slot ? .primary : .standard) { [weak self] in self?.recordShortcut(slot) }
+        button.setAccessibilityLabel(title + ", " + value)
+    }
+    /// Captures the next key press in this window: Esc cancels, Delete turns the shortcut off,
+    /// anything else is checked for conflicts before it is saved.
+    private func recordShortcut(_ slot: ShortcutSlot) {
+        recordingShortcut = slot; shortcutStatus = ""
+        if shortcutMonitor == nil {
+            shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self, let slot = self.recordingShortcut, event.window === self.window else { return event }
+                self.finishRecording(slot, with: event)
+                return nil
+            }
+        }
+        buildPage(); layout()
+    }
+    private func finishRecording(_ slot: ShortcutSlot, with event: NSEvent) {
+        recordingShortcut = nil
+        let preferences = Preferences.shared
+        switch event.keyCode {
+        case 53: break
+        case 51, 117: if slot == .emoji { preferences.emojiShortcut = nil } else { preferences.clipboardShortcut = nil }
+        default:
+            guard let shortcut = KeyShortcut(event: event) else { break }
+            let other = slot == .emoji ? preferences.clipboardShortcut : preferences.emojiShortcut
+            if let conflict = ShortcutValidator.conflict(for: shortcut, other: other, system: ShortcutValidator.systemShortcuts()) {
+                shortcutStatus = Self.message(for: conflict, shortcut: shortcut)
+            } else if slot == .emoji { preferences.emojiShortcut = shortcut } else { preferences.clipboardShortcut = shortcut }
+        }
+        buildPage(); layout()
+    }
+    /// A saved shortcut can become taken later, when a macOS shortcut is assigned to it.
+    private func currentShortcutConflict() -> String {
+        let preferences = Preferences.shared, system = ShortcutValidator.systemShortcuts()
+        for shortcut in [preferences.emojiShortcut, preferences.clipboardShortcut].compactMap({ $0 }) {
+            if let conflict = ShortcutValidator.conflict(for: shortcut, other: nil, system: system) { return Self.message(for: conflict, shortcut: shortcut) }
+        }
+        return ""
+    }
+    static func message(for conflict: ShortcutConflict, shortcut: KeyShortcut) -> String {
+        switch conflict {
+        case .needsModifier: return L10n.shortcutNeedsModifier
+        case .typesCharacters: return L10n.shortcutTypesCharacters
+        case .common: return L10n.shortcutCommon(shortcut.display)
+        case .system: return L10n.shortcutSystem(shortcut.display)
+        case .duplicate: return L10n.shortcutDuplicate(shortcut.display)
+        }
     }
 
     static let pageColumnWidth: CGFloat = 1000
@@ -621,7 +679,16 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
                 let y = CGFloat(474 + index * 42)
                 _ = label(item.0, y: y, width: 280); _ = label(item.1, x: 260, y: y, secondary: true, width: 300)
             }
-            documentHeight = 762
+            _ = label(L10n.keysShortcutsTitle, y: 740, size: 20)
+            shortcutRow(L10n.keysShortcutEmoji, slot: .emoji, y: 788)
+            shortcutRow(L10n.keysShortcutClipboard, slot: .clipboard, y: 840)
+            let status = shortcutStatus.isEmpty ? currentShortcutConflict() : shortcutStatus
+            if !status.isEmpty { paragraph(status, y: 892, height: 40) }
+            paragraph(L10n.keysShortcutHint, y: status.isEmpty ? 892 : 936, height: 40)
+            _ = action(L10n.keysShortcutReset, y: status.isEmpty ? 946 : 990, width: 200) { [weak self] in
+                self?.recordingShortcut = nil; self?.shortcutStatus = ""; Preferences.shared.resetShortcuts(); self?.buildPage(); self?.layout()
+            }
+            documentHeight = status.isEmpty ? 1020 : 1064
         case .appearance:
             choice(L10n.appearanceInterfaceLanguage, y: 0, options: [("system", L10n.appearanceSystem), ("zh-Hans", L10n.languageSimplified), ("zh-Hant", L10n.languageTraditional), ("en", L10n.languageEnglish)], selected: p.interfaceLanguage) { p.interfaceLanguage = $0 }
             _ = label(L10n.appearanceInterfaceLanguageHint, y: 84, size: 13, secondary: true)
@@ -640,7 +707,8 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             _ = label(L10n.appearanceAdvancedEffectsHint, y: 956, size: 13, secondary: true)
             toggle(L10n.modeIndicator, y: 1014, value: p.showInputModeIndicator) { p.showInputModeIndicator = $0 }
             _ = label(L10n.modeIndicatorHint, y: 1084, size: 13, secondary: true)
-            documentHeight = 1150
+            choice(L10n.modeIndicatorSize, y: 1140, width: 300, options: [("regular", L10n.modeIndicatorSizeRegular), ("small", L10n.modeIndicatorSizeSmall)], selected: p.modeIndicatorSize) { p.modeIndicatorSize = $0 }
+            documentHeight = 1240
         case .dictionary:
             _ = label(L10n.settingsDictionaryTitle, y: 0, size: 20)
             toggle(L10n.dictionaryLearning, y: 48, value: language.learning) { language.learning = $0 }

@@ -36,6 +36,31 @@ final class Preferences {
         get { defaults.bool(forKey: "englishPunctuation") }
         set { defaults.set(newValue, forKey: "englishPunctuation"); notify() }
     }
+    /// "regular" is the original badge; "small" is close to the macOS Caps Lock indicator.
+    var modeIndicatorSize: String {
+        get { defaults.string(forKey: "modeIndicatorSize") == "small" ? "small" : "regular" }
+        set { defaults.set(newValue == "small" ? "small" : "regular", forKey: "modeIndicatorSize"); notify() }
+    }
+    /// Panel shortcuts; nil is off. Unset keys use the defaults.
+    var emojiShortcut: KeyShortcut? {
+        get { shortcut("emojiShortcut", default: .emojiDefault) }
+        set { setShortcut(newValue, for: "emojiShortcut") }
+    }
+    var clipboardShortcut: KeyShortcut? {
+        get { shortcut("clipboardShortcut", default: .clipboardDefault) }
+        set { setShortcut(newValue, for: "clipboardShortcut") }
+    }
+    private func shortcut(_ key: String, default value: KeyShortcut) -> KeyShortcut? {
+        guard let stored = defaults.object(forKey: key) else { return value }
+        guard let data = stored as? Data else { return nil }
+        return (try? JSONDecoder().decode(KeyShortcut.self, from: data)) ?? value
+    }
+    private func setShortcut(_ value: KeyShortcut?, for key: String) {
+        defaults.set(value.flatMap { try? JSONEncoder().encode($0) } ?? "off" as Any, forKey: key); notify()
+    }
+    func resetShortcuts() {
+        defaults.removeObject(forKey: "emojiShortcut"); defaults.removeObject(forKey: "clipboardShortcut"); notify()
+    }
     var shiftSwitch: Bool {
         get { defaults.object(forKey: "shiftSwitch") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "shiftSwitch"); notify() }

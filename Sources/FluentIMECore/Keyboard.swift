@@ -43,10 +43,11 @@ public struct ShiftTapTracker {
 
 public enum PanelPlacement {
     /// AppKit screen coordinates, including screens with negative origins.
-    public static func frame(size: NSSize, caret: NSRect, screen: NSRect, gap: CGFloat = 6) -> NSRect {
+    /// Left-aligned to the caret, or centered on it for small accessories such as the mode indicator.
+    public static func frame(size: NSSize, caret: NSRect, screen: NSRect, gap: CGFloat = 6, centered: Bool = false) -> NSRect {
         let width = min(size.width, screen.width)
         let height = min(size.height, screen.height)
-        let x = min(max(caret.minX, screen.minX), screen.maxX - width)
+        let x = min(max(centered ? caret.midX - width / 2 : caret.minX, screen.minX), screen.maxX - width)
         let below = caret.minY - height - gap
         let y = below >= screen.minY ? below : min(caret.maxY + gap, screen.maxY - height)
         return NSRect(x: x, y: max(y, screen.minY), width: width, height: height)
