@@ -133,7 +133,7 @@ final class MaintenanceWindowController: NSWindowController, NSWindowDelegate {
             guard let self else { return }
             do {
                 try result.get()
-                if enabled { try InputMethodInstallation.shared.enable() }
+                if enabled { try InputMethodInstallation.shared.enable(); InputMethodInstallation.shared.restoreSelection() }
                 self.busy = false
                 try InputMethodInstallation.shared.relaunchAndQuit()
             } catch { self.busy = false; self.status = error.localizedDescription; self.build() }

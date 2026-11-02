@@ -40,6 +40,33 @@ final class UpdateTests: XCTestCase {
         do { _ = try await GitHubUpdateService(edition: .lite, configuration: limited).latest(channel: .preview); XCTFail("A failed preview lookup must not silently switch to stable") }
         catch { XCTAssertTrue(error is UpdateError) }
     }
+    func testHistoryUsesCacheAndPublicFeedWhenTheAPIQuotaIsExhausted() async throws {
+        let configuration = URLSessionConfiguration.ephemeral; configuration.protocolClasses = [QuotaReleaseProtocol.self]
+        let cache = FileManager.default.temporaryDirectory.appendingPathComponent("FluentIME-History-" + UUID().uuidString + ".json")
+        defer { try? FileManager.default.removeItem(at: cache) }
+        // No cache: the feed supplies notes; versions newer than the latest stable stay in the test channel.
+        QuotaReleaseProtocol.mode = .limited
+        let service = GitHubUpdateService(edition: .lite, configuration: configuration, cache: cache)
+        let stable = try await service.history(channel: .stable)
+        XCTAssertEqual(stable.map(\.version), ["0.6.5", "0.6.4"])
+        XCTAssertEqual(stable.first?.name, "Fluent IME 0.6.5")
+        XCTAssertEqual(stable.first?.body, "## Changes\n- Rows move one at a time & keep <numbers>.\nDefault download.")
+        let versions1 = try await service.history(channel: .preview).map(\.version)
+        XCTAssertEqual(versions1, ["0.7.0-beta.1", "0.6.6", "0.6.5", "0.6.4"])
+        do { _ = try await service.latest(channel: .preview); XCTFail("The feed has no assets and cannot prove there is no newer preview") }
+        catch { XCTAssertTrue(error is UpdateError) }
+        // A successful response is cached; the next request is conditional and a 304 reuses it.
+        QuotaReleaseProtocol.mode = .available
+        let versions2 = try await service.history(channel: .stable).map(\.version)
+        XCTAssertEqual(versions2, ["1.0.0"])
+        QuotaReleaseProtocol.mode = .notModified
+        let versions3 = try await service.history(channel: .stable).map(\.version)
+        XCTAssertEqual(versions3, ["1.0.0"])
+        XCTAssertEqual(QuotaReleaseProtocol.lastETag, "\"v1\"")
+        QuotaReleaseProtocol.mode = .limited
+        let versions4 = try await service.history(channel: .stable).map(\.version)
+        XCTAssertEqual(versions4, ["1.0.0"], "An exhausted quota shows the cached list")
+    }
     func testReleaseFilteringAndAssetSelection() throws {
         let release = try JSONDecoder().decode(GitHubRelease.self, from: Data(#"{"tag_name":"v0.6.0","draft":false,"prerelease":false,"assets":[{"name":"Fluent-IME-0.6.0-Setup.dmg","size":8,"browser_download_url":"https://github.com/egysoloman/Fluent-IME/releases/download/v0.6.0/Fluent-IME-0.6.0-Setup.dmg"}]}"#.utf8))
         XCTAssertTrue(release.isNewer(than: "0.5.4")); XCTAssertFalse(release.isNewer(than: "0.6.0"))
@@ -83,6 +110,8 @@ final class UpdateTests: XCTestCase {
             XCTAssertEqual(release?.manifest(for: edition)?.name, edition == .full ? "release-full.json" : "release.json")
             XCTAssertNotNil(release?.installer(for: edition))
             XCTAssertNil(release?.installer(for: edition == .full ? .lite : .full))
+            XCTAssertEqual(release?.name, "Fluent IME 0.6.2")
+            XCTAssertEqual(release?.body, "- Notes come from the public feed.", "The quota fallback must still show release notes")
         }
     }
     func testChecksumAndSizeRejectCorruptedDownloads() throws {
@@ -197,6 +226,8 @@ private final class RateLimitedReleaseProtocol: URLProtocol {
         } else if url.pathExtension == "dmg" {
             guard request.httpMethod == "HEAD" else { return fail() }
             headers["Content-Length"] = "123456"
+        } else if url.path.hasSuffix("/releases.atom") {
+            body = Data(#"<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry><updated>2026-11-01T00:00:00Z</updated><link rel="alternate" type="text/html" href="https://github.com/egysoloman/Fluent-IME/releases/tag/v0.6.2"/><title>Fluent IME 0.6.2</title><content type="html">&lt;ul&gt;&lt;li&gt;Notes come from the public feed.&lt;/li&gt;&lt;/ul&gt;</content></entry></feed>"#.utf8)
         } else { return fail() }
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: responseURL, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: body)
@@ -220,6 +251,43 @@ private final class ChannelReleaseProtocol: URLProtocol {
         let data = try! JSONSerialization.data(withJSONObject: json)
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data); client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+private final class QuotaReleaseProtocol: URLProtocol {
+    enum Mode { case limited, available, notModified }
+    nonisolated(unsafe) static var mode = Mode.limited
+    nonisolated(unsafe) static var lastETag: String?
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let url = request.url!
+        var responseURL = url, status = 200, body = Data(), headers: [String: String] = [:]
+        if url.host == "api.github.com" {
+            Self.lastETag = request.value(forHTTPHeaderField: "If-None-Match")
+            switch Self.mode {
+            case .limited: status = 403
+            case .notModified: status = Self.lastETag == "\"v1\"" ? 304 : 500
+            case .available:
+                headers["ETag"] = "\"v1\""
+                body = try! JSONSerialization.data(withJSONObject: [["tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": []]])
+            }
+        } else if url.path.hasSuffix("/releases/latest") {
+            responseURL = URL(string: "https://github.com/egysoloman/Fluent-IME/releases/tag/v0.6.5")!
+        } else if url.path.hasSuffix("/releases.atom") {
+            let entries = ["0.7.0-beta.1", "0.6.6", "0.6.5", "0.6.4"].map { version in
+                """
+                <entry><id>tag:github.com,2008:Repository/1/v\(version)</id><updated>2026-11-02T04:46:50Z</updated>
+                <link rel="alternate" type="text/html" href="https://github.com/egysoloman/Fluent-IME/releases/tag/v\(version)"/>
+                <title>Fluent IME \(version)</title>
+                <content type="html">&lt;h2&gt;Changes&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;Rows move one at a time &amp;amp; keep &amp;lt;numbers&amp;gt;.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Default download.&lt;/p&gt;</content></entry>
+                """
+            }
+            body = Data(("<?xml version=\"1.0\"?><feed xmlns=\"http://www.w3.org/2005/Atom\"><title>Release notes</title>" + entries.joined() + "</feed>").utf8)
+        } else { status = 404 }
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: responseURL, statusCode: status, httpVersion: nil, headerFields: headers)!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body); client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
 }

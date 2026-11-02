@@ -314,19 +314,24 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         if let observer { NotificationCenter.default.removeObserver(observer) }
     }
 
+    static let pageColumnWidth: CGFloat = 1000
     private func layout() {
         let width = root.bounds.width, height = root.bounds.height
         material.frame = root.bounds
         if abs(width - titleBarWidth) > 0.5 { updateTitleBar() }
         titleBar?.frame = NSRect(x: 0, y: 0, width: width, height: 48)
-        let breadcrumbWidthChanged = breadcrumbs.frame.width != width - 46
-        breadcrumbs.frame = NSRect(x: 22, y: 68, width: width - 46, height: 44)
-        if breadcrumbWidthChanged && !breadcrumbs.subviews.isEmpty { buildBreadcrumbs() }
         scroll.frame = NSRect(x: 0, y: 136, width: width, height: height - 136)
         let trailingInset: CGFloat = page == .preview ? max(20, CandidateChrome.sideMargin) : 20
+        // Pages stop growing at the widest control; beyond that the column and its title center.
+        let available = max(1, scroll.contentSize.width - 24 - trailingInset)
+        let centering = max(0, (available - Self.pageColumnWidth) / 2)
+        let breadcrumbWidth = width - 46 - centering
+        let breadcrumbWidthChanged = breadcrumbs.frame.width != breadcrumbWidth
+        breadcrumbs.frame = NSRect(x: 22 + centering, y: 68, width: breadcrumbWidth, height: 44)
+        if breadcrumbWidthChanged && !breadcrumbs.subviews.isEmpty { buildBreadcrumbs() }
         // Keep the leading gutter inside the viewport so outgoing page motion is not sliced at the text edge.
         pageDocument.frame = NSRect(x: 0, y: 0, width: scroll.contentSize.width, height: max(documentHeight, scroll.contentSize.height))
-        pageContent.frame = NSRect(x: 24, y: 0, width: max(1, scroll.contentSize.width - 24 - trailingInset), height: pageDocument.bounds.height)
+        pageContent.frame = NSRect(x: 24 + centering, y: 0, width: min(available, Self.pageColumnWidth), height: pageDocument.bounds.height)
         pageWidthUpdates.forEach { $0(pageContent.bounds.width) }
         if page == .preview {
             let available = min(860, pageContent.bounds.width - 30)

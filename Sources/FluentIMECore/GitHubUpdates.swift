@@ -187,6 +187,7 @@ public final class GitHubUpdateService {
     private let transport = UpdateTransport()
     private let edition: ReleaseEdition
     private let configuration: URLSessionConfiguration
+    private let cache: URL?
     private lazy var session: URLSession = {
         URLSession(configuration: configuration, delegate: transport, delegateQueue: nil)
     }()
@@ -194,26 +195,75 @@ public final class GitHubUpdateService {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 30; config.timeoutIntervalForResource = 1800
         config.httpAdditionalHeaders = ["User-Agent": "Fluent-IME-Updater", "Accept": "application/vnd.github+json"]
-        self.init(edition: edition, configuration: config)
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+        self.init(edition: edition, configuration: config, cache: caches?.appendingPathComponent("org.fluentime.inputmethod.FluentIME/release-history.json"))
     }
-    init(edition: ReleaseEdition, configuration: URLSessionConfiguration) {
-        self.edition = edition; self.configuration = configuration
+    init(edition: ReleaseEdition, configuration: URLSessionConfiguration, cache: URL? = nil) {
+        self.edition = edition; self.configuration = configuration; self.cache = cache
     }
     public static func trustedAsset(_ url: URL) -> Bool {
         url.scheme == "https" && url.host == "github.com" && url.user == nil && url.password == nil && url.port == nil && url.path.hasPrefix("/\(repository)/releases/download/")
     }
     public func history(channel: UpdateChannel) async throws -> [GitHubRelease] {
-        let url = URL(string: "https://api.github.com/repos/\(Self.repository)/releases?per_page=30")!
-        let (data, response) = try await session.data(from: url)
-        try Task.checkCancellation()
-        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 4_000_000 else { throw UpdateError.unavailable }
-        return try JSONDecoder().decode([GitHubRelease].self, from: data)
-            .filter { channel.accepts($0) }
-            .sorted { ReleaseVersion($0.version)! > ReleaseVersion($1.version)! }
+        try await releases().filter { channel.accepts($0) }.sorted { ReleaseVersion($0.version)! > ReleaseVersion($1.version)! }
     }
     public func latest(channel: UpdateChannel) async throws -> GitHubRelease? {
         if channel == .stable { return try await latest() }
-        return try await history(channel: channel).first { $0.installer(for: edition) != nil && $0.manifest(for: edition) != nil }
+        let records = try await history(channel: channel)
+        // The public feed has no assets, so it cannot prove there is no newer preview.
+        if !records.isEmpty, records.allSatisfy({ $0.assets.isEmpty }) { throw UpdateError.unavailable }
+        return records.first { $0.installer(for: edition) != nil && $0.manifest(for: edition) != nil }
+    }
+    private struct CachedReleases: Codable { let etag: String; let data: Data }
+    /// The anonymous API allows 60 requests an hour per network. A conditional
+    /// request answered with 304 does not count, and the cached list or the public
+    /// release feed covers an exhausted quota.
+    private func releases() async throws -> [GitHubRelease] {
+        let cached = cache.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode(CachedReleases.self, from: $0) }
+        var request = URLRequest(url: URL(string: "https://api.github.com/repos/\(Self.repository)/releases?per_page=30")!)
+        if let cached { request.setValue(cached.etag, forHTTPHeaderField: "If-None-Match") }
+        let status: Int?, data: Data, response: URLResponse?
+        do { (data, response) = try await session.data(for: request); status = (response as? HTTPURLResponse)?.statusCode }
+        catch {
+            try Task.checkCancellation()
+            if (error as? URLError)?.code == .cancelled { throw error }
+            if let cached { return try JSONDecoder().decode([GitHubRelease].self, from: cached.data) }
+            throw error
+        }
+        try Task.checkCancellation()
+        if status == 304, let cached { return try JSONDecoder().decode([GitHubRelease].self, from: cached.data) }
+        if status == 200, data.count < 4_000_000 {
+            let records = try JSONDecoder().decode([GitHubRelease].self, from: data)
+            if let cache, let etag = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "ETag"),
+               let encoded = try? JSONEncoder().encode(CachedReleases(etag: etag, data: data)) {
+                try? FileManager.default.createDirectory(at: cache.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? encoded.write(to: cache, options: .atomic)
+            }
+            return records
+        }
+        if let cached { return try JSONDecoder().decode([GitHubRelease].self, from: cached.data) }
+        guard status == 403 || status == 429 || status.map({ (500...599).contains($0) }) == true else { throw UpdateError.unavailable }
+        return try await releasesFromFeed()
+    }
+    private func feedEntries() async throws -> [ReleaseFeed.Entry] {
+        let data: Data, response: URLResponse
+        do { (data, response) = try await session.data(from: Self.releasesURL.appendingPathExtension("atom")) }
+        catch { try Task.checkCancellation(); throw (error as? URLError)?.code == .cancelled ? error : UpdateError.unavailable }
+        try Task.checkCancellation()
+        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 4_000_000,
+              let entries = ReleaseFeed.entries(data) else { throw UpdateError.unavailable }
+        return entries
+    }
+    private func releasesFromFeed() async throws -> [GitHubRelease] {
+        let entries = try await feedEntries()
+        // The feed has no Pre-release flag. Anything newer than the latest stable
+        // release, or with a prerelease version, stays in the test channel.
+        let stable = (try? await latestStableTag()).flatMap { ReleaseVersion($0) }
+        return entries.compactMap { entry in
+            guard let version = ReleaseVersion(entry.tag) else { return nil }
+            let prerelease = version.isPrerelease || stable.map { version > $0 } ?? false
+            return GitHubRelease(tag_name: entry.tag, draft: false, prerelease: prerelease, assets: [], name: entry.title, body: entry.notes, published_at: entry.updated)
+        }
     }
     public func latest() async throws -> GitHubRelease? {
         let url = URL(string: "https://api.github.com/repos/\(Self.repository)/releases/latest")!
@@ -238,7 +288,8 @@ public final class GitHubUpdateService {
         guard UpdateChannel.stable.accepts(release) else { throw UpdateError.invalidRelease }
         return release
     }
-    private func latestFromWebsite() async throws -> GitHubRelease? {
+    /// The public redirect from /releases/latest names the newest stable tag.
+    private func latestStableTag() async throws -> String? {
         var request = URLRequest(url: Self.releasesURL.appendingPathComponent("latest"))
         request.httpMethod = "HEAD"
         request.setValue("text/html", forHTTPHeaderField: "Accept")
@@ -247,6 +298,11 @@ public final class GitHubUpdateService {
         if (response as? HTTPURLResponse)?.statusCode == 404 { return nil }
         guard (response as? HTTPURLResponse)?.statusCode == 200,
               let url = response.url, let tag = Self.releaseTag(from: url) else { throw UpdateError.unavailable }
+        return tag
+    }
+    private func latestFromWebsite() async throws -> GitHubRelease? {
+        guard let tag = try await latestStableTag() else { return nil }
+        var request: URLRequest
         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
         let base = Self.releasesURL.appendingPathComponent("download").appendingPathComponent(tag)
         let manifestName = edition == .full ? "release-full.json" : "release.json"
@@ -265,10 +321,13 @@ public final class GitHubUpdateService {
         let size = installerResponse.expectedContentLength
         guard (installerResponse as? HTTPURLResponse)?.statusCode == 200,
               (1...2_000_000_000).contains(size) else { throw UpdateError.invalidRelease }
+        // Release notes are optional here; the feed is outside the API quota as well.
+        let entry = (try? await feedEntries())?.first { $0.tag == tag }
+        try Task.checkCancellation()
         return GitHubRelease(tag_name: tag, draft: false, prerelease: false, assets: [
             .init(name: manifestName, size: Int64(data.count), browser_download_url: manifestURL, digest: nil),
             .init(name: installerName, size: size, browser_download_url: installerURL, digest: "sha256:" + manifest.installer.dmg_sha256)
-        ])
+        ], name: entry?.title, body: entry?.notes, published_at: entry?.updated)
     }
     static func releaseTag(from url: URL) -> String? {
         guard url.scheme == "https", url.host == "github.com", url.user == nil, url.password == nil,
@@ -329,5 +388,45 @@ public struct UpdateManifest: Decodable {
         #endif
         let current = ProcessInfo.processInfo.operatingSystemVersion
         guard architecture == arch, let required = ReleaseVersion(minimum_macos), let running = ReleaseVersion("\(current.majorVersion).\(current.minorVersion).\(current.patchVersion)"), running >= required else { throw UpdateError.incompatible }
+    }
+}
+
+/// Reads GitHub's public release feed, which is not subject to the API quota.
+enum ReleaseFeed {
+    struct Entry { var tag = "", title = "", updated = "", notes = "" }
+    static func entries(_ data: Data) -> [Entry]? {
+        final class Reader: NSObject, XMLParserDelegate {
+            var entries: [Entry] = [], entry: Entry?, text = ""
+            func parser(_ parser: XMLParser, didStartElement name: String, namespaceURI: String?, qualifiedName: String?, attributes: [String: String] = [:]) {
+                text = ""
+                if name == "entry" { entry = Entry() }
+                if name == "link", entry != nil, attributes["rel"] == "alternate", let href = attributes["href"],
+                   let url = URL(string: href), url.path.hasPrefix("/\(GitHubUpdateService.repository)/releases/tag/") { entry?.tag = url.lastPathComponent }
+            }
+            func parser(_ parser: XMLParser, foundCharacters string: String) { text += string }
+            func parser(_ parser: XMLParser, didEndElement name: String, namespaceURI: String?, qualifiedName: String?) {
+                switch name {
+                case "title": entry?.title = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                case "updated": entry?.updated = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                case "content": entry?.notes = ReleaseFeed.plainText(html: text)
+                case "entry": if let entry, !entry.tag.isEmpty { entries.append(entry) }; entry = nil
+                default: break
+                }
+            }
+        }
+        let parser = XMLParser(data: data), reader = Reader(); parser.delegate = reader
+        parser.shouldResolveExternalEntities = false
+        return parser.parse() ? reader.entries : nil
+    }
+    /// Turns GitHub's rendered notes back into the Markdown subset the notes view shows.
+    static func plainText(html: String) -> String {
+        var text = html
+        for (pattern, replacement) in [("<h[1-6][^>]*>", "\n## "), ("<li[^>]*>", "\n- "), ("<br\\s*/?>", "\n"), ("</(p|h[1-6]|li|ul|ol)>", "\n"), ("<[^>]+>", "")] {
+            text = text.replacingOccurrences(of: pattern, with: replacement, options: [.regularExpression, .caseInsensitive])
+        }
+        for (entity, character) in [("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\""), ("&#39;", "'"), ("&nbsp;", " "), ("&amp;", "&")] {
+            text = text.replacingOccurrences(of: entity, with: character)
+        }
+        return text.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: "\n")
     }
 }

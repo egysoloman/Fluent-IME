@@ -29,6 +29,20 @@ final class InstallationFilesTests: XCTestCase {
         XCTAssertEqual(backups.count, 1)
         XCTAssertEqual(try String(contentsOf: backups[0].appendingPathComponent("Fluent IME.app/Contents/MacOS/FluentIME")), "old")
     }
+    func testRepeatedUpgradesKeepOnlyTheNewestApplicationBackup() throws {
+        let files = InstallationFiles(home: home)
+        try app(files.application, version: "1")
+        let unrelated = files.support.appendingPathComponent("Backups/0000-manual")
+        try fm.createDirectory(at: unrelated, withIntermediateDirectories: true); try Data().write(to: unrelated.appendingPathComponent("notes.txt"))
+        for version in ["2", "3", "4"] {
+            let source = home.appendingPathComponent("download-\(version).app"); try app(source, version: version)
+            try files.install(from: source)
+        }
+        let backups = try fm.contentsOfDirectory(at: files.support.appendingPathComponent("Backups"), includingPropertiesForKeys: nil).filter { $0.lastPathComponent != "0000-manual" }
+        XCTAssertEqual(backups.count, 1, "Updates must not accumulate one app copy each")
+        XCTAssertEqual(try String(contentsOf: backups[0].appendingPathComponent("Fluent IME.app/Contents/MacOS/FluentIME")), "3")
+        XCTAssertTrue(fm.fileExists(atPath: unrelated.path), "Folders the installer did not create stay")
+    }
     func testInvalidPayloadDoesNotReplaceExistingInstallation() throws {
         let files = InstallationFiles(home: home), source = home.appendingPathComponent("unrelated.app")
         try app(files.application, version: "old"); try app(source, version: "bad", id: "another.app")

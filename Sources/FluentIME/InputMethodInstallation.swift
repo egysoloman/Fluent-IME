@@ -50,10 +50,20 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
         guard let p = TISGetInputSourceProperty(source, property) else { return false }
         return CFBooleanGetValue(Unmanaged<CFBoolean>.fromOpaque(p).takeUnretainedValue())
     }
+    private static func identifier(_ source: TISInputSource) -> String? {
+        TISGetInputSourceProperty(source, kTISPropertyInputSourceID).map { Unmanaged<CFString>.fromOpaque($0).takeUnretainedValue() as String }
+    }
+    private var selectionBeforeInstall: String?
+    /// Installing selects ABC while the bundle is replaced; an update returns to the mode the user was typing in.
+    func restoreSelection() {
+        guard let id = selectionBeforeInstall, let source = Self.sources().first(where: { Self.identifier($0) == id }) else { return }
+        _ = TISSelectInputSource(source)
+    }
     static func check(_ status: OSStatus) throws { if status != noErr { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) } }
     func install(completion: @escaping (Result<Void, Error>) -> Void) {
         guard InstallerLifecycle.isMaintenance else { completion(.failure(CocoaError(.fileWriteNoPermission))); return }
         let source = InstallerLifecycle.payload
+        selectionBeforeInstall = Self.sources().first { Self.bool($0, kTISPropertyInputSourceIsSelected) }.flatMap(Self.identifier)
         do { try selectFallbackIfNeeded() } catch { completion(.failure(error)); return }
         let other = NSRunningApplication.runningApplications(withBundleIdentifier: "org.fluentime.inputmethod.FluentIME").filter {
             $0.processIdentifier != getpid() && $0.bundleURL?.standardizedFileURL == files.application.standardizedFileURL

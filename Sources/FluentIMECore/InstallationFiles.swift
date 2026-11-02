@@ -43,6 +43,17 @@ public struct InstallationFiles {
         }
         do { try fm.moveItem(at: staged, to: application) }
         catch { if let previous { try? fm.moveItem(at: previous, to: application) }; throw error }
+        if let previous { pruneApplicationBackups(keeping: previous.deletingLastPathComponent()) }
+    }
+    /// Each update moves the replaced app aside. Keep only the newest copy for recovery.
+    func pruneApplicationBackups(keeping newest: URL) {
+        let fm = FileManager.default, backups = support.appendingPathComponent("Backups")
+        guard let folders = try? fm.contentsOfDirectory(at: backups, includingPropertiesForKeys: nil) else { return }
+        for folder in folders where folder.standardizedFileURL != newest.standardizedFileURL {
+            // Only remove folders this installer created: one app copy and nothing else.
+            guard (try? fm.contentsOfDirectory(atPath: folder.path)) == ["Fluent IME.app"] else { continue }
+            try? fm.removeItem(at: folder)
+        }
     }
     @discardableResult public func backupDictionary() throws -> URL? {
         let fm = FileManager.default

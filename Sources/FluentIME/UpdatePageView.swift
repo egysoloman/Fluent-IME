@@ -181,8 +181,8 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     convenience init() { self.init(coordinator: .shared) }
     init(coordinator: UpdateCoordinator) {
         self.coordinator = coordinator; super.init(frame: .zero)
-        for view in [icon, version, status, lastCheck, primary, cancel, notesCard, more, preview, automatic, history] { addSubview(view) }
-        for view in [releaseTitle, detail, progress, notesTitle, notes] { notesCard.addSubview(view) }
+        for view in [icon, version, status, progress, lastCheck, primary, cancel, notesCard, more, preview, automatic, history] { addSubview(view) }
+        for view in [releaseTitle, detail, notesTitle, notes] { notesCard.addSubview(view) }
         primary.onClick = { [weak coordinator] in guard let coordinator else { return }; if coordinator.canInstall { coordinator.install() } else { coordinator.check() } }
         cancel.onClick = { [weak coordinator] in coordinator?.cancel() }
         preview.toggle.onValueChanged = { [weak coordinator] value in coordinator?.selectChannel(value ? .preview : .stable) }
@@ -256,19 +256,20 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         let textX: CGFloat = 104
         let textWidth = max(1, width - textX - actionWidth - 20)
         let statusHeight = updateTextHeight(status, width: textWidth)
-        let headerHeight = max(92, statusHeight + 52)
-        let textY = (headerHeight - statusHeight - 46) / 2
+        // Like Windows Update, a running check or download shows its bar under the status, up to the action button.
+        let progressSpace: CGFloat = progress.isHidden ? 0 : 14
+        let headerHeight = max(92, statusHeight + 52 + progressSpace)
+        let textY = (headerHeight - statusHeight - 46 - progressSpace) / 2
         icon.frame = NSRect(x: 0, y: (headerHeight - 84) / 2, width: 84, height: 84)
         status.frame = NSRect(x: textX, y: textY, width: textWidth, height: statusHeight)
-        lastCheck.frame = NSRect(x: textX, y: status.frame.maxY + 8, width: width - textX, height: 18)
+        progress.frame = NSRect(x: textX, y: status.frame.maxY + 8, width: max(1, width - actionWidth - 16 - textX), height: 4)
+        lastCheck.frame = NSRect(x: textX, y: status.frame.maxY + 8 + progressSpace, width: width - textX, height: 18)
         version.frame = NSRect(x: textX, y: lastCheck.frame.maxY + 2, width: width - textX, height: 18)
         primary.frame = NSRect(x: width - actionWidth, y: (headerHeight - 32) / 2, width: actionWidth, height: 32)
         cancel.frame = primary.frame; primary.isHidden = coordinator.busy
         releaseTitle.frame = NSRect(x: 16, y: 14, width: width - (detail.stringValue.isEmpty ? 32 : 232), height: 24)
         detail.frame = NSRect(x: width - 212, y: 16, width: 196, height: 22); detail.alignment = .right
         var y: CGFloat = releaseTitle.frame.maxY + 8
-        progress.frame = NSRect(x: 16, y: y, width: width - 32, height: 4)
-        if !progress.isHidden { y += 16 }
         notesTitle.frame = NSRect(x: 16, y: y, width: width - 32, height: 20)
         if !notesTitle.stringValue.isEmpty { y += 28 }
         notes.frame = NSRect(x: 16, y: y, width: width - 32, height: notes.fittingHeight(for: width - 32))
