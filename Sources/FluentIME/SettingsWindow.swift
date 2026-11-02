@@ -654,7 +654,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             paragraph(modelStatus, y: 594, height: 60)
             documentHeight = 674
         case .advanced:
-            let buttonWidth = [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction, L10n.updatePageTitle].map { FluentButton(title: $0).intrinsicContentSize.width }.reduce(CGFloat(240), max)
+            let buttonWidth = [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction, L10n.updatePageTitle, L10n.maintenanceOpen].map { FluentButton(title: $0).intrinsicContentSize.width }.reduce(CGFloat(240), max)
             _ = label(L10n.advancedSystemInput, y: 0, size: 20)
             _ = label(L10n.advancedAddInputHint, y: 48)
             _ = action(L10n.advancedOpenKeyboard, y: 92, width: buttonWidth) { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!) }
@@ -669,7 +669,13 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             _ = action(L10n.setupReopen, y: 414, width: buttonWidth) { [weak self] in self?.showSetup() }
             _ = action(L10n.uninstallAction, y: 476, width: buttonWidth, role: .destructive) { [weak self] in self?.showUninstall() }
             _ = action(L10n.updatePageTitle, y: 534, width: buttonWidth) { [weak self] in self?.navigate(.updates) }
-            documentHeight = 610
+            _ = action(L10n.maintenanceOpen, y: 592, width: buttonWidth) { [weak self] in
+                Task { @MainActor in
+                    do { try await MaintenanceClient.launch(.show) }
+                    catch { if let root = self?.root { MaintenanceDialogs.showError(error, in: root) } }
+                }
+            }
+            documentHeight = 666
         case .updates:
             let updates = UpdatePageView()
             updates.frame = NSRect(x: 0, y: 0, width: 540, height: 320)

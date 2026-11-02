@@ -32,7 +32,7 @@ extension GitHubUpdateService: IMEUpdateService {}
             do {
                 let latest = try await service.latest(); try Task.checkCancellation()
                 guard request == generation else { return }
-                if let latest, latest.isNewer(than: currentVersion) { release = latest; state = .available(latest.version) }
+                if let latest, latest.isNewer(than: currentVersion) || (InstallerLifecycle.isMaintenance && !InputMethodInstallation.shared.isPresent) { release = latest; state = .available(latest.version) }
                 else { state = latest == nil ? .failed(L10n.updateNoRelease) : .current }
             } catch { if request == generation, !Task.isCancelled { state = .failed(error.localizedDescription) } }
             if request == generation { task = nil }
@@ -47,7 +47,7 @@ extension GitHubUpdateService: IMEUpdateService {}
         generation += 1; let request = generation
         state = .downloading(0, release.installer(for: .current)?.size ?? 0)
         let previous = InstallerLifecycle.isInstaller ? [Bundle.main.bundleURL.path] + InstallerLifecycle.previousInstallers : []
-        let waitForParent = InstallerLifecycle.isInstaller
+        let waitForParent = InstallerLifecycle.isMaintenance
         task = Task { [weak self] in
             guard let self else { return }
             let directory = InputMethodInstallation.shared.files.support.appendingPathComponent("Updates/" + UUID().uuidString)
@@ -63,8 +63,12 @@ extension GitHubUpdateService: IMEUpdateService {}
                 }
                 try Task.checkCancellation(); guard request == generation else { throw CancellationError() }
                 state = .opening
-                let launcher = Task.detached { try UpdatedInstaller.launch(file, version: release.version, previous: previous, waitForParent: waitForParent) }
-                try await withTaskCancellationHandler(operation: { try await launcher.value }, onCancel: { launcher.cancel() })
+                if InstallerLifecycle.isMaintenance {
+                    let launcher = Task.detached { try MaintenanceUpdateExecutor.launch(file, version: release.version, previous: previous, waitForParent: waitForParent) }
+                    try await withTaskCancellationHandler(operation: { try await launcher.value }, onCancel: { launcher.cancel() })
+                } else {
+                    try await MaintenanceClient.launch(.update(file: file, version: release.version))
+                }
                 guard request == generation else { return }
                 self.release = nil; state = .opened
                 if waitForParent { NSApp.terminate(nil) }
@@ -140,6 +144,7 @@ extension GitHubUpdateService: IMEUpdateService {}
         case .failed(let message): status.stringValue = message
         }
         primary.title = coordinator.canInstall ? L10n.updateInstall : L10n.updateTitle
+        primary.setAccessibilityLabel(primary.title)
         primary.isEnabled = !coordinator.busy; cancel.isHidden = !coordinator.busy
         if case .opening = coordinator.state { cancel.isEnabled = false } else { cancel.isEnabled = true }
         needsLayout = true
@@ -155,31 +160,4 @@ extension GitHubUpdateService: IMEUpdateService {}
         cancel.frame = NSRect(x: width + 12, y: 216, width: min(120, bounds.width - width - 12), height: 32)
     }
     deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
-}
-private enum UpdatedInstaller {
-    static func launch(_ file: URL, version: String, previous: [String], waitForParent: Bool) throws {
-        func run(_ path: String, _ arguments: [String]) throws -> Data {
-            let process = Process(), pipe = Pipe(); process.executableURL = URL(fileURLWithPath: path); process.arguments = arguments
-            process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
-            try process.run(); let data = pipe.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
-            guard process.terminationStatus == 0 else { throw UpdateError.integrity }; return data
-        }
-        try Task.checkCancellation()
-        _ = try run("/usr/bin/hdiutil", ["verify", "-quiet", file.path])
-        let data = try run("/usr/bin/hdiutil", ["attach", "-readonly", "-nobrowse", "-plist", file.path])
-        let info = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
-        guard let path = (info?["system-entities"] as? [[String: Any]])?.compactMap({ $0["mount-point"] as? String }).first else { throw UpdateError.integrity }
-        let mount = URL(fileURLWithPath: path); var launched = false
-        defer { if !launched { _ = try? run("/usr/bin/hdiutil", ["detach", mount.path]) } }
-        let app = mount.appendingPathComponent("Fluent IME Setup.app")
-        guard let metadata = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")),
-              metadata["CFBundleIdentifier"] as? String == InstallerLifecycle.identifier,
-              metadata["CFBundleShortVersionString"] as? String == version else { throw UpdateError.integrity }
-        _ = try run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path])
-        try Task.checkCancellation()
-        let process = Process(); process.executableURL = app.appendingPathComponent("Contents/MacOS/FluentSetup")
-        process.arguments = Array(previous.prefix(4)).flatMap { ["--previous-installer", $0] } + (waitForParent ? ["--relaunch-after", String(getpid())] : [])
-        process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
-        try process.run(); launched = true
-    }
 }

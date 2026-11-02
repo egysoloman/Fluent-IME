@@ -402,3 +402,14 @@
 "clipboard.encryption" = "Encrypt pinned items";
 
 "clipboard.encryptionHint" = "Uses a key stored in Keychain when on. When off, files are readable and writable only by your account, including other apps running under it. Changing this converts existing items.";
+
+// Maintenance
+"maintenance.title" = "Fluent IME Maintenance";
+"maintenance.detail" = "Manage the installed input method or run setup again.";
+"maintenance.open" = "Open maintenance";
+"maintenance.install" = "Run this installer";
+"maintenance.opening" = "Opening maintenance…";
+"maintenance.removing" = "Quitting and uninstalling the input method…";
+"maintenance.removed" = "The input method and its local data have been removed.";
+"maintenance.removedKeepingData" = "The input method has been removed. Settings, dictionaries, and pinned items were kept.";
+"maintenance.verifying" = "Verifying the installer…";

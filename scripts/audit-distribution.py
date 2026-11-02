@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate the assembled artifact, not just the source dependency declaration."""
 from pathlib import Path
-import hashlib, json, subprocess, sys
+import hashlib, json, plistlib, subprocess, sys
 app = Path(sys.argv[1]).resolve()
 resources = app / 'Contents/Resources'
 licenses = resources / 'Licenses'
@@ -9,6 +9,19 @@ components = json.loads((licenses / 'components.json').read_text())
 components = [item for item in components if 'present_if' not in item or (resources / item['present_if']).exists()]
 (licenses / 'components.json').write_text(json.dumps(components, indent=2, ensure_ascii=False) + '\n')
 errors = []
+maintenance = app / 'Contents/Library/Fluent IME Maintenance.app'
+maintenance_executable = maintenance / 'Contents/MacOS/FluentMaintenance'
+if not maintenance_executable.is_file():
+    errors.append('Maintenance application is missing')
+else:
+    app_info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
+    helper_info = plistlib.loads((maintenance / 'Contents/Info.plist').read_bytes())
+    if helper_info.get('CFBundleIdentifier') != 'org.fluentime.maintenance':
+        errors.append('Wrong maintenance application identifier')
+    for key in ['CFBundleVersion', 'CFBundleShortVersionString', 'FluentIMEEdition']:
+        if helper_info.get(key) != app_info.get(key): errors.append('Maintenance metadata mismatch: ' + key)
+    for name in ['Models', 'Rime', 'Payload']:
+        if (maintenance / 'Contents/Resources' / name).exists(): errors.append('Maintenance must not duplicate ' + name)
 fonts = []
 for component in components:
     for notice in component['notices']:
@@ -22,7 +35,7 @@ for path in app.rglob('*'):
         errors.append('Private user/system data in artifact: ' + str(path.relative_to(app)))
 libraries = []
 known = [prefix for component in components for prefix in component.get('libraries', [])]
-for binary in [app / 'Contents/MacOS/FluentIME', *(app / 'Contents/Frameworks').rglob('*.dylib')]:
+for binary in [app / 'Contents/MacOS/FluentIME', *([maintenance_executable] if maintenance_executable.is_file() else []), *app.rglob('*.dylib')]:
     if binary.suffix == '.dylib' and not any(binary.name.startswith(prefix) for prefix in known):
         errors.append('Unreviewed library: ' + binary.name)
     linked = subprocess.check_output(['otool','-L',str(binary)], text=True)
@@ -60,4 +73,4 @@ report = {'scope': 'Artifact inventory and notice completeness; not a legal opin
           'release_status': 'Local ad-hoc build; Developer ID signing and notarization still required for public distribution.'}
 (licenses / 'distribution-audit.json').write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n')
 if errors: raise SystemExit('\n'.join(errors))
-print(f'Distribution inventory passed: {len(libraries)-1} dylibs, {len(components)} components, no bundled fonts or user databases.')
+print(f'Distribution inventory passed: {len(libraries)} binaries, {len(components)} components, no bundled fonts or user databases.')

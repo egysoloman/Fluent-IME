@@ -20,6 +20,7 @@ info_path = lite_app / 'Contents/Info.plist'
 info = plistlib.loads(info_path.read_bytes())
 info['FluentIMEEdition'] = 'lite'
 info_path.write_bytes(plistlib.dumps(info))
+run(sys.executable, root / 'scripts/package-maintenance.py', lite_app)
 # Word data, Octagram plugin and the Wanxiang grammar model remain identical.
 grammar = 'Contents/Resources/Rime/wanxiang-lts-zh-hans.gram'
 assert hashlib.file_digest((source / grammar).open('rb'), 'sha256').digest() == hashlib.file_digest((lite_app / grammar).open('rb'), 'sha256').digest()

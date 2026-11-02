@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-public enum ReleaseEdition: String, Decodable {
+public enum ReleaseEdition: String, Codable {
     case lite, full
     public static var current: Self {
         if let value = Bundle.main.object(forInfoDictionaryKey: "FluentIMEEdition") as? String, let edition = Self(rawValue: value) { return edition }
@@ -246,6 +246,8 @@ public final class GitHubUpdateService {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let target = directory.appendingPathComponent(asset.name)
         try FileManager.default.moveItem(at: temporary, to: target)
+        do { try VerifiedUpdateReceipt(version: release.version, edition: edition, size: asset.size, sha256: info.installer.dmg_sha256).save(beside: target) }
+        catch { try? FileManager.default.removeItem(at: target); throw error }
         return target
     }
     public static func verify(file: URL, expectedSize: Int64, sha256: String) throws {

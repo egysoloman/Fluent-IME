@@ -171,6 +171,7 @@ shutil.copytree(deployment / "build", RESOURCES / "Rime/build")
 runtime_default.write_text(base_only)
 # Its source checksum changed; let Rime regenerate this small menu config.
 (RESOURCES / "Rime/build/default.yaml").unlink()
+run("python3", ROOT / "scripts/package-maintenance.py", APP)
 run("python3", ROOT / "scripts/audit-distribution.py", APP)
 run("python3", ROOT / "scripts/localize.py", "--check", "--bundle", APP)
 run("codesign", "--force", "--sign", "-", APP)

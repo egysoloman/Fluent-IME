@@ -402,3 +402,14 @@
 "clipboard.encryption" = "加密固定项目";
 
 "clipboard.encryptionHint" = "开启后使用钥匙串中的密钥加密。关闭后以普通文件保存，仅当前账户可读写；同一账户下的其他程序仍可能访问。切换时会转换已有项目。";
+
+// Maintenance
+"maintenance.title" = "Fluent IME 维护";
+"maintenance.detail" = "管理已安装的输入法，或重新运行安装引导。";
+"maintenance.open" = "打开维护程序";
+"maintenance.install" = "运行此安装包";
+"maintenance.opening" = "正在打开维护程序…";
+"maintenance.removing" = "正在退出并卸载输入法…";
+"maintenance.removed" = "输入法及本地数据已移除。";
+"maintenance.removedKeepingData" = "输入法已移除。设置、词库和固定项目已保留。";
+"maintenance.verifying" = "正在校验安装包…";

@@ -402,3 +402,14 @@
 "clipboard.encryption" = "加密釘選項目";
 
 "clipboard.encryptionHint" = "開啟後使用鑰匙圈中的金鑰加密。關閉後以一般檔案保存，僅目前帳戶可讀寫；同一帳戶下的其他程式仍可能存取。切換時會轉換既有項目。";
+
+// Maintenance
+"maintenance.title" = "Fluent IME 維護";
+"maintenance.detail" = "管理已安裝的輸入法，或重新執行安裝引導。";
+"maintenance.open" = "開啟維護程式";
+"maintenance.install" = "執行此安裝套件";
+"maintenance.opening" = "正在開啟維護程式…";
+"maintenance.removing" = "正在結束並解除安裝輸入法…";
+"maintenance.removed" = "輸入法及本機資料已移除。";
+"maintenance.removedKeepingData" = "輸入法已移除。設定、詞庫和釘選項目已保留。";
+"maintenance.verifying" = "正在驗證安裝套件…";

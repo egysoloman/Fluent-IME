@@ -3,11 +3,12 @@ import InputMethodKit
 import Carbon
 import Security
 import CryptoKit
+import CRimeBridge
 import FluentIMECore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let preview: Bool
-    var cleanupError: Error?
+    var cleanupInstallers: [URL] = []
     init(preview: Bool) {
         self.preview = preview
         super.init()
@@ -16,9 +17,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showSettingsNotification() { Runtime.shared.showSettings() }
     func applicationDidFinishLaunching(_ notification: Notification) {
         if preview { Runtime.shared.showSettings() }
-        if let cleanupError { Runtime.shared.showInstallationCleanupError(cleanupError) }
+        if !cleanupInstallers.isEmpty {
+            Task { @MainActor in
+                do { try await MaintenanceClient.launch(.finishSetup(installers: cleanupInstallers)) }
+                catch { Runtime.shared.showInstallationCleanupError(error) }
+            }
+        }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // Do not terminate in the middle of persisting a pinned clipboard item.
+        // Maintenance times out without deleting data if storage is still busy.
+        Runtime.hasStarted && ClipboardHistory.shared.isStorageBusy ? .terminateCancel : .terminateNow
+    }
+    func applicationWillTerminate(_ notification: Notification) {
+        if Runtime.hasStarted { ClipboardHistory.shared.setRecording(false) }
+        UserDefaults.standard.synchronize()
+        FIMFinalize()
+    }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         Runtime.shared.showSettings(); return true
     }
@@ -86,21 +102,31 @@ if let index = arguments.firstIndex(of: "--relaunch-after"), arguments.count > i
 }
 let rendering = arguments.contains(where: { $0.hasPrefix("--render-") })
 let installation = InputMethodInstallation.shared
-if !rendering, InstallerLifecycle.isInstaller {
+if !rendering, InstallerLifecycle.isMaintenance {
     InstallerLifecycle.preparePreferences()
     let app = NSApplication.shared; app.setActivationPolicy(.regular)
-    let setup = SetupWindowController(); setup.showWindow(nil); app.activate(ignoringOtherApps: true)
-    app.run(); exit(0)
-}
-var installerCleanupError: Error?
-if installation.isRunningInstalled, let index = arguments.firstIndex(of: "--finish-setup"), arguments.count > index + 1 {
-    do {
-        for path in Set([arguments[index + 1]] + InstallerLifecycle.previousInstallers) {
-            let url = URL(fileURLWithPath: path)
-            if FileManager.default.fileExists(atPath: url.path) { try InstallerLifecycle.finishCleanup(installer: url) }
+    let delegate = MaintenanceAppDelegate(); app.delegate = delegate
+    if let index = arguments.firstIndex(of: "--maintenance-request"), arguments.count == index + 2 {
+        let controller = MaintenanceWindowController(showSetup: { delegate.showSetup() }); delegate.controller = controller
+        do {
+            let request = try MaintenanceRequestStore(support: installation.files.support).consume(URL(fileURLWithPath: arguments[index + 1]))
+            if case .finishSetup = request { app.setActivationPolicy(.accessory) }
+            else if request == .show, !installation.isPresent, installation.hasInstallerPayload { delegate.showSetup() }
+            else { controller.showWindow(nil) }
+            if request != .show || installation.isPresent || !installation.hasInstallerPayload { controller.handle(request) }
         }
-    }
-    catch { installerCleanupError = NSError(domain: "FluentIME.Setup", code: 3, userInfo: [NSLocalizedDescriptionKey: L10n.installCleanupWarning]) }
+        catch { controller.showFailure(error) }
+    } else if arguments.contains("--apply-update") || installation.isPresent || !InstallerLifecycle.isInstaller {
+        let controller = MaintenanceWindowController(showSetup: { delegate.showSetup() }); delegate.controller = controller
+        controller.showWindow(nil)
+        if arguments.contains("--apply-update") { controller.applyBundledUpdate() }
+    } else { delegate.showSetup() }
+    if app.activationPolicy() != .accessory { app.activate(ignoringOtherApps: true) }
+    withExtendedLifetime(delegate) { app.run() }; exit(0)
+}
+var cleanupInstallers: [URL] = []
+if installation.isRunningInstalled, let index = arguments.firstIndex(of: "--finish-setup"), arguments.count > index + 1 {
+    cleanupInstallers = Set([arguments[index + 1]] + InstallerLifecycle.previousInstallers).map { URL(fileURLWithPath: $0) }
 }
 if !rendering, !installation.isRunningInstalled, Bundle.main.bundleURL.pathExtension == "app" {
     let bundledVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
@@ -109,7 +135,10 @@ if !rendering, !installation.isRunningInstalled, Bundle.main.bundleURL.pathExten
         do { try installation.launchInstalled(); exit(0) } catch { fputs("\(error.localizedDescription)\n", stderr); exit(1) }
     }
     let app = NSApplication.shared; app.setActivationPolicy(.regular)
-    let setup = SetupWindowController(); setup.showWindow(nil); app.activate(ignoringOtherApps: true)
+    Task { @MainActor in
+        do { try await MaintenanceClient.launch(.show); NSApp.terminate(nil) }
+        catch { Runtime.shared.showError(error); NSApp.terminate(nil) }
+    }
     app.run(); exit(0)
 }
 if arguments.contains("--preview"),
@@ -122,7 +151,7 @@ let app = NSApplication.shared
 let preview = arguments.contains("--preview") || arguments.contains("--render-preview") || arguments.contains("--render-components")
 app.setActivationPolicy(preview ? .regular : .accessory)
 let delegate = AppDelegate(preview: preview)
-delegate.cleanupError = installerCleanupError
+delegate.cleanupInstallers = cleanupInstallers
 app.delegate = delegate
 let menu = NSMenu()
 let item = NSMenuItem(); menu.addItem(item)

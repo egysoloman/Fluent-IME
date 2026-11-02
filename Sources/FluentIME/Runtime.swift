@@ -3,11 +3,13 @@ import FluentIMECore
 
 final class Runtime {
     static let shared = Runtime()
+    private(set) static var hasStarted = false
     lazy var engine: Result<RimeEngine, Error> = makeEngine()
     private var setup: SetupWindowController?
     private var settings: SettingsWindowController?
 
     init() {
+        Self.hasStarted = true
         if !CommandLine.arguments.contains(where: { $0.hasPrefix("--render-") }) {
             ClipboardHistory.shared.setRetention(TimeInterval(Preferences.shared.clipboardRetention))
             ClipboardHistory.shared.setRecording(Preferences.shared.clipboardRecording)

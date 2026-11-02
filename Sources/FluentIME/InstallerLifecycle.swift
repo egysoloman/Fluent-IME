@@ -4,14 +4,29 @@ import FluentIMECore
 enum InstallerLifecycle {
     static let identifier = "org.fluentime.installer"
     static var isInstaller: Bool { Bundle.main.bundleIdentifier == identifier }
+    static var isMaintenance: Bool { isInstaller || Bundle.main.bundleIdentifier == "org.fluentime.maintenance" }
     static var previousInstallers: [String] {
         let args = CommandLine.arguments
         return Array(args.indices.compactMap { i in args[i] == "--previous-installer" && i + 1 < args.count ? args[i + 1] : nil }.prefix(4))
     }
-    static var payload: URL { Bundle.main.resourceURL!.appendingPathComponent("Payload/Fluent IME.app") }
+    static var payload: URL {
+        if isInstaller { return Bundle.main.resourceURL!.appendingPathComponent("Payload/Fluent IME.app") }
+        let enclosingApp = Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        if (NSDictionary(contentsOf: enclosingApp.appendingPathComponent("Contents/Info.plist")))?["CFBundleIdentifier"] as? String == "org.fluentime.inputmethod.FluentIME" { return enclosingApp }
+        return InstallationFiles().application
+    }
     static func preparePreferences() {
         // Wizard controls are drafts. Read existing preferences without writing them.
         UserDefaults.standard.addSuite(named: "org.fluentime.inputmethod.FluentIME")
+    }
+    static func removeTemporaryMaintenanceCopy() {
+        guard Bundle.main.bundleIdentifier == "org.fluentime.maintenance" else { return }
+        let parent = Bundle.main.bundleURL.deletingLastPathComponent().resolvingSymlinksInPath()
+        let prefix = "FluentIME-Maintenance-"
+        guard parent.deletingLastPathComponent() == FileManager.default.temporaryDirectory.resolvingSymlinksInPath(),
+              parent.lastPathComponent.hasPrefix(prefix),
+              UUID(uuidString: String(parent.lastPathComponent.dropFirst(prefix.count))) != nil else { return }
+        try? FileManager.default.removeItem(at: parent)
     }
     static func commitPreferences() {
         let shared = UserDefaults(suiteName: "org.fluentime.inputmethod.FluentIME")!
@@ -19,7 +34,7 @@ enum InstallerLifecycle {
             if let value = UserDefaults.standard.object(forKey: key) { shared.set(value, forKey: key) }
         }
         shared.synchronize()
-        UserDefaults.standard.removePersistentDomain(forName: identifier)
+        UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier ?? identifier)
     }
     static func finishCleanup(installer: URL) throws {
         let readOnly = try installer.resourceValues(forKeys: [.volumeIsReadOnlyKey]).volumeIsReadOnly ?? true

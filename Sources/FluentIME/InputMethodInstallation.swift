@@ -11,13 +11,22 @@ protocol SetupInstallation: AnyObject {
     func enable() throws
     func complete(resetDictionary: Bool, applyPreferences: @escaping () -> Void, completion: @escaping (Result<Void, Error>) -> Void)
 }
-final class InputMethodInstallation: SetupInstallation {
+protocol MaintenanceInstallation: AnyObject {
+    var isPresent: Bool { get }
+    var installedVersion: String? { get }
+    var hasInstallerPayload: Bool { get }
+    func remove(keepData: Bool, completion: @escaping (Result<Void, Error>) -> Void)
+}
+final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation {
     static let shared = InputMethodInstallation()
     let files = InstallationFiles()
+    var isPresent: Bool { files.isInstalled }
+    var installedVersion: String? { (NSDictionary(contentsOf: files.application.appendingPathComponent("Contents/Info.plist")))?["CFBundleShortVersionString"] as? String }
+    var hasInstallerPayload: Bool { InstallerLifecycle.isMaintenance && FileManager.default.fileExists(atPath: InstallerLifecycle.payload.appendingPathComponent("Contents/MacOS/FluentIME").path) }
     private(set) var needsQuitAfterFailure = false
     var isInstalled: Bool {
         guard files.isInstalled else { return false }
-        guard InstallerLifecycle.isInstaller else { return true }
+        guard InstallerLifecycle.isMaintenance, hasInstallerPayload else { return true }
         let targetInfo = NSDictionary(contentsOf: files.application.appendingPathComponent("Contents/Info.plist"))
         let payloadInfo = NSDictionary(contentsOf: InstallerLifecycle.payload.appendingPathComponent("Contents/Info.plist"))
         guard (targetInfo?["FluentIMEEdition"] as? String ?? "full") == (payloadInfo?["FluentIMEEdition"] as? String ?? "full") else { return false }
@@ -38,7 +47,8 @@ final class InputMethodInstallation: SetupInstallation {
     }
     static func check(_ status: OSStatus) throws { if status != noErr { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) } }
     func install(completion: @escaping (Result<Void, Error>) -> Void) {
-        let source = InstallerLifecycle.isInstaller ? InstallerLifecycle.payload : Bundle.main.bundleURL
+        guard InstallerLifecycle.isMaintenance else { completion(.failure(CocoaError(.fileWriteNoPermission))); return }
+        let source = InstallerLifecycle.payload
         do { try selectFallbackIfNeeded() } catch { completion(.failure(error)); return }
         let other = NSRunningApplication.runningApplications(withBundleIdentifier: "org.fluentime.inputmethod.FluentIME").filter {
             $0.processIdentifier != getpid() && $0.bundleURL?.standardizedFileURL == files.application.standardizedFileURL
@@ -75,7 +85,7 @@ final class InputMethodInstallation: SetupInstallation {
                 try files.backupDictionary()
             }
             applyPreferences()
-            if InstallerLifecycle.isInstaller { InstallerLifecycle.commitPreferences() }
+            if InstallerLifecycle.isMaintenance { InstallerLifecycle.commitPreferences() }
             if resetDictionary || !isRunningInstalled { try relaunchAndQuit() }
             else { completion(.success(())) }
         } catch { completion(.failure(error)) }
@@ -107,15 +117,31 @@ final class InputMethodInstallation: SetupInstallation {
             try Self.check(TISEnableInputSource(source)); try Self.check(TISSelectInputSource(source))
         }
     }
-    func uninstall(keepData: Bool) throws {
-        let sources = Self.sources()
-        try selectFallbackIfNeeded()
-        for source in sources { try Self.check(TISDisableInputSource(source)) }
-        ClipboardHistory.shared.setRecording(false)
-        FIMFinalize(); needsQuitAfterFailure = true
-        if !keepData { try ClipboardHistory.shared.clear(); try ClipboardVault.deleteKeychainKey() }
-        try files.uninstall(keepData: keepData) { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
-        if !keepData { UserDefaults.standard.removePersistentDomain(forName: "org.fluentime.inputmethod.FluentIME"); UserDefaults.standard.synchronize() }
-        NSApp.terminate(nil)
+    func remove(keepData: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
+        guard InstallerLifecycle.isMaintenance else { completion(.failure(CocoaError(.fileWriteNoPermission))); return }
+        do {
+            try selectFallbackIfNeeded()
+            for source in Self.sources() { try Self.check(TISDisableInputSource(source)) }
+        } catch { completion(.failure(error)); return }
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: "org.fluentime.inputmethod.FluentIME").filter {
+            $0.bundleURL?.standardizedFileURL == files.application.standardizedFileURL
+        }
+        others.forEach { $0.terminate() }
+        DispatchQueue.global(qos: .userInitiated).async { [files] in
+            let result = Result<Void, Error> {
+                let deadline = Date(timeIntervalSinceNow: 8)
+                while others.contains(where: { kill($0.processIdentifier, 0) == 0 }), Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+                guard !others.contains(where: { kill($0.processIdentifier, 0) == 0 }) else { throw CocoaError(.fileWriteFileExists) }
+                try files.uninstall(keepData: keepData) { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
+                if !keepData {
+                    UserDefaults.standard.removePersistentDomain(forName: "org.fluentime.inputmethod.FluentIME")
+                    UserDefaults.standard.synchronize()
+                    // Delete last: a failed application removal must never leave
+                    // retained encrypted records without their key.
+                    try ClipboardVault.deleteKeychainKey()
+                }
+            }
+            DispatchQueue.main.async { completion(result) }
+        }
     }
 }

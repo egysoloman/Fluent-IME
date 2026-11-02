@@ -45,9 +45,15 @@ enum MaintenanceDialogs {
         let host = dialog._makeView(in: FluentRenderContext(theme: Preferences.shared.theme, locale: L10n.locale))
         mounted = host; host.frame = root.bounds; host.autoresizingMask = [.width, .height]; root.addSubview(host)
     }
-    static func uninstall(in root: NSView) {
+    static func uninstall(in root: NSView, accepted: ((Bool) -> Void)? = nil) {
         present(in: root, title: L10n.uninstallTitle, message: L10n.uninstallDetail + "\n\n" + L10n.uninstallRemoveHint,
-                primary: L10n.uninstallAction, checkbox: L10n.uninstallKeepData, emphasizePrimary: true, destructive: true) { keep in try InputMethodInstallation.shared.uninstall(keepData: keep) }
+                primary: L10n.uninstallAction, checkbox: L10n.uninstallKeepData, emphasizePrimary: true, destructive: true) { keep in
+            Task { @MainActor in
+                if let accepted { accepted(keep); return }
+                do { try await MaintenanceClient.launch(.uninstall(keepData: keep)) }
+                catch { showError(error, in: root) }
+            }
+        }
     }
     static func dictionary(in root: NSView) {
         present(in: root, title: L10n.dictionaryManage, message: L10n.dictionaryManageHint + "\n\n" + L10n.installResetHint,

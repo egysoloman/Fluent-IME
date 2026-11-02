@@ -85,6 +85,10 @@ final class UpdateTests: XCTestCase {
         let reports = Reports()
         let file = try await service.download(release, to: directory) { reports.append($0) }
         XCTAssertEqual(try Data(contentsOf: file), data)
+        let receipt = try JSONDecoder().decode(VerifiedUpdateReceipt.self, from: Data(contentsOf: directory.appendingPathComponent(VerifiedUpdateReceipt.filename)))
+        XCTAssertEqual(receipt.version, release.version)
+        XCTAssertEqual(receipt.size, Int64(data.count))
+        XCTAssertNoThrow(try GitHubUpdateService.verify(file: file, expectedSize: receipt.size, sha256: receipt.sha256))
         let values = reports.snapshot()
         XCTAssertEqual(values.first, .downloading(received: 0, total: Int64(data.count)))
         XCTAssertEqual(values.last, .verifying)
