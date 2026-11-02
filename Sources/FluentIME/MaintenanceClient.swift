@@ -47,6 +47,8 @@ import FluentIMECore
             if let staging = prepared.1 { try? FileManager.default.removeItem(at: staging) }
             throw error
         }
+        // Settings hands uninstall, update and maintenance over; only background cleanup keeps it open.
+        if case .finishSetup = request {} else if Runtime.hasStarted { Runtime.shared.closeSettings() }
     }
 
     nonisolated static func verify(_ app: URL) throws {

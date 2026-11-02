@@ -49,6 +49,8 @@ final class Runtime {
         } catch { showError(error) }
     }
 
+    func closeSettings() { settings?.close() }
+
     func showError(_ error: Error) {
         let alert = NSAlert()
         alert.messageText = L10n.errorStartup

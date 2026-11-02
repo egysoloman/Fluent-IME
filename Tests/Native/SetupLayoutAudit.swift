@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import FluentKit
 import FluentIMECore
 
@@ -6,6 +7,9 @@ import FluentIMECore
     @MainActor static func main() throws {
         _ = NSApplication.shared; NSApp.setActivationPolicy(.accessory); NSApp.finishLaunching()
         let output = URL(fileURLWithPath: CommandLine.arguments[1]); try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        // A Mac without the input method registered gets NULL from TIS; setup must not crash on it.
+        precondition(InputMethodInstallation.inputSources([kTISPropertyBundleID as String: "org.fluentime.audit.unregistered"]).isEmpty)
+        _ = InputMethodInstallation.shared.isEnabled
         final class Installation: SetupInstallation {
             var isInstalled = false, isEnabled = false, hasLocalDictionary = true
             func install(completion: @escaping (Result<Void, Error>) -> Void) { isInstalled = true; completion(.success(())) }

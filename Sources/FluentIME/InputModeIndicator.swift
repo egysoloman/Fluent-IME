@@ -235,8 +235,7 @@ final class SystemInputModeIndicator {
             self.input?.selectMode(mode)
             if !self.sourceID.hasPrefix("org.fluentime."), mode.isChinese {
                 self.requestedMode = mode
-                let filter = [kTISPropertyInputSourceID as String: "org.fluentime.inputmethod.FluentIME.Hans"] as CFDictionary
-                let sources = TISCreateInputSourceList(filter, false).takeRetainedValue() as! [TISInputSource]
+                let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: "org.fluentime.inputmethod.FluentIME.Hans"], includeAllInstalled: false)
                 if let source = sources.first {
                     if TISSelectInputSource(source) != noErr { self.requestedMode = nil }
                 } else { self.requestedMode = nil }

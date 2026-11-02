@@ -43,8 +43,12 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
     var hasLocalDictionary: Bool { files.hasLocalDictionary }
     var isRunningInstalled: Bool { Bundle.main.bundleURL.resolvingSymlinksInPath() == files.application.resolvingSymlinksInPath() }
     static func sources() -> [TISInputSource] {
-        let filter = [kTISPropertyBundleID as String: "org.fluentime.inputmethod.FluentIME"] as CFDictionary
-        return TISCreateInputSourceList(filter, true).takeRetainedValue() as! [TISInputSource]
+        inputSources([kTISPropertyBundleID as String: "org.fluentime.inputmethod.FluentIME"])
+    }
+    /// TISCreateInputSourceList returns NULL rather than an empty list when nothing
+    /// matches, as on a Mac where the input method has never been registered.
+    static func inputSources(_ properties: [String: String], includeAllInstalled: Bool = true) -> [TISInputSource] {
+        (TISCreateInputSourceList(properties as CFDictionary, includeAllInstalled)?.takeRetainedValue() as? [TISInputSource]) ?? []
     }
     private static func bool(_ source: TISInputSource, _ property: CFString) -> Bool {
         guard let p = TISGetInputSourceProperty(source, property) else { return false }
@@ -126,8 +130,7 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
     }
     private func selectFallbackIfNeeded() throws {
         if Self.sources().contains(where: { Self.bool($0, kTISPropertyInputSourceIsSelected) }) {
-            let filter = [kTISPropertyInputSourceID as String: "com.apple.keylayout.ABC"] as CFDictionary
-            let fallback = TISCreateInputSourceList(filter, true).takeRetainedValue() as! [TISInputSource]
+            let fallback = Self.inputSources([kTISPropertyInputSourceID as String: "com.apple.keylayout.ABC"])
             guard let source = fallback.first else { throw CocoaError(.featureUnsupported) }
             try Self.check(TISEnableInputSource(source)); try Self.check(TISSelectInputSource(source))
         }

@@ -61,8 +61,7 @@ if arguments.contains("--audit-clipboard-keychain") {
 if arguments.contains("--diagnose") {
     let controllerExists = NSClassFromString("FluentInputController") != nil
     print("Controller registered: \(controllerExists)")
-    let filter = [kTISPropertyBundleID as String: "org.fluentime.inputmethod.FluentIME"] as CFDictionary
-    let sources = TISCreateInputSourceList(filter, true).takeRetainedValue() as! [TISInputSource]
+    let sources = InputMethodInstallation.inputSources([kTISPropertyBundleID as String: "org.fluentime.inputmethod.FluentIME"])
     for source in sources {
         func property(_ key: CFString) -> String {
             guard let pointer = TISGetInputSourceProperty(source, key) else { return "nil" }
@@ -87,8 +86,7 @@ if arguments.count >= 4, arguments[1] == "--deploy" {
 if arguments.contains("--register") {
     let status = TISRegisterInputSource(Bundle.main.bundleURL as CFURL)
     print("TISRegisterInputSource: \(status)")
-    let filter = [kTISPropertyInputSourceID as String: "org.fluentime.inputmethod.FluentIME.Hans"] as CFDictionary
-    let sources = TISCreateInputSourceList(filter, true).takeRetainedValue() as! [TISInputSource]
+    let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: "org.fluentime.inputmethod.FluentIME.Hans"])
     for source in sources { print("TISEnableInputSource: \(TISEnableInputSource(source))") }
     if sources.isEmpty { print(L10n.registrationReloginHint) }
     exit(status == noErr ? 0 : 1)
