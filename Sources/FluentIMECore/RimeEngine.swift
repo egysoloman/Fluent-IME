@@ -10,6 +10,8 @@ public struct Candidate: Equatable {
 public struct Composition: Equatable {
     public var preedit = ""
     public var rawInput = ""
+    /// Rime's converted text for the whole composition (selected and pending segments).
+    public var commitPreview = ""
     public var cursorUTF16 = 0
     public var candidates: [Candidate] = []
     public var highlighted = 0
@@ -98,6 +100,7 @@ public final class RimeSession {
         var result = Composition()
         result.preedit = String(cString: context.preedit)
         result.rawInput = String(cString: context.input)
+        result.commitPreview = String(cString: context.commit_preview)
         // librime offsets are UTF-8 bytes; InputMethodKit expects UTF-16 units.
         result.cursorUTF16 = Self.utf16Offset(in: result.preedit, utf8Offset: Int(context.cursor_utf8))
         result.page = Int(context.page)

@@ -24,6 +24,32 @@
 	<dict>
 		<key>tsInputModeListKey</key>
 		<dict>
+			<key>org.fluentime.inputmethod.FluentIME.Bopomofo</key>
+			<dict>
+				<key>TISInputSourceID</key>
+				<string>org.fluentime.inputmethod.FluentIME.Bopomofo</string>
+				<key>TISIntendedLanguage</key>
+				<string>zh-Hant</string>
+				<key>tsInputModeAlternateMenuIconFileKey</key>
+				<string>InputMenuIconBopomofo.pdf</string>
+				<key>tsInputModeCharacterRepertoireKey</key>
+				<array>
+					<string>Hant</string>
+					<string>Bopo</string>
+				</array>
+				<key>tsInputModeDefaultStateKey</key>
+				<false/>
+				<key>tsInputModeIsVisibleKey</key>
+				<true/>
+				<key>tsInputModeMenuIconFileKey</key>
+				<string>InputMenuIconBopomofo.pdf</string>
+				<key>tsInputModePaletteIconFileKey</key>
+				<string>InputMenuIconBopomofo.pdf</string>
+				<key>tsInputModePrimaryInScriptKey</key>
+				<false/>
+				<key>tsInputModeScriptKey</key>
+				<string>smUnicodeScript</string>
+			</dict>
 			<key>org.fluentime.inputmethod.FluentIME.Hans</key>
 			<dict>
 				<key>TISInputSourceID</key>
@@ -53,6 +79,7 @@
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
 			<string>org.fluentime.inputmethod.FluentIME.Hans</string>
+			<string>org.fluentime.inputmethod.FluentIME.Bopomofo</string>
 		</array>
 	</dict>
 	<key>FluentIMEEdition</key>

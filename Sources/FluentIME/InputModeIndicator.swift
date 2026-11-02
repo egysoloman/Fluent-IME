@@ -229,13 +229,16 @@ final class SystemInputModeIndicator {
             guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(), let pointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsASCIICapable),
                   CFBooleanGetValue(Unmanaged<CFBoolean>.fromOpaque(pointer).takeUnretainedValue()) else { panel.dismiss(); return }
         }
+        // Choosing Chinese from another source returns to the last Fluent keyboard.
+        let keyboard = input?.keyboard ?? .pinyin
         panel.present(mode: isFluent ? (requestedMode ?? input?.mode ?? lastMode) : .english, modes: Preferences.shared.enabledInputModes, near: caret) { [weak self] mode in
             guard let self, self.ownerPID == NSWorkspace.shared.frontmostApplication?.processIdentifier else { return }
             self.lastMode = mode
             self.input?.selectMode(mode)
             if !self.sourceID.hasPrefix("org.fluentime."), mode.isChinese {
                 self.requestedMode = mode
-                let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: "org.fluentime.inputmethod.FluentIME.Hans"], includeAllInstalled: false)
+                let target = keyboard == .zhuyin ? InputKeyboard.zhuyinSourceID : "org.fluentime.inputmethod.FluentIME.Hans"
+                let sources = InputMethodInstallation.inputSources([kTISPropertyInputSourceID as String: target], includeAllInstalled: false)
                 if let source = sources.first {
                     if TISSelectInputSource(source) != noErr { self.requestedMode = nil }
                 } else { self.requestedMode = nil }

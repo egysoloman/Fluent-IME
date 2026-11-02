@@ -339,7 +339,8 @@ final class CandidatePanel: NSPanel {
         resizeTimer = timer; RunLoop.main.add(timer, forMode: .common)
     }
     func present(_ composition: Composition, caret: NSRect) {
-        guard composition.isComposing else { orderOut(nil); return }
+        // Zhuyin composes inline and shows candidates only once the list is opened.
+        guard composition.isComposing, !composition.candidates.isEmpty else { orderOut(nil); return }
         let screen = NSScreen.screens.first { $0.frame.intersects(caret) } ?? NSScreen.main ?? NSScreen.screens.first
         guard let screen else { return }
         let reveal = !isVisible && shouldAnimateReveal

@@ -4097,6 +4097,9 @@ schema_list:
   - schema: fluent_pinyin_a1_c1_l0_f255_g1
   - schema: fluent_pinyin_a1_c1_l1_f255
   - schema: fluent_pinyin_a1_c1_l1_f255_g1
+  - schema: fluent_bopomofo
+  - schema: fluent_bopomofo_l0
+  - schema: fluent_bopomofo_l1
 menu:
   page_size: 7
 switcher:

@@ -323,6 +323,28 @@ import FluentIMECore
             preview.close()
             print("Try-input expansion/collapse animation shares geometry with its shadow")
         }
+        // Zhuyin composes inline: the popup stays hidden until ↓ (or Space) opens the list.
+        do {
+            let shared = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("dist/Fluent IME.app/Contents/Resources/Rime")
+            let engine = try RimeEngine(sharedDirectory: shared, userDirectory: output.appendingPathComponent("zhuyin-user"))
+            let options = InputOptions(learning: false, defaultMode: .traditionalChinese)
+            let zhuyin = try InputSession(engine: engine, keyboard: .zhuyin, options: { options })
+            func key(_ characters: String, _ code: UInt16 = 0) -> NSEvent {
+                NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                                 characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
+            }
+            for character in "su3cl3" { _ = zhuyin.handle(key(String(character))) }
+            var typed = zhuyin.composition
+            precondition(typed.preedit == "你好" && typed.candidates.isEmpty, "Zhuyin converts inline with the list hidden")
+            panel.present(typed, caret: caret)
+            precondition(!panel.isVisible, "The popup stays hidden while Zhuyin is typed")
+            _ = zhuyin.handle(key("", 125)); typed = zhuyin.composition
+            precondition(typed.candidates.first?.text == "你好", "↓ opens the list")
+            panel.present(typed, caret: caret); settle("zhuyin-list-open")
+            precondition(panel.isVisible)
+            panel.orderOut(nil)
+            print("Zhuyin keeps the popup hidden while typing and shows it once the list opens")
+        }
         try JSONSerialization.data(withJSONObject: rows, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("geometry.json"))
         let failures = rows.filter { row in
             guard row["visible"] as? Bool == true else { return (row["visibleShadows"] as? Int ?? 0) != 0 }

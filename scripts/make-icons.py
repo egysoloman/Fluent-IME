@@ -35,6 +35,8 @@ shutil.rmtree(iconset)
 menu = root/'Resources/Icons/InputMenuIcon.svg'
 cairosvg.svg2pdf(url=str(menu), write_to=str(dest/'InputMenuIcon.pdf'))
 cairosvg.svg2png(url=str(menu), output_width=36, output_height=36, write_to=str(dest/'InputMenuIcon-36.png'))
-print('Built AppIcon.icns + InputMenuIcon.pdf from SVG')
+zhuyin = root/'Resources/Icons/InputMenuIconBopomofo.svg'
+cairosvg.svg2pdf(url=str(zhuyin), write_to=str(dest/'InputMenuIconBopomofo.pdf'))
+print('Built AppIcon.icns + InputMenuIcon.pdf + InputMenuIconBopomofo.pdf from SVG')
 
-(dest / 'sources.json').write_text(json.dumps({name: hashlib.sha256((root / 'Resources/Icons' / name).read_bytes()).hexdigest() for name in ['AppIcon.svg', 'InputMenuIcon.svg']}, indent=2) + '\n')
+(dest / 'sources.json').write_text(json.dumps({name: hashlib.sha256((root / 'Resources/Icons' / name).read_bytes()).hexdigest() for name in ['AppIcon.svg', 'InputMenuIcon.svg', 'InputMenuIconBopomofo.svg']}, indent=2) + '\n')

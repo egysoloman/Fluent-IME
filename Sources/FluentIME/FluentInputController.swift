@@ -24,9 +24,10 @@ final class FluentInputController: IMKInputController {
         invalidateAnchor()
         activeClient = sender as? IMKTextInput
         if input == nil {
-            do { input = try InputSession(engine: Runtime.shared.engine.get(), options: { Preferences.shared.inputOptions }, ranker: NeuralRuntime.shared.ranker, languageOptions: { Preferences.shared.inputOptions(for: $0) }) }
+            do { input = try InputSession(engine: Runtime.shared.engine.get(), keyboard: selectedKeyboard ?? .pinyin, options: { Preferences.shared.inputOptions }, ranker: NeuralRuntime.shared.ranker, languageOptions: { Preferences.shared.inputOptions(for: $0) }) }
             catch { NSLog("Fluent IME: %@", error.localizedDescription); return }
         }
+        if let keyboard = selectedKeyboard { input?.setKeyboard(keyboard) }
         input?.resetContext()
         if let input { modeIndicatorRequest.activate(mode: input.mode) }
         input?.onCommit = { [weak self] text in
@@ -77,6 +78,18 @@ final class FluentInputController: IMKInputController {
         return input?.handle(event) ?? false
     }
 
+    /// The keyboard of the selected Fluent input source, or nil when another source is selected.
+    private var selectedKeyboard: InputKeyboard? {
+        guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
+              let idPointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceID) else { return nil }
+        let id = Unmanaged<CFString>.fromOpaque(idPointer).takeUnretainedValue() as String
+        return id.hasPrefix("org.fluentime.inputmethod.") ? InputKeyboard(sourceID: id) : nil
+    }
+    // InputMethodKit reports a switch between this bundle's input modes here.
+    override func setValue(_ value: Any!, forTag tag: Int, client sender: Any!) {
+        super.setValue(value, forTag: tag, client: sender)
+        if tag == kTextServiceInputModePropertyTag, let id = value as? String { input?.setKeyboard(InputKeyboard(sourceID: id)) }
+    }
     private var latinSourceIsSelected: Bool {
         guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
               let idPointer = TISGetInputSourceProperty(source, kTISPropertyInputSourceID),
@@ -182,7 +195,7 @@ final class FluentInputController: IMKInputController {
 
     override func menu() -> NSMenu! {
         let menu = NSMenu(title: L10n.appName)
-        for mode in Preferences.shared.enabledInputModes {
+        for mode in input?.availableModes ?? Preferences.shared.enabledInputModes {
             let item = menu.addItem(withTitle: mode.title, action: #selector(selectMode(_:)), keyEquivalent: "")
             item.target = self; item.representedObject = mode.rawValue; item.state = input?.mode == mode ? .on : .off
         }
@@ -196,7 +209,7 @@ final class FluentInputController: IMKInputController {
     @objc private func toggleMode(_ sender: Any?) { input?.toggleLanguage() }
     @objc private func selectMode(_ sender: Any?) {
         let command = InputMethodMenuCommand(sender)
-        guard let mode = command.mode, Preferences.shared.enabledInputModes.contains(mode) else { return }
+        guard let mode = command.mode, (input?.availableModes ?? Preferences.shared.enabledInputModes).contains(mode) else { return }
         attachMenuClient(command.client)
         input?.selectMode(mode)
     }

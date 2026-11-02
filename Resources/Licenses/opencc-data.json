@@ -2,11 +2,14 @@
   "source": "https://github.com/BYVoid/OpenCC/tree/ver.1.4.2",
   "version": "1.4.2",
   "license": "Apache-2.0",
-  "changes": "Original conversion dictionary bytes; s2t configuration renamed to fluent_s2t.json, with explicit mmseg segmentation for compatibility with the pinned Rime runtime.",
+  "changes": "Original conversion dictionary bytes; s2t and t2s configurations renamed to fluent_s2t.json and fluent_t2s.json, with explicit mmseg segmentation for compatibility with the pinned Rime runtime. fluent_t2s.json gives simplified output for the traditional Zhuyin dictionary.",
   "files": {
     "STPhrases_GeneratedFromRegionalPhrases.ocd2": "815bbb98c644095fb0bfd76dbf259b9da4350a19d4927b2342e7928fb26b20e2",
     "STCharacters.ocd2": "94639fe1d2bbeb3dcb4f29a297cda70ecfd26425b8a935f4b6bac0746c3987f2",
     "STPhrases.ocd2": "c472f936ab624e8887ed48c2572d0af68b904f0be72d98e237a6b8c1f5de024d",
-    "CJK_Compatibility_Ideographs.ocd2": "4b1faa6649012f524068ec18c0fb520ead343c11cbe0a8e4c8853ca61369d666"
+    "CJK_Compatibility_Ideographs.ocd2": "4b1faa6649012f524068ec18c0fb520ead343c11cbe0a8e4c8853ca61369d666",
+    "TSPhrases.ocd2": "2b722237cc00a4ac985790deb6a68c99f34de10e980a0029ac82c72b0f7ae22b",
+    "TSCharacters.ocd2": "7a994de7900707925fac9c68728a6bb9cf3059870426f661cf31b601efbf5f2f",
+    "TSCharactersExt.ocd2": "e2b0286801dcd1d26119d19ba8b8a35cde021ec173468255d117c4c0951b2906"
   }
 }

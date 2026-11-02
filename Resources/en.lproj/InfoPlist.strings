@@ -1,3 +1,4 @@
 "CFBundleName" = "Fluent Pinyin";
 "CFBundleDisplayName" = "Fluent Pinyin";
 "org.fluentime.inputmethod.FluentIME.Hans" = "Fluent Pinyin";
+"org.fluentime.inputmethod.FluentIME.Bopomofo" = "Fluent Zhuyin";

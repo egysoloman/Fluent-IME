@@ -1,3 +1,4 @@
 "CFBundleName" = "Fluent 拼音";
 "CFBundleDisplayName" = "Fluent 拼音";
 "org.fluentime.inputmethod.FluentIME.Hans" = "Fluent 拼音";
+"org.fluentime.inputmethod.FluentIME.Bopomofo" = "Fluent 注音";

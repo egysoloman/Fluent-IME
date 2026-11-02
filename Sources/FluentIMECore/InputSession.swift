@@ -17,12 +17,18 @@ public struct InputOptions {
     public var keepCandidateSelectionOnPage: Bool
     public var enabledModes: [InputMode]
     public var defaultMode: InputMode?
+    /// Set by the session from the active input source, not by preferences.
+    public var keyboard: InputKeyboard = .pinyin
+    var modes: [InputMode] { InputMode.normalized(enabledModes) }
     var initialMode: InputMode {
         let requested = defaultMode ?? (startsInEnglish ? .english : .simplifiedChinese)
         let modes = InputMode.normalized(enabledModes)
         return modes.contains(requested) ? requested : modes[0]
     }
     var schemaID: String {
+        // Zhuyin has its own toned dictionary: no abbreviation, correction, fuzzy-pinyin
+        // or Simplified-Chinese grammar variants.
+        if keyboard == .zhuyin { return "fluent_bopomofo_l\(learning ? 1 : 0)" }
         let mask = fuzzyPinyinMask & FuzzyPinyinRule.validMask
         return "fluent_pinyin_a\(abbreviation ? 1 : 0)_c\(autoCorrection ? 1 : 0)_l\(learning ? 1 : 0)" + (mask == 0 ? "" : "_f\(mask)") + (wanxiangGrammar ? "_g1" : "")
     }
@@ -45,14 +51,21 @@ public final class InputSession {
     public let rime: RimeSession
     public private(set) var mode: InputMode = .simplifiedChinese
     public var isChinese: Bool { mode.isChinese }
+    public private(set) var keyboard: InputKeyboard
+    /// The modes Shift and the mode menu cycle through on the current keyboard.
+    public var availableModes: [InputMode] { options().modes }
+    private var zhuyinListOpen = false
     public var nextMode: InputMode {
-        let modes = InputMode.normalized(options().enabledModes)
+        let modes = options().modes
         return modes[(modes.firstIndex(of: mode).map { $0 + 1 } ?? 0) % modes.count]
     }
     private var shift = ShiftTapTracker()
     private let baseOptions: () -> InputOptions
     private let languageOptions: ((InputMode) -> InputOptions)?
-    private func options() -> InputOptions { languageOptions?(mode) ?? baseOptions() }
+    private func options() -> InputOptions {
+        var result = languageOptions?(mode) ?? baseOptions(); result.keyboard = keyboard
+        return result
+    }
     private var appliedOptions: InputOptions
     public var onCommit: ((String) -> Void)?
     public var onUpdate: ((Composition) -> Void)?
@@ -74,6 +87,7 @@ public final class InputSession {
     private var wasComposing = false
     public var composition: Composition {
         var result = baseComposition
+        if keyboard == .zhuyin { presentZhuyin(&result); return result }
         if let order = rankingOrder, key(for: result) == rankingKey, order.count <= result.candidates.count {
             let original = result.candidates, indices = result.candidateIndices
             let selectedID = indices.indices.contains(result.highlighted) ? indices[result.highlighted] : -1
@@ -84,7 +98,7 @@ public final class InputSession {
     }
     private var baseComposition: Composition {
         var result = rawComposition
-        guard appliedOptions.fuzzyPinyinMask != 0 || appliedOptions.autoCorrection, result.page == 0 || result.isContinuous else { return result }
+        guard keyboard == .pinyin, appliedOptions.fuzzyPinyinMask != 0 || appliedOptions.autoCorrection, result.page == 0 || result.isContinuous else { return result }
         let candidates = Array(result.candidates.prefix(result.pageSize))
         let order = PinyinCandidateOrder.prioritizeExact(candidates, preedit: result.preedit, cursorUTF16: result.cursorUTF16)
         let indices = result.candidateIndices
@@ -97,6 +111,7 @@ public final class InputSession {
     }
     private var rawComposition: Composition {
         var result = rime.composition
+        guard keyboard == .pinyin else { return result }
         pinyinPreedit.format(&result, caret: rime.caretPosition)
         if result.isComposing && result.candidates.isEmpty {
             result.candidates = [Candidate(result.rawInput)]
@@ -131,16 +146,18 @@ public final class InputSession {
         numberedRowStart = max(0, start); expandedColumns = max(1, min(9, columns))
     }
 
-    public init(engine: RimeEngine, options: @escaping () -> InputOptions = { InputOptions() }, ranker: CandidateReranking? = nil, languageOptions: ((InputMode) -> InputOptions)? = nil, rankingClock: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws {
+    public init(engine: RimeEngine, keyboard: InputKeyboard = .pinyin, options: @escaping () -> InputOptions = { InputOptions() }, ranker: CandidateReranking? = nil, languageOptions: ((InputMode) -> InputOptions)? = nil, rankingClock: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws {
         rime = try engine.makeSession()
         self.ranker = ranker; self.rankingClock = rankingClock
-        self.baseOptions = options; self.languageOptions = languageOptions
-        let initialMode = options().initialMode
+        self.baseOptions = options; self.languageOptions = languageOptions; self.keyboard = keyboard
+        var initial = options(); initial.keyboard = keyboard
+        let initialMode = initial.initialMode
         mode = initialMode
         appliedOptions = languageOptions?(initialMode) ?? options()
+        appliedOptions.keyboard = keyboard
         guard rime.selectSchema(appliedOptions.schemaID) else { throw EngineError.sessionUnavailable }
         rime.setOption("ascii_punct", appliedOptions.englishPunctuation)
-        rime.setOption("traditional", mode == .traditionalChinese)
+        applyScript()
     }
 
     public func applyOptions(preservingComposition: Bool = false) {
@@ -158,10 +175,10 @@ public final class InputSession {
         if schemaChanged || current.englishPunctuation != appliedOptions.englishPunctuation {
             rime.setOption("ascii_punct", current.englishPunctuation)
         }
-        let modeChanged = current.initialMode != appliedOptions.initialMode || !current.enabledModes.contains(mode)
+        let modeChanged = current.initialMode != appliedOptions.initialMode || !current.modes.contains(mode)
         appliedOptions = current
         if modeChanged { selectMode(current.initialMode) }
-        else if schemaChanged { rime.setOption("traditional", mode == .traditionalChinese) }
+        else if schemaChanged { applyScript() }
         if !pending.isEmpty {
             for byte in pending.utf8 { rime.process(key: Int32(byte)) }
             rime.caretPosition = caret
@@ -199,6 +216,7 @@ public final class InputSession {
         }
         guard isChinese else { return false }
         guard let key = RimeKey.translate(keyCode: event.keyCode, characters: event.characters ?? "") else { return false }
+        if keyboard == .zhuyin { return handleZhuyin(key, flags: flags) }
         let current = composition
         if !current.isComposing { resetContextForEditingKey(key) }
         if current.isComposing, options().bracketsExpandCandidates, let changeExpansion = onExpansionChange {
@@ -293,6 +311,87 @@ public final class InputSession {
         return handled
     }
 
+    /// Switches between the Pinyin and Zhuyin input sources, finishing any composition first.
+    public func setKeyboard(_ next: InputKeyboard) {
+        guard next != keyboard else { return }
+        finish(); zhuyinListOpen = false
+        keyboard = next
+        expandedKey = ""; expandedItems = []
+        applyOptions()
+        if !options().modes.contains(mode) { selectMode(options().initialMode) }
+        publish()
+    }
+    /// Pinyin's dictionary is Simplified and Zhuyin's Traditional; each converts to the other.
+    private func applyScript() {
+        if keyboard == .zhuyin { rime.setOption("simplification", mode == .simplifiedChinese) }
+        else { rime.setOption("traditional", mode == .traditionalChinese) }
+    }
+    /// Zhuyin on 大千. Rime's speller parses Zhuyin, tones (Space is the first tone) and
+    /// syllables; Fluent only decides when the candidate list is shown and what selects.
+    /// - Typing converts inline and keeps the list hidden. A typed tone narrows candidates.
+    /// - ↓, or a Space that Rime does not take as the first tone, opens the list.
+    /// - List open: 1–9 or Shift+1–9 choose, ← ↑ / → ↓ move the highlight, Space or
+    ///   PageDown and PageUp page, Enter chooses, Esc closes; other keys keep typing.
+    /// - List closed: Enter commits the converted text, Esc clears, ← / → move the caret
+    ///   so the list offers candidates for the text before it, Shift+digits type symbols.
+    private static let shiftedDigits: [Int32] = "!@#$%^&*(".unicodeScalars.map { Int32($0.value) }
+    private func handleZhuyin(_ key: Int32, flags: NSEvent.ModifierFlags) -> Bool {
+        let current = rime.composition
+        if !current.isComposing { zhuyinListOpen = false }
+        if zhuyinListOpen {
+            let menu = composition
+            let slot = (49...57).contains(key) ? Int(key - 49) : Self.shiftedDigits.firstIndex(of: key)
+            if let slot {
+                // Choose while the list is still shown; Rime keeps the rest composing.
+                if menu.candidates.indices.contains(slot) { choose(slot); zhuyinListOpen = false; publish() }
+                return true
+            }
+            switch key {
+            case RimeKey.enter: choose(menu.highlighted); zhuyinListOpen = false; publish(); return true
+            case RimeKey.escape: zhuyinListOpen = false; publish(); return true
+            case RimeKey.left, RimeKey.up, RimeKey.right, RimeKey.down:
+                let backwards = key == RimeKey.left || key == RimeKey.up
+                let destination = menu.highlighted + (backwards ? -1 : 1)
+                if menu.candidateIndices.indices.contains(destination) { _ = rime.highlightAbsolute(menu.candidateIndices[destination]); publish() }
+                else { page(backward: backwards) }
+                return true
+            case 32, RimeKey.pageDown: page(backward: false); return true
+            case RimeKey.pageUp: page(backward: true); return true
+            default: zhuyinListOpen = false
+            }
+        }
+        if current.isComposing {
+            switch key {
+            case RimeKey.down: zhuyinListOpen = true; publish(selectFirst: true); return true
+            case RimeKey.enter: rime.commit(); resetContext(); publish(); return true
+            case RimeKey.left, RimeKey.right:
+                let caret = rime.caretPosition
+                if key == RimeKey.left ? caret > 0 : caret < current.rawInput.utf8.count { _ = rime.process(key: key) }
+                publish(selectFirst: true); return true
+            default: break
+            }
+        }
+        let handled = rime.process(key: key, modifiers: flags.contains(.shift) ? 1 : 0)
+        if key == 32, current.isComposing, rime.composition.rawInput == current.rawInput {
+            zhuyinListOpen = true; publish(selectFirst: true); return true
+        }
+        publish(selectFirst: handled && rime.composition.rawInput != current.rawInput)
+        return handled
+    }
+    /// Inline text is the converted sentence; untranslated keys show as Zhuyin. The
+    /// candidate list appears only after Space or ↓.
+    private func presentZhuyin(_ result: inout Composition) {
+        guard result.isComposing else { return }
+        let raw = Array(result.rawInput.utf8), caret = min(max(0, rime.caretPosition), raw.count)
+        let preview = ZhuyinLayout.display(result.commitPreview.isEmpty ? result.rawInput : result.commitPreview)
+        let after = ZhuyinLayout.display(String(decoding: raw[caret...], as: UTF8.self))
+        result.preedit = preview
+        result.cursorUTF16 = max(0, preview.utf16.count - after.utf16.count)
+        if !zhuyinListOpen {
+            result.candidates = []; result.candidateIndices = []
+            result.highlighted = 0; result.page = 0; result.isLastPage = true
+        }
+    }
     public func choose(_ index: Int) {
         let current = composition
         guard current.candidateIndices.indices.contains(index) else { return }
@@ -347,12 +446,12 @@ public final class InputSession {
     }
     public func toggleLanguage() { selectMode(nextMode) }
     public func selectMode(_ next: InputMode) {
-        guard InputMode.normalized(options().enabledModes).contains(next), next != mode else { return }
+        guard options().modes.contains(next), next != mode else { return }
         if next == .english || mode == .english { finishRaw() }
         else { resetContext() }
         mode = next
         applyOptions(preservingComposition: next.isChinese)
-        rime.setOption("traditional", next == .traditionalChinese)
+        applyScript()
         expandedKey = ""; expandedItems = []
         publish(selectFirst: true)
     }
@@ -384,7 +483,7 @@ public final class InputSession {
     }
     private func requestRanking() {
         let current = baseComposition
-        guard options().neuralRanking, let ranker, !rankingLocked, !IsSecureEventInputEnabled(), recentContext.count >= 2,
+        guard keyboard == .pinyin, options().neuralRanking, let ranker, !rankingLocked, !IsSecureEventInputEnabled(), recentContext.count >= 2,
               current.isComposing, rime.caretPosition == current.rawInput.utf8.count,
               !current.isContinuous, current.page == 0, current.candidates.count >= 2 else { return }
         let fingerprint = key(for: current)

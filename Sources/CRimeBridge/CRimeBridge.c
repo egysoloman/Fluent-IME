@@ -121,6 +121,7 @@ FIMContext *FIMGetContext(FIMSession session) {
     result->preedit = strdup(context.composition.preedit ? context.composition.preedit : "");
     const char *input = api->get_input(session);
     result->input = strdup(input ? input : "");
+    result->commit_preview = strdup(RIME_STRUCT_HAS_MEMBER(context, context.commit_text_preview) && context.commit_text_preview ? context.commit_text_preview : "");
     result->cursor_utf8 = context.composition.cursor_pos;
     result->page = context.menu.page_no;
     result->page_size = context.menu.page_size;
@@ -136,7 +137,7 @@ FIMContext *FIMGetContext(FIMSession session) {
 }
 void FIMFreeContext(FIMContext *context) {
     if (!context) return;
-    free(context->preedit); free(context->input);
+    free(context->preedit); free(context->input); free(context->commit_preview);
     for (int i = 0; i < context->count; ++i) { free(context->candidates[i]); free(context->comments[i]); }
     free(context);
 }

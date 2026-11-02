@@ -94,7 +94,8 @@ final class InputMethodInstallation: SetupInstallation, MaintenanceInstallation 
         try Self.check(TISRegisterInputSource(files.application as CFURL))
         let sources = Self.sources()
         guard !sources.isEmpty else { throw NSError(domain: "FluentIME.Installation", code: 1, userInfo: [NSLocalizedDescriptionKey: L10n.registrationReloginHint]) }
-        for source in sources { try Self.check(TISEnableInputSource(source)) }
+        // Zhuyin is added by the user in System Settings; installing and updating leave it as it was.
+        for source in sources where Self.identifier(source) != InputKeyboard.zhuyinSourceID { try Self.check(TISEnableInputSource(source)) }
     }
     func complete(resetDictionary: Bool, applyPreferences: @escaping () -> Void, completion: @escaping (Result<Void, Error>) -> Void) {
         do {

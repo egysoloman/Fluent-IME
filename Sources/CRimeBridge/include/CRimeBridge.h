@@ -7,6 +7,7 @@ typedef uintptr_t FIMSession;
 typedef struct {
     char *preedit;
     char *input;
+    char *commit_preview;
     int cursor_utf8;
     int page;
     int page_size;
