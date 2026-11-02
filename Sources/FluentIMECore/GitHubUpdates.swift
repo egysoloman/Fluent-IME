@@ -9,15 +9,48 @@ public enum ReleaseEdition: String, Codable {
     }
 }
 
+public enum UpdateChannel: String, CaseIterable, Codable {
+    case stable, preview
+    public var title: String { self == .stable ? L10n.updateChannelStable : L10n.updateChannelPreview }
+    public func accepts(_ release: GitHubRelease) -> Bool {
+        guard !release.draft, ReleaseVersion(release.version) != nil else { return false }
+        return self == .preview || !release.prerelease
+    }
+}
+
 public struct ReleaseVersion: Comparable, Equatable {
     private let parts: [Int]
+    private let prerelease: [String]
+    public var isPrerelease: Bool { !prerelease.isEmpty }
     public init?(_ value: String) {
         let value = value.hasPrefix("v") ? String(value.dropFirst()) : value
-        let strings = value.split(separator: ".", omittingEmptySubsequences: false)
-        guard (2...3).contains(strings.count), strings.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isNumber) }), strings.allSatisfy({ Int($0) != nil }) else { return nil }
+        let metadata = value.split(separator: "+", omittingEmptySubsequences: false)
+        func identifiers(_ text: Substring) -> [String]? {
+            let ids = text.split(separator: ".", omittingEmptySubsequences: false)
+            guard ids.allSatisfy({ !$0.isEmpty && $0.utf8.allSatisfy { (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || $0 == 45 } }) else { return nil }
+            return ids.map(String.init)
+        }
+        guard metadata.count <= 2, metadata.count == 1 || identifiers(metadata[1]) != nil else { return nil }
+        let components = metadata[0].split(separator: "-", maxSplits: 1, omittingEmptySubsequences: false)
+        let strings = components[0].split(separator: ".", omittingEmptySubsequences: false)
+        guard (2...3).contains(strings.count), strings.allSatisfy({ !$0.isEmpty && $0.utf8.allSatisfy { (48...57).contains($0) } && ($0.count == 1 || $0.first != "0") && Int($0) != nil }) else { return nil }
+        if components.count == 2 {
+            guard strings.count == 3, let ids = identifiers(components[1]), ids.allSatisfy({ !$0.allSatisfy(\.isNumber) || $0.count == 1 || $0.first != "0" }) else { return nil }
+            prerelease = ids
+        } else { prerelease = [] }
         parts = strings.map { Int($0)! } + Array(repeating: 0, count: 3 - strings.count)
     }
-    public static func < (lhs: Self, rhs: Self) -> Bool { lhs.parts.lexicographicallyPrecedes(rhs.parts) }
+    public static func < (lhs: Self, rhs: Self) -> Bool {
+        if lhs.parts != rhs.parts { return lhs.parts.lexicographicallyPrecedes(rhs.parts) }
+        if lhs.prerelease.isEmpty || rhs.prerelease.isEmpty { return !lhs.prerelease.isEmpty && rhs.prerelease.isEmpty }
+        for (left, right) in zip(lhs.prerelease, rhs.prerelease) where left != right {
+            let ln = left.allSatisfy(\.isNumber), rn = right.allSatisfy(\.isNumber)
+            if ln != rn { return ln }
+            if ln && left.count != right.count { return left.count < right.count }
+            return left < right
+        }
+        return lhs.prerelease.count < rhs.prerelease.count
+    }
 }
 public struct GitHubRelease: Decodable {
     public struct Asset: Decodable {
@@ -30,13 +63,21 @@ public struct GitHubRelease: Decodable {
     public let draft: Bool
     public let prerelease: Bool
     public let assets: [Asset]
+    public let name: String?
+    public let body: String?
+    public let published_at: String?
+    public init(tag_name: String, draft: Bool, prerelease: Bool, assets: [Asset], name: String? = nil, body: String? = nil, published_at: String? = nil) {
+        self.tag_name = tag_name; self.draft = draft; self.prerelease = prerelease; self.assets = assets
+        self.name = name; self.body = body; self.published_at = published_at
+    }
+    public var pageURL: URL { GitHubUpdateService.releasesURL.appendingPathComponent("tag").appendingPathComponent(tag_name) }
     public var version: String { tag_name.hasPrefix("v") ? String(tag_name.dropFirst()) : tag_name }
     public var installer: Asset? { installer(for: .lite) }
     public var manifest: Asset? { manifest(for: .lite) }
     public func installer(for edition: ReleaseEdition) -> Asset? { assets.first { $0.name == "Fluent-IME-\(version)\(edition == .full ? "-Full" : "")-Setup.dmg" } }
     public func manifest(for edition: ReleaseEdition) -> Asset? { assets.first { $0.name == (edition == .full ? "release-full.json" : "release.json") } }
-    public func isNewer(than current: String) -> Bool {
-        guard !draft, !prerelease, let next = ReleaseVersion(version), let old = ReleaseVersion(current) else { return false }
+    public func isNewer(than current: String, channel: UpdateChannel = .stable) -> Bool {
+        guard channel.accepts(self), let next = ReleaseVersion(version), let old = ReleaseVersion(current) else { return false }
         return next > old
     }
 }
@@ -161,6 +202,19 @@ public final class GitHubUpdateService {
     public static func trustedAsset(_ url: URL) -> Bool {
         url.scheme == "https" && url.host == "github.com" && url.user == nil && url.password == nil && url.port == nil && url.path.hasPrefix("/\(repository)/releases/download/")
     }
+    public func history(channel: UpdateChannel) async throws -> [GitHubRelease] {
+        let url = URL(string: "https://api.github.com/repos/\(Self.repository)/releases?per_page=30")!
+        let (data, response) = try await session.data(from: url)
+        try Task.checkCancellation()
+        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 4_000_000 else { throw UpdateError.unavailable }
+        return try JSONDecoder().decode([GitHubRelease].self, from: data)
+            .filter { channel.accepts($0) }
+            .sorted { ReleaseVersion($0.version)! > ReleaseVersion($1.version)! }
+    }
+    public func latest(channel: UpdateChannel) async throws -> GitHubRelease? {
+        if channel == .stable { return try await latest() }
+        return try await history(channel: channel).first { $0.installer(for: edition) != nil && $0.manifest(for: edition) != nil }
+    }
     public func latest() async throws -> GitHubRelease? {
         let url = URL(string: "https://api.github.com/repos/\(Self.repository)/releases/latest")!
         let result: (Data, URLResponse)
@@ -181,7 +235,7 @@ public final class GitHubUpdateService {
         }
         guard status == 200, data.count < 2_000_000 else { throw UpdateError.unavailable }
         let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
-        guard ReleaseVersion(release.version) != nil, !release.draft, !release.prerelease else { throw UpdateError.invalidRelease }
+        guard UpdateChannel.stable.accepts(release) else { throw UpdateError.invalidRelease }
         return release
     }
     private func latestFromWebsite() async throws -> GitHubRelease? {

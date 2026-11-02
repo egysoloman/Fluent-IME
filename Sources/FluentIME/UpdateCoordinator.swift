@@ -3,7 +3,8 @@ import FluentKit
 import FluentIMECore
 
 protocol IMEUpdateService {
-    func latest() async throws -> GitHubRelease?
+    func latest(channel: UpdateChannel) async throws -> GitHubRelease?
+    func history(channel: UpdateChannel) async throws -> [GitHubRelease]
     func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)?) async throws -> URL
 }
 extension GitHubUpdateService: IMEUpdateService {}
@@ -16,9 +17,75 @@ extension GitHubUpdateService: IMEUpdateService {}
     private var task: Task<Void, Never>?
     private var generation = 0
     private var release: GitHubRelease?
+    private(set) var latestRelease: GitHubRelease?
+    private(set) var history: [GitHubRelease] = []
+    private(set) var historyLoading = false
+    private(set) var historyError: String?
+    private var historyTask: Task<Void, Never>?
+    private var historyGeneration = 0
+    private var automaticTimer: Timer?
+    var automaticChecks: Bool {
+        get { defaults.object(forKey: "updateAutomaticChecks") as? Bool ?? true }
+        set {
+            defaults.set(newValue, forKey: "updateAutomaticChecks"); notify()
+            if newValue { checkAutomaticallyIfDue() }
+        }
+    }
+    func startAutomaticChecks() {
+        guard automaticTimer == nil else { return }
+        automaticTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkAutomaticallyIfDue() }
+        }
+        automaticTimer?.tolerance = 300
+        checkAutomaticallyIfDue()
+    }
+    func checkAutomaticallyIfDue(now: Date = Date()) {
+        guard automaticChecks, !busy,
+              defaults.object(forKey: "updateLastAttempt").flatMap({ $0 as? Date }).map({ now.timeIntervalSince($0) >= 86400 }) ?? true else { return }
+        channel = UpdateChannel(rawValue: defaults.string(forKey: "updateChannel") ?? "") ?? .stable
+        check()
+    }
+    private static func message(_ error: Error) -> String {
+        if error is URLError { return L10n.updateConnectionFailed }
+        return error.localizedDescription
+    }
+    private let defaults: UserDefaults
+    private(set) var channel: UpdateChannel
+    private(set) var lastChecked: Date?
+    var canChangeChannel: Bool {
+        switch state { case .downloading, .verifying, .opening: return false; default: return true }
+    }
+    private func notify() { NotificationCenter.default.post(name: Self.changed, object: self) }
+    func selectChannel(_ channel: UpdateChannel) {
+        guard canChangeChannel, self.channel != channel else { return }
+        generation += 1; task?.cancel(); task = nil
+        historyGeneration += 1; historyTask?.cancel(); historyTask = nil
+        self.channel = channel; defaults.set(channel.rawValue, forKey: "updateChannel")
+        history = []; historyError = nil; historyLoading = false; latestRelease = nil; release = nil; state = .idle
+        check(); loadHistory()
+    }
+    func loadHistory() {
+        guard !historyLoading else { return }
+        historyGeneration += 1; let request = historyGeneration; let channel = channel
+        historyLoading = true; historyError = nil; notify()
+        historyTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let records = try await service.history(channel: channel); try Task.checkCancellation()
+                guard request == historyGeneration else { return }
+                history = records
+            } catch { if request == historyGeneration, !Task.isCancelled { historyError = Self.message(error) } }
+            guard request == historyGeneration else { return }
+            historyLoading = false; historyTask = nil; notify()
+        }
+    }
     private let service: any IMEUpdateService
     private var updateWindow: NSWindow?
-    init(service: any IMEUpdateService = GitHubUpdateService()) { self.service = service }
+    init(service: any IMEUpdateService = GitHubUpdateService(), defaults: UserDefaults? = nil) {
+        self.service = service; self.defaults = defaults ?? (InstallerLifecycle.isMaintenance ? UserDefaults(suiteName: "org.fluentime.inputmethod.FluentIME")! : .standard)
+        channel = UpdateChannel(rawValue: self.defaults.string(forKey: "updateChannel") ?? "") ?? .stable
+        lastChecked = self.defaults.object(forKey: "updateLastChecked") as? Date
+    }
     var currentVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0" }
     var busy: Bool {
         switch state { case .checking, .downloading, .verifying, .opening: return true; default: return false }
@@ -26,15 +93,18 @@ extension GitHubUpdateService: IMEUpdateService {}
     var canInstall: Bool { release != nil && !busy }
     func check() {
         guard !busy else { return }
-        generation += 1; let request = generation; release = nil; state = .checking
+        defaults.set(Date(), forKey: "updateLastAttempt")
+        generation += 1; let request = generation; let channel = channel; release = nil; state = .checking
+        loadHistory()
         task = Task { [weak self] in
             guard let self else { return }
             do {
-                let latest = try await service.latest(); try Task.checkCancellation()
+                let latest = try await service.latest(channel: channel); try Task.checkCancellation()
                 guard request == generation else { return }
-                if let latest, latest.isNewer(than: currentVersion) || (InstallerLifecycle.isMaintenance && !InputMethodInstallation.shared.isPresent) { release = latest; state = .available(latest.version) }
+                latestRelease = latest; lastChecked = Date(); defaults.set(lastChecked, forKey: "updateLastChecked")
+                if let latest, latest.isNewer(than: currentVersion, channel: channel) || (InstallerLifecycle.isMaintenance && !InputMethodInstallation.shared.isPresent) { release = latest; state = .available(latest.version) }
                 else { state = latest == nil ? .failed(L10n.updateNoRelease) : .current }
-            } catch { if request == generation, !Task.isCancelled { state = .failed(error.localizedDescription) } }
+            } catch { if request == generation, !Task.isCancelled { state = .failed(Self.message(error)) } }
             if request == generation { task = nil }
         }
     }
@@ -74,7 +144,7 @@ extension GitHubUpdateService: IMEUpdateService {}
                 if waitForParent { NSApp.terminate(nil) }
             } catch {
                 try? FileManager.default.removeItem(at: directory)
-                if request == generation, !Task.isCancelled { state = .failed(error.localizedDescription) }
+                if request == generation, !Task.isCancelled { state = .failed(Self.message(error)) }
             }
             if request == generation { task = nil }
         }
@@ -82,82 +152,17 @@ extension GitHubUpdateService: IMEUpdateService {}
     // The installer uses the same update page in its own window.
     func present(in root: NSView) {
         if let updateWindow { updateWindow.makeKeyAndOrderFront(nil); return }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 380), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = L10n.updatePageTitle; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false; window.styleMask.insert(.fullSizeContentView)
         for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] { window.standardWindowButton(type)?.isHidden = true }
         let content = IMEFlippedView(); content.wantsLayer = true; content.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor; window.contentView = content
         let title = FluentTitleBar(title: L10n.updatePageTitle, heightMode: .compact, backgroundStyle: .transparent, windowControlsStyle: .windows)
-        let bar = title._makeView(in: FluentRenderContext(theme: IMEThemeObservation.current, locale: L10n.locale)); bar.frame = NSRect(x: 0, y: 0, width: 600, height: 40); content.addSubview(bar)
-        let page = UpdatePageView(coordinator: self); page.frame = NSRect(x: 32, y: 72, width: 536, height: 280); content.addSubview(page)
+        let bar = title._makeView(in: FluentRenderContext(theme: IMEThemeObservation.current, locale: L10n.locale)); bar.frame = NSRect(x: 0, y: 0, width: 640, height: 40); bar.autoresizingMask = [.width]; content.addSubview(bar)
+        window.minSize = NSSize(width: 600, height: 520)
+        let host = UpdateNavigationView(coordinator: self)
+        host.frame = NSRect(x: 0, y: 52, width: 640, height: 708); host.autoresizingMask = [.width, .height]
+        content.addSubview(host)
         updateWindow = window; window.center(); window.makeKeyAndOrderFront(nil)
     }
-}
-
-@MainActor final class UpdatePageView: NSView {
-    private let coordinator: UpdateCoordinator
-    private let version = NSTextField(labelWithString: "")
-    private let status = FluentSelectableLabel(wrappingLabelWithString: "")
-    private let detail = NSTextField(labelWithString: "")
-    private let progress = FluentProgressBar(value: 0)
-    private let primary = FluentButton(title: "", role: .primary)
-    private let cancel = FluentButton(title: L10n.commonCancel)
-    private var observer: NSObjectProtocol?
-    private var themeObservation: IMEThemeObservation?
-    override var isFlipped: Bool { true }
-    convenience init() { self.init(coordinator: .shared) }
-    init(coordinator: UpdateCoordinator) {
-        self.coordinator = coordinator; super.init(frame: .zero)
-        for view in [version, status, detail, progress, primary, cancel] { addSubview(view) }
-        primary.onClick = { [weak coordinator] in guard let coordinator else { return }; if coordinator.canInstall { coordinator.install() } else { coordinator.check() } }
-        cancel.onClick = { [weak coordinator] in coordinator?.cancel() }
-        observer = NotificationCenter.default.addObserver(forName: UpdateCoordinator.changed, object: coordinator, queue: .main) { [weak self] _ in Task { @MainActor in self?.refresh() } }
-        themeObservation = IMEThemeObservation { [weak self] _ in self?.refresh() }
-        refresh()
-    }
-    required init?(coder: NSCoder) { fatalError() }
-    func refresh() {
-        let theme = IMEThemeObservation.current
-        version.stringValue = L10n.updateInstalledVersion(coordinator.currentVersion)
-        version.font = IMEFont.font(ofSize: 20, weight: .medium); version.textColor = theme.textPrimary
-        status.font = IMEFont.font(ofSize: 14); status.theme = theme; status.textColor = theme.textPrimary
-        detail.font = IMEFont.font(ofSize: 12); detail.textColor = theme.textSecondary
-        progress.theme = theme; primary.theme = theme; cancel.theme = theme
-        progress.isHidden = !coordinator.busy
-        if case .downloading(_, let total) = coordinator.state { progress.isIndeterminate = total <= 0 }
-        else { progress.isIndeterminate = true }
-        detail.stringValue = ""
-        switch coordinator.state {
-        case .idle: status.stringValue = L10n.updateIdle
-        case .checking: status.stringValue = L10n.updateChecking
-        case .available(let version): status.stringValue = L10n.updateAvailable(version)
-        case .current: status.stringValue = L10n.updateCurrent(coordinator.currentVersion)
-        case .downloading(let received, let total):
-            status.stringValue = L10n.updateDownloading
-            progress.value = total > 0 ? min(100, Double(received) / Double(total) * 100) : 0
-            let format = ByteCountFormatter(); format.countStyle = .file
-            detail.stringValue = "\(format.string(fromByteCount: received)) / \(format.string(fromByteCount: total))"
-        case .verifying: status.stringValue = L10n.updateVerifying
-        case .opening: status.stringValue = L10n.updateOpening
-        case .opened: status.stringValue = L10n.updateOpened
-        case .cancelled: status.stringValue = L10n.updateCancelled
-        case .failed(let message): status.stringValue = message
-        }
-        primary.title = coordinator.canInstall ? L10n.updateInstall : L10n.updateTitle
-        primary.setAccessibilityLabel(primary.title)
-        primary.isEnabled = !coordinator.busy; cancel.isHidden = !coordinator.busy
-        if case .opening = coordinator.state { cancel.isEnabled = false } else { cancel.isEnabled = true }
-        needsLayout = true
-    }
-    override func layout() {
-        super.layout()
-        version.frame = NSRect(x: 0, y: 0, width: bounds.width, height: 32)
-        status.frame = NSRect(x: 0, y: 52, width: bounds.width, height: 76)
-        progress.frame = NSRect(x: 0, y: 142, width: bounds.width, height: 8)
-        detail.frame = NSRect(x: 0, y: 162, width: bounds.width, height: 24)
-        let width = min(bounds.width * 0.65, max(220, primary.intrinsicContentSize.width))
-        primary.frame = NSRect(x: 0, y: 216, width: width, height: 32)
-        cancel.frame = NSRect(x: width + 12, y: 216, width: min(120, bounds.width - width - 12), height: 32)
-    }
-    deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
 }

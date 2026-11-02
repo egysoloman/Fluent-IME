@@ -116,7 +116,7 @@ final class PreviewTextView: NSTextView {
 }
 
 private enum SettingsPage: String, CaseIterable {
-    case home, language, modes, general, keys, appearance, dictionary, models, advanced, preview, fonts, clipboard, updates
+    case home, language, modes, general, keys, appearance, dictionary, models, advanced, preview, fonts, clipboard, updates, updateHistory
     var title: String {
         switch self {
         case .home: return L10n.settingsInputMethod
@@ -131,6 +131,7 @@ private enum SettingsPage: String, CaseIterable {
         case .preview: return L10n.previewTitle
         case .fonts: return L10n.fontTitle
         case .updates: return L10n.updatePageTitle
+        case .updateHistory: return L10n.updateHistoryTitle
         case .clipboard: return L10n.clipboardTitle
         }
     }
@@ -148,6 +149,7 @@ private enum SettingsPage: String, CaseIterable {
         case .preview: return L10n.previewTitle
         case .fonts: return L10n.fontHint
         case .updates: return L10n.updatePageDetail
+        case .updateHistory: return L10n.updateHistoryHint
         case .clipboard: return L10n.clipboardDetail
         }
     }
@@ -158,7 +160,9 @@ private enum SettingsPage: String, CaseIterable {
         case .appearance, .fonts: return .appearance
         case .dictionary, .models: return .dictionary
         case .clipboard: return .clipboard
-        case .advanced, .updates: return .advanced
+        case .advanced: return .advanced
+        case .updates: return .updates
+        case .updateHistory: return .updateHistory
         }
     }
     static let categories: [SettingsPage] = [.modes, .keys, .appearance, .models, .clipboard, .updates, .advanced]
@@ -174,6 +178,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     private let material = FluentMaterialView(material: .mica)
     private let breadcrumbs = IMEFlippedView()
     private let scroll = SettingsScrollView()
+    private let pageDocument = IMEFlippedView()
     private let pageContent = IMEFlippedView()
     private let search = FluentSearchTextField(placeholder: L10n.settingsSearchPlaceholder)
     private let pageMotion = IMEPageMotion()
@@ -247,7 +252,8 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         window.contentView = root
         for view in [material, breadcrumbs, scroll] { root.addSubview(view) }
         scroll.drawsBackground = false; scroll.contentView.drawsBackground = false
-        scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true; scroll.verticalScroller = SettingsScroller(); scroll.documentView = pageContent
+        scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true; scroll.verticalScroller = SettingsScroller(); scroll.documentView = pageDocument
+        pageDocument.addSubview(pageContent)
         scroll.onViewportSizeChange = { [weak self] in self?.root.needsLayout = true }
         search.delegate = self; search.setAccessibilityLabel(L10n.settingsSearchAccessibility)
         search.onCancel = { [weak self] in guard let self else { return }; self.navigate(.home) }
@@ -314,9 +320,11 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         let breadcrumbWidthChanged = breadcrumbs.frame.width != width - 46
         breadcrumbs.frame = NSRect(x: 22, y: 68, width: width - 46, height: 44)
         if breadcrumbWidthChanged && !breadcrumbs.subviews.isEmpty { buildBreadcrumbs() }
-        scroll.frame = NSRect(x: 24, y: 136, width: width - 24, height: height - 136)
+        scroll.frame = NSRect(x: 0, y: 136, width: width, height: height - 136)
         let trailingInset: CGFloat = page == .preview ? max(20, CandidateChrome.sideMargin) : 20
-        pageContent.frame = NSRect(x: 0, y: 0, width: max(1, scroll.contentSize.width - trailingInset), height: max(documentHeight, scroll.contentSize.height))
+        // Keep the leading gutter inside the viewport so outgoing page motion is not sliced at the text edge.
+        pageDocument.frame = NSRect(x: 0, y: 0, width: scroll.contentSize.width, height: max(documentHeight, scroll.contentSize.height))
+        pageContent.frame = NSRect(x: 24, y: 0, width: max(1, scroll.contentSize.width - 24 - trailingInset), height: pageDocument.bounds.height)
         pageWidthUpdates.forEach { $0(pageContent.bounds.width) }
         if page == .preview {
             let available = min(860, pageContent.bounds.width - 30)
@@ -405,7 +413,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         input.finish(); emojiPanel.dismiss(); modeIndicator.dismiss(); Preferences.shared.expandedCandidates = false; search.stringValue = ""; page = destination
         buildBreadcrumbs(); buildPage(); layout(); scroll.contentView.scroll(to: .zero)
         root.layoutSubtreeIfNeeded()
-        pageMotion.play(snapshot, in: scroll.contentView, content: pageContent, backward: destination == .home, navigation: true)
+        pageMotion.play(snapshot, in: scroll.contentView, content: pageContent, backward: destination == .home || (oldPage == .updateHistory && destination == .updates), navigation: true)
         if destination == .preview { window?.makeFirstResponder(editor) }
     }
     private func fitPageWidth(_ view: NSView) {
@@ -436,7 +444,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     private func buildBreadcrumbs() {
         breadcrumbAppearanceUpdates.removeAll()
         breadcrumbs.subviews.forEach { $0.removeFromSuperview() }
-        let parts = page == .home ? [L10n.settingsInputMethod] : isLanguagePage ? ([L10n.settingsInputMethod, settingsLanguage.title] + (page == .language ? [] : [page.title])) : page == .fonts ? [L10n.settingsInputMethod, L10n.settingsAppearanceTitle, page.title] : [L10n.settingsInputMethod, page.title]
+        let parts = page == .home ? [L10n.settingsInputMethod] : isLanguagePage ? ([L10n.settingsInputMethod, settingsLanguage.title] + (page == .language ? [] : [page.title])) : page == .fonts ? [L10n.settingsInputMethod, L10n.settingsAppearanceTitle, page.title] : page == .updateHistory ? [L10n.settingsInputMethod, L10n.updatePageTitle, page.title] : [L10n.settingsInputMethod, page.title]
         // Longer translations share the same breadcrumb row without clipping.
         var pointSize: CGFloat = 28
         func totalWidth() -> CGFloat {
@@ -464,13 +472,13 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         }
         updateTitleBar()
     }
-    @objc private func breadcrumbClicked(_ sender: NSButton) { navigate(sender.tag == 1 ? (isLanguagePage ? .language : page == .fonts ? .appearance : .home) : .home) }
+    @objc private func breadcrumbClicked(_ sender: NSButton) { navigate(sender.tag == 1 ? (isLanguagePage ? .language : page == .fonts ? .appearance : page == .updateHistory ? .updates : .home) : .home) }
 
     private var isLanguagePage: Bool { [.language, .general, .dictionary].contains(page) }
-    private func goBack() { navigate(page == .fonts ? .appearance : isLanguagePage && page != .language ? .language : .home) }
+    private func goBack() { navigate(page == .updateHistory ? .updates : page == .fonts ? .appearance : isLanguagePage && page != .language ? .language : .home) }
     private func navigationRow(_ title: String, detail: String, glyph: SettingsGlyph, y: CGFloat, invoke: @escaping () -> Void) {
         let button = SettingsNavigationButton(title: title, detail: detail, glyph: glyph, theme: theme)
-        button.frame = NSRect(x: -8, y: y, width: 570, height: 58); button.invoke = invoke
+        button.frame = NSRect(x: 0, y: y, width: 562, height: 58); button.invoke = invoke
         pageContent.addSubview(button); fitPageWidth(button)
         pageAppearanceUpdates.append { [weak button] theme in button?.theme = theme; button?.image = glyph.image(color: theme.textPrimary); button?.needsDisplay = true }
     }
@@ -667,7 +675,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
                 if let directory = Bundle.main.resourceURL?.appendingPathComponent("Licenses") { NSWorkspace.shared.open(directory) }
             }
             _ = action(L10n.setupReopen, y: 414, width: buttonWidth) { [weak self] in self?.showSetup() }
-            _ = action(L10n.uninstallAction, y: 476, width: buttonWidth, role: .destructive) { [weak self] in self?.showUninstall() }
+            _ = action(L10n.uninstallAction, y: 476, width: buttonWidth, role: .primary) { [weak self] in self?.showUninstall() }
             _ = action(L10n.updatePageTitle, y: 534, width: buttonWidth) { [weak self] in self?.navigate(.updates) }
             _ = action(L10n.maintenanceOpen, y: 592, width: buttonWidth) { [weak self] in
                 Task { @MainActor in
@@ -678,9 +686,23 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
             documentHeight = 666
         case .updates:
             let updates = UpdatePageView()
-            updates.frame = NSRect(x: 0, y: 0, width: 540, height: 320)
+            updates.onOpenHistory = { [weak self] in self?.navigate(.updateHistory) }
+            updates.frame = NSRect(x: 0, y: 0, width: 1000, height: updates.preferredHeight)
             pageContent.addSubview(updates); fitPageWidth(updates)
-            documentHeight = 360
+            documentHeight = updates.preferredHeight + 24
+            updates.onHeightChange = { [weak self, weak updates] height in
+                guard let self, self.page == .updates else { return }
+                updates?.frame.size.height = height; self.documentHeight = height + 24; self.root.needsLayout = true
+            }
+        case .updateHistory:
+            let history = UpdateHistoryPageView()
+            history.frame = NSRect(x: 0, y: 0, width: 1000, height: history.preferredHeight)
+            pageContent.addSubview(history); fitPageWidth(history)
+            documentHeight = history.preferredHeight + 24
+            history.onHeightChange = { [weak self, weak history] height in
+                guard let self, self.page == .updateHistory else { return }
+                history?.frame.size.height = height; self.documentHeight = height + 24; self.root.needsLayout = true
+            }
         case .fonts:
             buildFonts()
             documentHeight = 600

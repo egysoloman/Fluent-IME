@@ -791,6 +791,7 @@ final class EngineTests: XCTestCase {
     }
 
     private final class ManualRanker: CandidateReranking {
+        var now: TimeInterval = 0
         var completion: (([Int]?) -> Void)?
         var requested: (() -> Void)?
         var context = ""
@@ -801,7 +802,7 @@ final class EngineTests: XCTestCase {
         }
     }
     private func rankedInput(_ ranker: ManualRanker) throws -> InputSession {
-        let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { InputOptions(learning: false, neuralRanking: true) }, ranker: ranker)
+        let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { InputOptions(learning: false, neuralRanking: true) }, ranker: ranker, rankingClock: { ranker.now })
         for char in "nihao" { input.handle(key(String(char))) }
         input.handle(key(" ", code: 49))
         return input
@@ -816,6 +817,7 @@ final class EngineTests: XCTestCase {
             let original = input.composition.candidates
             wait(for: [requested], timeout: 1)
             XCTAssertEqual(fake.context, "你好")
+            fake.now = 0.079 // On-time even when the CI runner is busy.
             fake.completion?(Array(original.indices.reversed()))
             XCTAssertEqual(input.composition.candidates.first, original.last)
             XCTAssertEqual(input.composition.highlighted, 0)
@@ -852,7 +854,7 @@ final class EngineTests: XCTestCase {
         fake.requested = { requested.fulfill() }
         let input = try InputSession(engine: XCTUnwrap(Self.engine), options: {
             InputOptions(learning: false, fuzzyPinyinMask: FuzzyPinyinRule.nL.rawValue, neuralRanking: true)
-        }, ranker: fake)
+        }, ranker: fake, rankingClock: { fake.now })
         for char in "nihao" { _ = input.handle(key(String(char))) }
         _ = input.handle(key(" ", code: 49))
         for char in "ne" { _ = input.handle(key(String(char))) }
@@ -874,7 +876,7 @@ final class EngineTests: XCTestCase {
         for char in "shi" { _ = input.handle(key(String(char))) }
         wait(for: [requested], timeout: 1)
         let current = input.composition
-        RunLoop.main.run(until: Date().addingTimeInterval(0.09))
+        fake.now = 0.081
         fake.completion?(Array(current.candidates.indices.reversed()))
         XCTAssertEqual(input.composition.candidates, current.candidates)
         XCTAssertEqual(input.composition.highlighted, current.highlighted)

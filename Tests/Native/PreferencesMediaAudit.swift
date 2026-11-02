@@ -70,9 +70,20 @@ import CRimeBridge
         try settings.render(to: output.appendingPathComponent("settings-home.png"))
         let labels = all(settings.window!.contentView!).compactMap { ($0 as? NSTextField)?.stringValue }
         precondition(!labels.contains(InputMode.simplifiedChinese.title), "Disabled language must not have a root entry")
+        let settingsRoot = settings.window!.contentView!
+        let settingsScroll = all(settingsRoot).compactMap { $0 as? NSScrollView }.first!
+        let firstLanguage = all(settingsRoot).compactMap { $0 as? NSButton }.first { $0.title == InputMode.traditionalChinese.title }!
+        let leading = firstLanguage.convert(firstLanguage.bounds, to: settingsScroll.contentView).minX
+        precondition(leading >= 24 && settingsScroll.frame.minX == 0, "Navigation gutter must be inside the clipping viewport")
+        precondition(firstLanguage.frame.minX >= 0, "Navigation row background must not be clipped by its parent")
+        firstLanguage.performClick(nil); pump()
+        let home = all(settingsRoot).compactMap { $0 as? NSButton }.first { $0.title == L10n.settingsInputMethod }!
+        home.performClick(nil)
+        try capture(settingsRoot, "settings-return-home")
+        precondition(all(settingsRoot).allSatisfy { $0.layer?.animation(forKey: "FluentIME.Page.Entrance") == nil }, "Page motion did not settle")
         MaintenanceDialogs.uninstall(in: settings.window!.contentView!)
         pump()
-        precondition(button(L10n.uninstallAction, in: settings.window!.contentView!).role == .destructive)
+        precondition(button(L10n.uninstallAction, in: settings.window!.contentView!).role == .primary)
         try capture(settings.window!.contentView!, "uninstall-dialog")
         settings.window?.orderOut(nil)
         let renderLanguage = ProcessInfo.processInfo.environment["FLUENTIME_RENDER_LANGUAGE"]
@@ -208,10 +219,15 @@ import CRimeBridge
         let cleared = try ClipboardVault(directory: dir, key: { _ in key }).load(); precondition(cleared.isEmpty)
         try capture(palette, "clipboard-cleared"); panel.orderOut(nil)
         final class FakeUpdateService: IMEUpdateService {
-            func latest() async throws -> GitHubRelease? {
-                try await Task.sleep(nanoseconds: 1_200_000_000)
-                return try JSONDecoder().decode(GitHubRelease.self, from: Data(#"{"tag_name":"v99.0.0","draft":false,"prerelease":false,"assets":[]}"#.utf8))
+            func fixture(_ channel: UpdateChannel) -> GitHubRelease {
+                GitHubRelease(tag_name: channel == .preview ? "v99.1.0-beta.1" : "v99.0.0", draft: false, prerelease: channel == .preview, assets: [],
+                    body: "## Improvements\n- Candidate motion follows the selected language.\n- Clipboard storage no longer blocks the interface.", published_at: "2026-11-02T00:00:00Z")
             }
+            func latest(channel: UpdateChannel) async throws -> GitHubRelease? {
+                try await Task.sleep(nanoseconds: channel == .preview ? 100_000_000 : 1_200_000_000)
+                return fixture(channel)
+            }
+            func history(channel: UpdateChannel) async throws -> [GitHubRelease] { [fixture(channel)] }
             func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)?) async throws -> URL {
                 progress?(.downloading(received: 0, total: 100_000_000))
                 try await Task.sleep(nanoseconds: 100_000_000)
@@ -220,8 +236,9 @@ import CRimeBridge
                 throw CancellationError()
             }
         }
-        let updater = UpdateCoordinator(service: FakeUpdateService()), updateView = UpdatePageView(coordinator: updater)
-        let updateWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 290), styleMask: [.titled], backing: .buffered, defer: false)
+        let updateDefaults = UserDefaults(suiteName: "FluentIME-update-audit-" + UUID().uuidString)!
+        let updater = UpdateCoordinator(service: FakeUpdateService(), defaults: updateDefaults), updateView = UpdatePageView(coordinator: updater)
+        let updateWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 592, height: 800), styleMask: [.titled], backing: .buffered, defer: false)
         updateView.wantsLayer = true; updateView.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
         updateWindow.contentView = updateView; updateWindow.makeKeyAndOrderFront(nil)
         updater.check(); pump()
@@ -230,21 +247,71 @@ import CRimeBridge
         try capture(updateView, "update-checking")
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.65))
         precondition(updater.canInstall)
+        try capture(updateView, "update-available")
+        let historyPage = UpdateHistoryPageView(coordinator: updater)
+        historyPage.wantsLayer = true; historyPage.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
+        updateWindow.contentView = historyPage; pump()
+        let closedHeight = historyPage.preferredHeight
+        button(L10n.updateDetails, in: historyPage).onClick?(); pump()
+        precondition(historyPage.preferredHeight > closedHeight, "Release history must expand inline")
+        try capture(historyPage, "update-history")
+        updateWindow.contentView = updateView; pump()
+        var openedHistory = false
+        updateView.onOpenHistory = { openedHistory = true }
+        all(updateView).compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == L10n.updateHistoryTitle }!.performClick(nil)
+        precondition(openedHistory, "The entire history cell must navigate")
         updater.install(); pump()
         try capture(updateView, "update-downloading")
         precondition(!bar.isIndeterminate && bar.value == 50 && !bar.isHidden)
         updater.cancel(); pump()
         if case .cancelled = updater.state {} else { preconditionFailure("Cancellation did not settle the update page") }
         precondition(bar.isHidden)
+        // A late stable request must not replace the selected pre-release channel.
+        updater.check(); updater.selectChannel(.preview)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 1.5))
+        precondition(updater.channel == .preview && updater.latestRelease?.prerelease == true)
+        precondition(updater.history.first?.prerelease == true)
+        try capture(updateView, "update-preview-channel")
+        updater.checkAutomaticallyIfDue()
+        precondition(!updater.busy, "Automatic checks must respect the 24-hour interval")
+        updater.automaticChecks = false
+        updater.checkAutomaticallyIfDue(now: Date(timeIntervalSinceNow: 90000))
+        precondition(!updater.busy, "Turning automatic checks off must stop future checks")
+        updateDefaults.removeObject(forKey: "updateLastAttempt")
+        updater.automaticChecks = true
+        precondition(updater.busy, "Enabling automatic checks must check when due")
+        updater.cancel()
+        final class OfflineUpdateService: IMEUpdateService {
+            func latest(channel: UpdateChannel) async throws -> GitHubRelease? { throw URLError(.notConnectedToInternet) }
+            func history(channel: UpdateChannel) async throws -> [GitHubRelease] { throw URLError(.notConnectedToInternet) }
+            func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)?) async throws -> URL { throw URLError(.notConnectedToInternet) }
+        }
+        let offline = UpdateCoordinator(service: OfflineUpdateService(), defaults: updateDefaults)
+        let offlineView = UpdatePageView(coordinator: offline)
+        offlineView.wantsLayer = true; offlineView.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
+        updateWindow.contentView = offlineView; offline.check(); pump()
+        if case .failed(let message) = offline.state { precondition(message == L10n.updateConnectionFailed) }
+        else { preconditionFailure("Offline lookup must show an error, not an empty release or current state") }
+        try capture(offlineView, "update-offline")
+        let offlineHistory = UpdateHistoryPageView(coordinator: offline)
+        offlineHistory.wantsLayer = true; offlineHistory.layer?.backgroundColor = IMEThemeObservation.current.windowBackground.cgColor
+        updateWindow.contentView = offlineHistory; pump()
+        precondition(offline.historyError == L10n.updateConnectionFailed)
+        precondition(!button(L10n.updateHistoryRetry, in: offlineHistory).isHidden)
+        try capture(offlineHistory, "update-history-offline")
         updateWindow.orderOut(nil)
-        for page in ["fonts", "clipboard", "models", "updates", "advanced"] {
+        for page in ["fonts", "clipboard", "models", "updates", "updateHistory", "advanced"] {
             setenv("FLUENTIME_RENDER_PAGE", page, 1)
             let controller = try SettingsWindowController(engine: engine)
             try controller.render(to: output.appendingPathComponent("settings-" + page + ".png"))
+            if page == "updateHistory" {
+                let titles = all(controller.window!.contentView!).compactMap { ($0 as? NSButton)?.title }
+                precondition(titles.contains(L10n.updatePageTitle) && titles.contains(L10n.updateHistoryTitle), "History must have an Updates breadcrumb")
+            }
             if page == "advanced" {
                 let buttons = all(controller.window!.contentView!).compactMap { $0 as? FluentButton }.filter { [L10n.advancedOpenKeyboard, L10n.advancedLicenses, L10n.setupReopen, L10n.uninstallAction, L10n.updatePageTitle].contains($0.title) }
                 precondition(buttons.count == 5 && Set(buttons.map { $0.frame.width }).count == 1, "Advanced actions must align")
-                precondition(buttons.first { $0.title == L10n.uninstallAction }?.role == .destructive)
+                precondition(buttons.first { $0.title == L10n.uninstallAction }?.role == .primary)
             }
             if page == "fonts" {
                 let titles = all(controller.window!.contentView!).compactMap { ($0 as? NSTextField)?.stringValue }

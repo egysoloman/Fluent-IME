@@ -343,7 +343,7 @@
 "update.downloading" = "正在下载安装包，下载完成后会打开安装引导。";
 "update.current" = "当前已是最新版本（%1$@）。";
 "update.noRelease" = "暂时没有可用的发布版本。";
-"update.unavailable" = "无法获取更新，请稍后重试。";
+"update.unavailable" = "GitHub 暂时不可用，请稍后重试。";
 "update.invalid" = "发布版本不完整，请稍后重试。";
 "update.incompatible" = "这个版本不支持当前 Mac 或 macOS 版本。";
 "update.integrity" = "安装包校验失败，请重新下载。";
@@ -413,3 +413,36 @@
 "maintenance.removed" = "输入法及本地数据已移除。";
 "maintenance.removedKeepingData" = "输入法已移除。设置、词库和固定项目已保留。";
 "maintenance.verifying" = "正在校验安装包…";
+
+// Release channels and history
+"update.channelTitle" = "更新渠道";
+"update.channelStable" = "正式版";
+"update.channelPreview" = "测试版";
+"update.channelStableHint" = "只接收正式发布的版本。";
+"update.channelPreviewHint" = "接收正式版和测试版。切回正式版不会降级。";
+"update.notesTitle" = "更新内容";
+"update.notesEmpty" = "此版本未提供更新说明。";
+"update.notesPending" = "检查更新后显示版本说明。";
+"update.historyTitle" = "更新历史记录";
+"update.historyHint" = "GitHub 上的版本发布记录";
+"update.historyLoading" = "正在读取更新记录…";
+"update.historyEmpty" = "此渠道还没有发布记录。";
+"update.historyRetry" = "重新读取";
+"update.allReleases" = "所有版本 ↗";
+"update.releasePage" = "在 GitHub 查看 ↗";
+"update.details" = "查看详情";
+"update.hideDetails" = "收起详情";
+"update.lastChecked" = "上次检查：%1$@";
+"update.notChecked" = "尚未检查更新";
+"update.releaseLabel" = "Fluent IME %1$@";
+"update.moreOptions" = "更多选项";
+"update.receivePrerelease" = "接收测试版更新";
+"update.receivePrereleaseHint" = "接收 GitHub 上标记为 Pre-release 的版本。";
+"update.automaticChecks" = "自动检查更新";
+"update.automaticChecksHint" = "每 24 小时检查一次，不自动下载或安装。";
+"update.historyCellHint" = "查看已发布版本和更新内容";
+"update.connectionFailed" = "无法连接 GitHub，请检查网络后重试。";
+"update.checkFailed" = "检查更新失败";
+"update.downloadStatus" = "正在下载…";
+"update.ready" = "有可用更新";
+"update.historyFailed" = "无法读取更新记录";

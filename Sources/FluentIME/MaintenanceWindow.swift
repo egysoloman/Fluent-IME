@@ -52,7 +52,7 @@ final class MaintenanceWindowController: NSWindowController, NSWindowDelegate {
             button(L10n.commonClose, x: 310, y: 352, role: .primary) { [weak self] in self?.close() }
         } else {
             button(L10n.updateTitle, y: 260, width: 520, role: .primary) { [weak self] in Task { @MainActor in if let root = self?.root { UpdateCoordinator.shared.present(in: root) } } }
-            button(L10n.uninstallAction, y: installation.hasInstallerPayload ? 410 : 360, width: 520, role: .destructive, enabled: installation.isPresent) { [weak self] in
+            button(L10n.uninstallAction, y: installation.hasInstallerPayload ? 410 : 360, width: 520, role: .primary, enabled: installation.isPresent) { [weak self] in
                 guard let self else { return }
                 MaintenanceDialogs.uninstall(in: self.root, accepted: { [weak self] keep in self?.requestUninstall(keepData: keep) })
             }

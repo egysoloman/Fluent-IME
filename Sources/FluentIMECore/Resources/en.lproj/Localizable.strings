@@ -343,7 +343,7 @@
 "update.downloading" = "Downloading the update. Setup will open when the download finishes.";
 "update.current" = "You are up to date (%1$@).";
 "update.noRelease" = "No release is available yet.";
-"update.unavailable" = "Could not check for updates. Try again later.";
+"update.unavailable" = "GitHub is unavailable. Try again later.";
 "update.invalid" = "This release is incomplete. Try again later.";
 "update.incompatible" = "This release does not support this Mac or macOS version.";
 "update.integrity" = "The installer could not be verified. Download it again.";
@@ -413,3 +413,36 @@
 "maintenance.removed" = "The input method and its local data have been removed.";
 "maintenance.removedKeepingData" = "The input method has been removed. Settings, dictionaries, and pinned items were kept.";
 "maintenance.verifying" = "Verifying the installer…";
+
+// Release channels and history
+"update.channelTitle" = "Update channel";
+"update.channelStable" = "Release";
+"update.channelPreview" = "Pre-release";
+"update.channelStableHint" = "Only stable releases.";
+"update.channelPreviewHint" = "Stable and pre-release versions. Switching back does not downgrade.";
+"update.notesTitle" = "What’s new";
+"update.notesEmpty" = "No release notes were provided.";
+"update.notesPending" = "Check for updates to see release notes.";
+"update.historyTitle" = "Update history";
+"update.historyHint" = "Release history on GitHub";
+"update.historyLoading" = "Loading release history…";
+"update.historyEmpty" = "No releases in this channel yet.";
+"update.historyRetry" = "Retry";
+"update.allReleases" = "All releases ↗";
+"update.releasePage" = "View on GitHub ↗";
+"update.details" = "Show details";
+"update.hideDetails" = "Hide details";
+"update.lastChecked" = "Last checked: %1$@";
+"update.notChecked" = "Not checked yet";
+"update.releaseLabel" = "Fluent IME %1$@";
+"update.moreOptions" = "More options";
+"update.receivePrerelease" = "Receive pre-release updates";
+"update.receivePrereleaseHint" = "Include versions marked as Pre-release on GitHub.";
+"update.automaticChecks" = "Check for updates automatically";
+"update.automaticChecksHint" = "Check every 24 hours. Downloads and installation stay manual.";
+"update.historyCellHint" = "View published versions and release notes";
+"update.connectionFailed" = "Cannot connect to GitHub. Check your connection and try again.";
+"update.checkFailed" = "Could not check for updates";
+"update.downloadStatus" = "Downloading…";
+"update.ready" = "Updates available";
+"update.historyFailed" = "Could not load update history";

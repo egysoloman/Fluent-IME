@@ -40,14 +40,19 @@ final class InputModePanel: NSPanel {
     func present(mode: InputMode, modes: [InputMode], near caret: NSRect, onSelect: @escaping (InputMode) -> Void) {
         guard Preferences.shared.showInputModeIndicator, !IsSecureEventInputEnabled(), caret.height > 0 else { dismiss(); return }
         let wasVisible = isVisible
+        let nextModes = InputMode.normalized(modes)
+        // Follow the visible option order, including the last-to-first wrap.
+        let previousIndex = nextModes.firstIndex(of: self.mode)
+        let nextIndex = nextModes.firstIndex(of: mode)
+        let backward = previousIndex.flatMap { old in nextIndex.map { $0 < old } } ?? false
         let snapshot = wasVisible && !expanded && self.mode != mode ? badgeMotion.capture(surface) : nil
         finishExpansion(); badgeMotion.cancel()
         generation += 1
-        self.mode = mode; self.modes = InputMode.normalized(modes); anchor = caret; selection = onSelect
+        self.mode = mode; self.modes = nextModes; anchor = caret; selection = onSelect
         if !wasVisible { expanded = false }
         alphaValue = 1; shadow.alphaValue = 1; rebuild()
         if let snapshot, let button = surface.subviews.first(where: { $0 is FluentButton }) {
-            badgeMotion.play(snapshot, in: surface, content: button, backward: false)
+            badgeMotion.play(snapshot, in: surface, content: button, backward: backward)
         } else if !wasVisible { animateEntrance() }
         scheduleDismiss(after: expanded ? 8 : 1.8)
     }

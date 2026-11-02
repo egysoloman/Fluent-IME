@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     @objc private func showSettingsNotification() { Runtime.shared.showSettings() }
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UpdateCoordinator.shared.startAutomaticChecks()
         if preview { Runtime.shared.showSettings() }
         if !cleanupInstallers.isEmpty {
             Task { @MainActor in

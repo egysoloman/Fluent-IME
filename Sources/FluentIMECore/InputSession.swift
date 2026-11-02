@@ -63,6 +63,7 @@ public final class InputSession {
     private var visibleStart = 0
     private var expandedColumns = 6
     private var pinyinPreedit = PinyinPreedit()
+    private let rankingClock: () -> TimeInterval
     private let ranker: CandidateReranking?
     private var rankingTicket: RankingTicket?
     private var rankingGeneration = 0
@@ -129,9 +130,9 @@ public final class InputSession {
         visibleStart = max(0, start); expandedColumns = max(1, min(9, columns))
     }
 
-    public init(engine: RimeEngine, options: @escaping () -> InputOptions = { InputOptions() }, ranker: CandidateReranking? = nil, languageOptions: ((InputMode) -> InputOptions)? = nil) throws {
+    public init(engine: RimeEngine, options: @escaping () -> InputOptions = { InputOptions() }, ranker: CandidateReranking? = nil, languageOptions: ((InputMode) -> InputOptions)? = nil, rankingClock: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws {
         rime = try engine.makeSession()
-        self.ranker = ranker
+        self.ranker = ranker; self.rankingClock = rankingClock
         self.baseOptions = options; self.languageOptions = languageOptions
         let initialMode = options().initialMode
         mode = initialMode
@@ -373,7 +374,7 @@ public final class InputSession {
         let fingerprint = key(for: current)
         guard rankingKey != fingerprint else { return }
         invalidateRanking(); rankingKey = fingerprint
-        let generation = rankingGeneration, start = ProcessInfo.processInfo.systemUptime
+        let generation = rankingGeneration, start = rankingClock()
         let candidates = Array(current.candidates.prefix(7))
         // Give a new keystroke a chance to supersede this request before doing work.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.008) { [weak self] in
@@ -381,7 +382,7 @@ public final class InputSession {
             self.rankingTicket = ranker.rank(context: self.recentContext, candidates: candidates) { [weak self] order in
                 guard let self, self.rankingGeneration == generation, self.options().neuralRanking, !self.rankingLocked,
                       !IsSecureEventInputEnabled(), self.key(for: self.baseComposition) == fingerprint,
-                      ProcessInfo.processInfo.systemUptime - start <= 0.080,
+                      self.rankingClock() - start <= 0.080,
                       let order, order.sorted() == Array(candidates.indices) else { return }
                 let constrained = self.appliedOptions.fuzzyPinyinMask == 0 && !self.appliedOptions.autoCorrection ? order : PinyinCandidateOrder.prioritizeExact(candidates, preedit: current.preedit, cursorUTF16: current.cursorUTF16, order: order)
                 (ranker as? CoreMLCandidateRanker)?.recordApplied()

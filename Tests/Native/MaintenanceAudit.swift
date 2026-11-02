@@ -41,13 +41,13 @@ import FluentIMECore
                 let prefix = "\(dark ? "dark" : "light")-\(payload ? "installer" : "maintenance")"
                 try capture(root, prefix)
                 let uninstall = actions.first { $0.title == L10n.uninstallAction }!
-                precondition(uninstall.role == .destructive)
+                precondition(uninstall.role == .primary)
                 uninstall.onClick?(); pump()
                 let check = all(root).compactMap { $0 as? FluentCheckBox }.first!
                 precondition(check.isChecked)
                 check.isChecked = payload; check.onValueChanged?(payload)
                 let confirm = all(root).compactMap { $0 as? FluentButton }.first { $0.identifier?.rawValue == "FluentKit.ContentDialog.primary" }!
-                precondition(confirm.role == .destructive)
+                precondition(confirm.role == .primary)
                 try capture(root, prefix + "-uninstall")
                 confirm.onClick?(); pump()
                 precondition(fixture.choice == payload, "Uninstall did not carry the keep-data choice")

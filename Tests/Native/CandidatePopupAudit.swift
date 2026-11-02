@@ -120,12 +120,28 @@ import FluentIMECore
                       near: NSRect(x: screen.midX, y: screen.midY, width: 1, height: 20)) { selectedMode = $0 }
         precondition(badge.isVisible && !badge.expanded && !badge.isKeyWindow)
         pump(0.2)
-        badge.present(mode: .english, modes: InputMode.allCases, near: NSRect(x: screen.midX, y: screen.midY, width: 1, height: 20)) { selectedMode = $0 }
-        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            let button = badge.contentView!.subviews.compactMap { $0 as? FluentButton }.first!
-            precondition(button.layer?.animation(forKey: "FluentIME.Page.Entrance") != nil, "Visible Shift badge must animate")
+        let badgeAnchor = NSRect(x: screen.midX, y: screen.midY, width: 1, height: 20)
+        var oldMode: InputMode = .simplifiedChinese
+        for enabled in [InputMode.allCases, [.simplifiedChinese, .english]] {
+            let sequence: [InputMode] = enabled.count == 3
+                ? [.traditionalChinese, .english, .simplifiedChinese, .english, .traditionalChinese, .simplifiedChinese, .english]
+                : [.simplifiedChinese, .english]
+            for target in sequence {
+                let oldFrame = badge.frame
+                badge.present(mode: target, modes: enabled, near: badgeAnchor) { selectedMode = $0 }
+                precondition(badge.frame == oldFrame, "Changing modes must keep the collapsed badge anchored")
+                if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                    let button = badge.contentView!.subviews.compactMap { $0 as? FluentButton }.first!
+                    let group = button.layer?.animation(forKey: "FluentIME.Page.Entrance") as? CAAnimationGroup
+                    let slide = group?.animations?.compactMap { $0 as? CABasicAnimation }.first { $0.keyPath == "transform.translation.x" }
+                    let expected: Double = enabled.firstIndex(of: target)! < enabled.firstIndex(of: oldMode)! ? -24 : 24
+                    precondition((slide?.fromValue as? NSNumber)?.doubleValue == expected, "Badge slide must follow the visible option order")
+                }
+                oldMode = target; pump(0.2)
+            }
         }
-        pump(0.2)
+        // Restore all three options before checking the expanded selector.
+        badge.present(mode: .english, modes: InputMode.allCases, near: badgeAnchor) { selectedMode = $0 }
         badge.contentView!.subviews.compactMap { $0 as? NSButton }.first!.performClick(nil)
         precondition(badge.expanded)
         if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
@@ -138,6 +154,18 @@ import FluentIMECore
         let modeControl = badge.contentView!.subviews.compactMap { $0 as? NSSegmentedControl }.first!
         precondition(modeControl.segmentCount == 3)
         let indicator = modeControl.subviews.first { $0.identifier?.rawValue == "FluentKit.Segmented.SelectionIndicator" }!
+        for target in [InputMode.simplifiedChinese, .traditionalChinese, .english] {
+            let oldX = indicator.layer!.position.x
+            badge.present(mode: target, modes: InputMode.allCases, near: badgeAnchor) { selectedMode = $0 }
+            precondition(badge.contentView!.subviews.contains { $0 === modeControl })
+            if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                let group = indicator.layer?.animation(forKey: "fluent.segmented.selection") as? CAAnimationGroup
+                let slide = group?.animations?.compactMap { $0 as? CABasicAnimation }.first { $0.keyPath == "position" }
+                precondition(abs(((slide?.fromValue as? NSValue)?.pointValue.x ?? -1000) - oldX) < 0.5)
+                precondition((slide?.toValue as? NSValue)?.pointValue.x == indicator.layer!.position.x)
+            }
+            pump(0.2)
+        }
         let commandItem = NSMenuItem(title: "Mode", action: nil, keyEquivalent: "")
         commandItem.representedObject = InputMode.traditionalChinese.rawValue
         precondition(InputMethodMenuCommand([kIMKCommandMenuItemName: commandItem] as NSDictionary).mode == .traditionalChinese)

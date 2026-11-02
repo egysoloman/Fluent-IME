@@ -578,16 +578,56 @@ public extension L10n {
     static var uninstallRemoveHint: String { text("uninstall.removeHint") }
     /// 确定要卸载 Fluent 拼音吗？
     static var uninstallTitle: String { text("uninstall.title") }
+    /// 所有版本 ↗
+    static var updateAllReleases: String { text("update.allReleases") }
+    /// 自动检查更新
+    static var updateAutomaticChecks: String { text("update.automaticChecks") }
+    /// 每 24 小时检查一次，不自动下载或安装。
+    static var updateAutomaticChecksHint: String { text("update.automaticChecksHint") }
     /// 有新版本 %1$@。
     static func updateAvailable(_ arg1: String) -> String { format("update.available", arguments: [arg1]) }
     /// 已取消更新。
     static var updateCancelled: String { text("update.cancelled") }
+    /// 测试版
+    static var updateChannelPreview: String { text("update.channelPreview") }
+    /// 接收正式版和测试版。切回正式版不会降级。
+    static var updateChannelPreviewHint: String { text("update.channelPreviewHint") }
+    /// 正式版
+    static var updateChannelStable: String { text("update.channelStable") }
+    /// 只接收正式发布的版本。
+    static var updateChannelStableHint: String { text("update.channelStableHint") }
+    /// 更新渠道
+    static var updateChannelTitle: String { text("update.channelTitle") }
+    /// 检查更新失败
+    static var updateCheckFailed: String { text("update.checkFailed") }
     /// 正在检查更新…
     static var updateChecking: String { text("update.checking") }
+    /// 无法连接 GitHub，请检查网络后重试。
+    static var updateConnectionFailed: String { text("update.connectionFailed") }
     /// 当前已是最新版本（%1$@）。
     static func updateCurrent(_ arg1: String) -> String { format("update.current", arguments: [arg1]) }
+    /// 查看详情
+    static var updateDetails: String { text("update.details") }
+    /// 正在下载…
+    static var updateDownloadStatus: String { text("update.downloadStatus") }
     /// 正在下载安装包，下载完成后会打开安装引导。
     static var updateDownloading: String { text("update.downloading") }
+    /// 收起详情
+    static var updateHideDetails: String { text("update.hideDetails") }
+    /// 查看已发布版本和更新内容
+    static var updateHistoryCellHint: String { text("update.historyCellHint") }
+    /// 此渠道还没有发布记录。
+    static var updateHistoryEmpty: String { text("update.historyEmpty") }
+    /// 无法读取更新记录
+    static var updateHistoryFailed: String { text("update.historyFailed") }
+    /// GitHub 上的版本发布记录
+    static var updateHistoryHint: String { text("update.historyHint") }
+    /// 正在读取更新记录…
+    static var updateHistoryLoading: String { text("update.historyLoading") }
+    /// 重新读取
+    static var updateHistoryRetry: String { text("update.historyRetry") }
+    /// 更新历史记录
+    static var updateHistoryTitle: String { text("update.historyTitle") }
     /// 从 GitHub 获取新版本。
     static var updateIdle: String { text("update.idle") }
     /// 这个版本不支持当前 Mac 或 macOS 版本。
@@ -600,8 +640,20 @@ public extension L10n {
     static var updateIntegrity: String { text("update.integrity") }
     /// 发布版本不完整，请稍后重试。
     static var updateInvalid: String { text("update.invalid") }
+    /// 上次检查：%1$@
+    static func updateLastChecked(_ arg1: String) -> String { format("update.lastChecked", arguments: [arg1]) }
+    /// 更多选项
+    static var updateMoreOptions: String { text("update.moreOptions") }
     /// 暂时没有可用的发布版本。
     static var updateNoRelease: String { text("update.noRelease") }
+    /// 尚未检查更新
+    static var updateNotChecked: String { text("update.notChecked") }
+    /// 此版本未提供更新说明。
+    static var updateNotesEmpty: String { text("update.notesEmpty") }
+    /// 检查更新后显示版本说明。
+    static var updateNotesPending: String { text("update.notesPending") }
+    /// 更新内容
+    static var updateNotesTitle: String { text("update.notesTitle") }
     /// 安装引导已打开，请在引导中完成更新。
     static var updateOpened: String { text("update.opened") }
     /// 正在打开安装引导…
@@ -610,9 +662,19 @@ public extension L10n {
     static var updatePageDetail: String { text("update.pageDetail") }
     /// 更新
     static var updatePageTitle: String { text("update.pageTitle") }
+    /// 有可用更新
+    static var updateReady: String { text("update.ready") }
+    /// 接收测试版更新
+    static var updateReceivePrerelease: String { text("update.receivePrerelease") }
+    /// 接收 GitHub 上标记为 Pre-release 的版本。
+    static var updateReceivePrereleaseHint: String { text("update.receivePrereleaseHint") }
+    /// Fluent IME %1$@
+    static func updateReleaseLabel(_ arg1: String) -> String { format("update.releaseLabel", arguments: [arg1]) }
+    /// 在 GitHub 查看 ↗
+    static var updateReleasePage: String { text("update.releasePage") }
     /// 检查更新
     static var updateTitle: String { text("update.title") }
-    /// 无法获取更新，请稍后重试。
+    /// GitHub 暂时不可用，请稍后重试。
     static var updateUnavailable: String { text("update.unavailable") }
     /// 正在校验安装包…
     static var updateVerifying: String { text("update.verifying") }

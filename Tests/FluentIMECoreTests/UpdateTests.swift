@@ -8,6 +8,38 @@ final class UpdateTests: XCTestCase {
         XCTAssertEqual(ReleaseVersion("1.0"), ReleaseVersion("1.0.0"))
         for value in ["latest", "1.0-beta", "1..0", "-1.0", "1.0.0.9"] { XCTAssertNil(ReleaseVersion(value)) }
     }
+    func testPrereleaseVersionsAndGitHubChannelFlags() throws {
+        let versions = ["1.0.0-alpha", "1.0.0-alpha.1", "1.0.0-alpha.beta", "1.0.0-beta", "1.0.0-beta.2", "1.0.0-beta.11", "1.0.0-rc.1", "1.0.0"]
+        for (left, right) in zip(versions, versions.dropFirst()) { XCTAssertLessThan(ReleaseVersion(left)!, ReleaseVersion(right)!) }
+        XCTAssertEqual(ReleaseVersion("1.0.0+build.2"), ReleaseVersion("1.0.0+build.9"))
+        for invalid in ["1.0.0-", "1.0.0-beta..1", "1.0.0-01", "1.0.0+", "1.0.0+/file", "01.0.0", "1.0.0-测"] { XCTAssertNil(ReleaseVersion(invalid)) }
+        // GitHub's flag, not a guessed tag spelling, determines the channel.
+        let flagged = GitHubRelease(tag_name: "v1.1.0", draft: false, prerelease: true, assets: [])
+        XCTAssertFalse(UpdateChannel.stable.accepts(flagged))
+        XCTAssertTrue(UpdateChannel.preview.accepts(flagged))
+        XCTAssertFalse(flagged.isNewer(than: "1.0.0"))
+        XCTAssertTrue(flagged.isNewer(than: "1.0.0", channel: .preview))
+        XCTAssertFalse(UpdateChannel.preview.accepts(GitHubRelease(tag_name: "v2.0.0", draft: true, prerelease: true, assets: [])))
+        let final = GitHubRelease(tag_name: "v1.0.0", draft: false, prerelease: false, assets: [])
+        XCTAssertTrue(final.isNewer(than: "1.0.0-rc.1"))
+        XCTAssertFalse(final.isNewer(than: "1.1.0-beta.1"), "Returning to stable must not offer a downgrade")
+    }
+    func testChannelHistorySortsVersionsAndKeepsReleaseNotes() async throws {
+        let configuration = URLSessionConfiguration.ephemeral; configuration.protocolClasses = [ChannelReleaseProtocol.self]
+        let service = GitHubUpdateService(edition: .lite, configuration: configuration)
+        let stable = try await service.history(channel: .stable)
+        XCTAssertEqual(stable.map(\.version), ["1.0.0", "0.9.0"])
+        let preview = try await service.history(channel: .preview)
+        XCTAssertEqual(preview.map(\.version), ["1.1.0-beta.2", "1.1.0-beta.1", "1.0.0", "0.9.0"])
+        XCTAssertEqual(preview.first?.body, "## Changes\n- Fixed selection.")
+        XCTAssertEqual(preview.first?.published_at, "2026-11-02T00:00:00Z")
+        let latest = try await service.latest(channel: .preview)
+        XCTAssertEqual(latest?.version, "1.1.0-beta.1", "Skip releases without this edition's installer")
+        XCTAssertEqual(latest?.pageURL.absoluteString, "https://github.com/egysoloman/Fluent-IME/releases/tag/v1.1.0-beta.1")
+        let limited = URLSessionConfiguration.ephemeral; limited.protocolClasses = [RateLimitedReleaseProtocol.self]
+        do { _ = try await GitHubUpdateService(edition: .lite, configuration: limited).latest(channel: .preview); XCTFail("A failed preview lookup must not silently switch to stable") }
+        catch { XCTAssertTrue(error is UpdateError) }
+    }
     func testReleaseFilteringAndAssetSelection() throws {
         let release = try JSONDecoder().decode(GitHubRelease.self, from: Data(#"{"tag_name":"v0.6.0","draft":false,"prerelease":false,"assets":[{"name":"Fluent-IME-0.6.0-Setup.dmg","size":8,"browser_download_url":"https://github.com/egysoloman/Fluent-IME/releases/download/v0.6.0/Fluent-IME-0.6.0-Setup.dmg"}]}"#.utf8))
         XCTAssertTrue(release.isNewer(than: "0.5.4")); XCTAssertFalse(release.isNewer(than: "0.6.0"))
@@ -32,7 +64,7 @@ final class UpdateTests: XCTestCase {
         for value in [
             "https://github.com/other/Fluent-IME/releases/tag/v0.6.2",
             "https://github.com/egysoloman/Fluent-IME/releases/latest",
-            "https://github.com/egysoloman/Fluent-IME/releases/tag/v0.6.2-beta",
+            "https://github.com/egysoloman/Fluent-IME/releases/tag/v0.6.2-",
             "https://github.com/egysoloman/Fluent-IME/releases/tag/v0.6.2/extra",
             "https://github.com/egysoloman/Fluent-IME/releases/tag/v0.6.2?asset=other",
             "http://github.com/egysoloman/Fluent-IME/releases/tag/v0.6.2",
@@ -171,5 +203,23 @@ private final class RateLimitedReleaseProtocol: URLProtocol {
         client?.urlProtocolDidFinishLoading(self)
     }
     private func fail() { client?.urlProtocol(self, didFailWithError: URLError(.badURL)) }
+    override func stopLoading() {}
+}
+
+private final class ChannelReleaseProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let records: [(String, Bool, Bool)] = [("0.9.0", false, false), ("1.1.0-beta.1", true, false), ("1.0.0", false, false), ("1.1.0-beta.2", true, false), ("9.0.0", true, true), ("nightly", true, false)]
+        let json = records.map { version, preview, draft -> [String: Any] in
+            let base = "https://github.com/egysoloman/Fluent-IME/releases/download/v" + version + "/"
+            return ["tag_name": "v" + version, "prerelease": preview, "draft": draft,
+                "body": "## Changes\n- Fixed selection.", "published_at": "2026-11-02T00:00:00Z",
+                "assets": version == "1.1.0-beta.2" ? [] : ["Fluent-IME-" + version + "-Setup.dmg", "release.json"].map { ["name": $0, "size": 10, "browser_download_url": base + $0] }]
+        }
+        let data = try! JSONSerialization.data(withJSONObject: json)
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data); client?.urlProtocolDidFinishLoading(self)
+    }
     override func stopLoading() {}
 }
