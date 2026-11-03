@@ -107,9 +107,9 @@ import FluentIMECore
         overlay.orderOut(nil)
         print("IME window levels and WindowServer stacking above floating overlay passed")
         Preferences.shared.advancedEffects = true
-        let acrylic = panel.candidateView.subviews.compactMap { $0 as? FluentMaterialView }.first!
+        let acrylic = panel.candidateView.subviews.compactMap { $0 as? IMEAcrylicView }.first!
         precondition(!acrylic.isHidden && acrylic.isMaterialEnabled && acrylic.materialStyle == .nativeAcrylic)
-        precondition(emoji.paletteView.subviews.compactMap { $0 as? FluentMaterialView }.first!.isMaterialEnabled)
+        precondition(emoji.paletteView.subviews.compactMap { $0 as? IMEAcrylicView }.first!.isMaterialEnabled)
         Preferences.shared.advancedEffects = false
         precondition(acrylic.isHidden && !acrylic.isMaterialEnabled)
         Preferences.shared.showInputModeIndicator = true
@@ -132,10 +132,13 @@ import FluentIMECore
                 precondition(badge.frame == oldFrame, "Changing modes must keep the collapsed badge anchored")
                 if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
                     let button = badge.contentView!.subviews.compactMap { $0 as? FluentButton }.first!
-                    let group = button.layer?.animation(forKey: "FluentIME.Page.Entrance") as? CAAnimationGroup
-                    let slide = group?.animations?.compactMap { $0 as? CABasicAnimation }.first { $0.keyPath == "transform.translation.x" }
-                    let expected: Double = enabled.firstIndex(of: target)! < enabled.firstIndex(of: oldMode)! ? -24 : 24
-                    precondition((slide?.fromValue as? NSNumber)?.doubleValue == expected, "Badge slide must follow the visible option order")
+                    precondition(button.layer?.animation(forKey: "FluentIME.Page.Entrance") == nil, "The badge itself must not slide")
+                    let letter = badge.contentView!.subviews.compactMap { $0 as? ModeBadgeLetter }.first!
+                    let entering = letter.layer?.sublayers?.compactMap { $0.animation(forKey: "FluentIME.Letter.Enter") as? CAAnimationGroup }.first
+                    let slide = entering?.animations?.compactMap { $0 as? CABasicAnimation }.first { $0.keyPath == "transform.translation.x" }
+                    let expected: Double = enabled.firstIndex(of: target)! < enabled.firstIndex(of: oldMode)! ? -12 : 12
+                    
+                    precondition(target == oldMode || (slide?.fromValue as? NSNumber)?.doubleValue == expected, "Letter page must follow the visible option order")
                 }
                 oldMode = target; pump(0.2)
             }
