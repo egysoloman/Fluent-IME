@@ -86,7 +86,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     }
     @discardableResult private func button(_ title: String, x: CGFloat = 0, y: CGFloat, width: CGFloat = 192, enabled: Bool = true, primary: Bool = false, parent: NSView? = nil, action: @escaping () -> Void) -> FluentButton {
         let button = FluentButton(title: title, role: primary ? .primary : .standard); button.theme = theme; button.isEnabled = enabled && !busy; button.onClick = action
-        button.frame = NSRect(x: x, y: y, width: width, height: 34); (parent ?? content).addSubview(button); return button
+        button.frame = NSRect(x: x, y: y, width: max(width, button.intrinsicContentSize.width + 12), height: 34); (parent ?? content).addSubview(button); return button
     }
     private func card(x: CGFloat = 0, y: CGFloat, width: CGFloat = 544, height: CGFloat) {
         let view = NSView(frame: NSRect(x: x, y: y, width: width, height: height)); view.wantsLayer = true
@@ -105,7 +105,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         let definition = FluentComboBox(options: options.map(\.0), selection: FluentBinding(get: { selection }, set: { selection = $0; if let value = $0 { action(value) } }), title: { titles[$0] ?? $0 })
         let view = definition._makeView(in: FluentRenderContext(theme: theme, locale: L10n.locale))
         view.translatesAutoresizingMaskIntoConstraints = true
-        view.frame = NSRect(x: x, y: y, width: width, height: 32); content.addSubview(view)
+        let widest = options.map { ceil(($0.1 as NSString).size(withAttributes: [.font: IMEFont.font(ofSize: 14)]).width) }.max() ?? 0
+        view.frame = NSRect(x: x, y: y, width: max(width, widest + 64), height: 32); content.addSubview(view)
     }
     private func navigate(_ destination: Int) {
         guard !busy, (0...4).contains(destination), destination != step else { return }

@@ -1,0 +1,39 @@
+name: Release packages
+# Push a tag such as v0.7.4 (or run manually) to build every installer on GitHub
+# instead of locally. Release notes come from RELEASE_NOTES.md.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build with public dependencies
+        run: CONFIGURATION=release bash scripts/build.sh
+      - name: Package Lite, Full, Update and Zhuyin installers
+        run: python3 scripts/package-editions.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: |
+            dist/*-Setup.dmg
+            dist/release*.json
+            dist/SHA256SUMS
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            dist/Fluent-IME-$VERSION-Setup.dmg dist/Fluent-IME-$VERSION-Full-Setup.dmg \
+            dist/Fluent-IME-$VERSION-Update-Setup.dmg dist/Fluent-Zhuyin-$VERSION-Setup.dmg \
+            dist/release.json dist/release-full.json dist/release-update.json dist/release-zhuyin.json dist/SHA256SUMS \
+            --title "Fluent IME $VERSION" --notes-file RELEASE_NOTES.md

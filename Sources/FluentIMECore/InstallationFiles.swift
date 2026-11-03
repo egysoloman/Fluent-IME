@@ -39,6 +39,7 @@ public struct InstallationFiles {
         let staged = staging.appendingPathComponent(product.appFileName)
         try fm.copyItem(at: source, to: staged)
         try fm.createDirectory(at: application.deletingLastPathComponent(), withIntermediateDirectories: true)
+        carryOverModels(into: staged)
         var previous: URL?
         if fm.fileExists(atPath: application.path) {
             previous = try backupDirectory("Backups").appendingPathComponent(product.appFileName)
@@ -47,6 +48,35 @@ public struct InstallationFiles {
         do { try fm.moveItem(at: staged, to: application) }
         catch { if let previous { try? fm.moveItem(at: previous, to: application) }; throw error }
         if let previous { pruneApplicationBackups(keeping: previous.deletingLastPathComponent()) }
+    }
+    /// An update package without language models keeps the ones already installed.
+    /// The staged app is re-signed ad hoc because its contents changed.
+    func carryOverModels(into staged: URL) {
+        let fm = FileManager.default
+        var changed = false
+        func carry(_ relative: String) {
+            let from = application.appendingPathComponent(relative), to = staged.appendingPathComponent(relative)
+            guard fm.fileExists(atPath: from.path), !fm.fileExists(atPath: to.path) else { return }
+            try? fm.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if (try? fm.copyItem(at: from, to: to)) != nil { changed = true }
+        }
+        carry("Contents/Resources/Models")
+        carry("Contents/Resources/Rime/wanxiang-lts-zh-hans.gram")
+        carry("Contents/Resources/Licenses/transformer-model.json")
+        carry("Contents/Resources/Licenses/wanxiang-model.json")
+        guard changed else { return }
+        let hasTransformer = fm.fileExists(atPath: staged.appendingPathComponent("Contents/Resources/Models/ChineseContextScorer.mlmodelc").path)
+        for plist in ["Contents/Info.plist", "Contents/Library/Fluent IME Maintenance.app/Contents/Info.plist"] {
+            let url = staged.appendingPathComponent(plist)
+            guard var info = NSDictionary(contentsOf: url) as? [String: Any] else { continue }
+            info["FluentIMEEdition"] = hasTransformer ? "full" : "lite"
+            (info as NSDictionary).write(to: url, atomically: true)
+        }
+        let codesign = Process()
+        codesign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        codesign.arguments = ["--force", "--deep", "--sign", "-", staged.path]
+        codesign.standardOutput = FileHandle.nullDevice; codesign.standardError = FileHandle.nullDevice
+        if (try? codesign.run()) != nil { codesign.waitUntilExit() }
     }
     /// Each update moves the replaced app aside. Keep only the newest copy for recovery.
     func pruneApplicationBackups(keeping newest: URL) {

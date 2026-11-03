@@ -27,8 +27,8 @@ def product_of(app: Path) -> str:
 
 def installer_asset(product: str, version: str, edition: str) -> str:
     if product == 'zhuyin': return f'Fluent-Zhuyin-{version}-Setup.dmg'
-    return f'Fluent-IME-{version}{"-Full" if edition == "full" else ""}-Setup.dmg'
+    return f'Fluent-IME-{version}{"-Full" if edition == "full" else "-Update" if edition == "update" else ""}-Setup.dmg'
 
 def manifest_asset(product: str, edition: str) -> str:
     if product == 'zhuyin': return 'release-zhuyin.json'
-    return 'release-full.json' if edition == 'full' else 'release.json'
+    return {'full': 'release-full.json', 'update': 'release-update.json'}.get(edition, 'release.json')

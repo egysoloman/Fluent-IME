@@ -532,6 +532,27 @@ final class EngineTests: XCTestCase {
                          charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!
     }
 
+    func testAutoCorrectionRanksCorrectedFullPinyinFirst() throws {
+        let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { InputOptions(autoCorrection: true, abbreviation: true, learning: false) })
+        for (typed, expected) in [("zhonhguo", "中国"), ("nihso", "你好"), ("shenmr", "什么"), ("pengyoi", "朋友"), ("shijir", "世界")] {
+            input.cancel()
+            for character in typed { _ = input.handle(key(String(character))) }
+            XCTAssertEqual(input.composition.candidates.first?.text, expected, typed)
+        }
+    }
+
+    func testShiftLetterEntersCompositionAndKeepsCase() throws {
+        let input = try InputSession(engine: XCTUnwrap(Self.engine), options: { InputOptions(learning: false) })
+        var committed = ""
+        input.onCommit = { committed += $0 }
+        _ = input.handle(key("A", code: 0, flags: .shift))
+        for character in "ndroid" { _ = input.handle(key(String(character))) }
+        XCTAssertTrue(input.composition.isComposing)
+        XCTAssertEqual(input.composition.candidates.first?.text, "Android")
+        input.choose(0)
+        XCTAssertEqual(committed, "Android")
+    }
+
     func testReturnCommitsRawPinyinAndApplicationShortcutPassesThrough() throws {
         let input = try InputSession(engine: XCTUnwrap(Self.engine))
         var committed = ""

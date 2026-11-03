@@ -503,7 +503,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
     }
     private func action(_ title: String, x: CGFloat = 0, y: CGFloat, width: CGFloat = 180, role: FluentButtonRole = .standard, parent: NSView? = nil, invoke: @escaping () -> Void) -> FluentButton {
         let button = FluentButton(title: title, role: role); button.theme = theme; button.onClick = invoke
-        button.frame = NSRect(x: x, y: y, width: max(width, button.intrinsicContentSize.width), height: 32)
+        button.frame = NSRect(x: x, y: y, width: max(width, button.intrinsicContentSize.width + 12), height: 32)
         pageAppearanceUpdates.append { [weak button] theme in button?.theme = theme }
         (parent ?? pageContent).addSubview(button); return button
     }
@@ -518,7 +518,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
                 width + ceil((part.element as NSString).size(withAttributes: [.font: IMEFont.font(ofSize: pointSize, weight: part.offset == parts.count - 1 ? .medium : .regular)]).width) + 4
             }
         }
-        while pointSize > 18 && totalWidth() > breadcrumbs.bounds.width { pointSize -= 0.5 }
+        while pointSize > 13 && totalWidth() > breadcrumbs.bounds.width { pointSize -= 0.5 }
         var x: CGFloat = 0
         for (index, text) in parts.enumerated() {
             let font = IMEFont.font(ofSize: pointSize, weight: index == parts.count - 1 ? .medium : .regular)
@@ -583,7 +583,8 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         pageAppearanceUpdates.append { [weak view] theme in
             if let view { _ = definition._updateView(view, in: FluentRenderContext(theme: theme, locale: L10n.locale)) }
         }
-        view.frame = NSRect(x: 0, y: y + 27, width: width, height: 32)
+        let widest = options.map { ceil(($0.title as NSString).size(withAttributes: [.font: IMEFont.font(ofSize: 14)]).width) }.max() ?? 0
+        view.frame = NSRect(x: 0, y: y + 27, width: max(width, widest + 64), height: 32)
         view.setAccessibilityLabel(title); pageContent.addSubview(view)
     }
     private func buildPage() {
@@ -744,8 +745,8 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
                 let missing = !grammar && Bundle.main.resourceURL.map { !FileManager.default.fileExists(atPath: $0.appendingPathComponent("Models/ChineseContextScorer.mlmodelc").path) } != false
                 _ = label(custom ? L10n.modelsCustom : (missing ? L10n.dictionaryModelMissing : L10n.modelsBundled), y: y + 44, size: 13, secondary: true)
                 paragraph(grammar ? L10n.modelsGrammarFormat : L10n.modelsTransformerFormat, y: y + 76, height: 64)
-                _ = action(L10n.modelsDownload, y: y + 152, width: 170) { UserModels.download(grammar: grammar) }
-                _ = action(L10n.modelsImport, x: 188, y: y + 152, width: 170) { [weak self] in
+                let download = action(L10n.modelsDownload, y: y + 152, width: 170) { UserModels.download(grammar: grammar) }
+                _ = action(L10n.modelsImport, x: max(188, download.frame.maxX + 18), y: y + 152, width: 170) { [weak self] in
                     guard let self else { return }
                     UserModels.chooseImport(grammar: grammar, in: root) { [weak self] status in self?.modelStatus = status; self?.buildPage() }
                 }
@@ -879,6 +880,7 @@ final class SettingsWindowController: NSWindowController, NSSearchFieldDelegate 
         guard page == .preview else { return }
         languageButton?.title = L10n.modeSwitchTo(input.nextMode.title)
         languageButton?.setAccessibilityLabel(L10n.modeSwitchTo(input.nextMode.title))
+        if let button = languageButton { button.frame.size.width = max(180, button.intrinsicContentSize.width + 16) }
         candidates.isHidden = !input.isChinese
         candidateShadow.isHidden = candidates.isHidden
         candidates.language = input.mode

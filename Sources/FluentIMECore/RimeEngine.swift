@@ -39,7 +39,9 @@ public enum EngineError: LocalizedError {
 public final class RimeEngine {
     public let sharedDirectory: URL
     public let userDirectory: URL
-    public var grammarAvailable: Bool { FIMHasGrammar() }
+    public var grammarAvailable: Bool {
+        FIMHasGrammar() && [userDirectory, sharedDirectory].contains { FileManager.default.fileExists(atPath: $0.appendingPathComponent("wanxiang-lts-zh-hans.gram").path) }
+    }
     public var version: String { String(cString: FIMVersion()) }
 
     public init(sharedDirectory: URL, userDirectory: URL, fullCheck: Bool = false) throws {

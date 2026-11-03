@@ -54,7 +54,9 @@ for binary in [app / 'Contents/MacOS/FluentIME', *([maintenance_executable] if m
 if product_name == 'pinyin':
     plugin = app / 'Contents/Frameworks/rime-plugins/librime-octagram.dylib'
     if not plugin.is_file(): errors.append('Wanxiang grammar plugin is missing')
+    # The Update edition keeps the grammar model already installed on the Mac.
     for name in ['wanxiang-lts-zh-hans.gram','wanxiang_fluent.dict.yaml']:
+        if name.endswith('.gram') and app_info.get('FluentIMEEdition') == 'update': continue
         if not (resources / 'Rime' / name).is_file(): errors.append('Missing word/model data: ' + name)
     model = resources / 'Rime/wanxiang-lts-zh-hans.gram'
     if model.is_file() and hashlib.file_digest(model.open('rb'),'sha256').hexdigest() != 'e34500ab44626dc039a0641792ecba98ab63307646eb3d29186be56608ffe094':

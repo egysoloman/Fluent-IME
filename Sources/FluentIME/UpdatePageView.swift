@@ -52,21 +52,73 @@ private final class UpdateNotes: NSScrollView {
     required init?(coder: NSCoder) { fatalError() }
     private func refresh() {
         let result = NSMutableAttributedString(string: "")
-        let lines = notes.prefix(40_000).components(separatedBy: "\n")
-        for (index, line) in lines.enumerated() {
-            let heading = line.hasPrefix("#") && line.contains(" ")
-            var content = line
-            if heading { content = String(line.drop(while: { $0 == "#" || $0 == " " })) }
-            if content.hasPrefix("- ") || content.hasPrefix("* ") { content = "• " + content.dropFirst(2) }
-            let paragraph = NSMutableParagraphStyle(); paragraph.paragraphSpacing = heading ? 6 : 4
-            result.append(NSAttributedString(string: content + (index < lines.count - 1 ? "\n" : ""), attributes: [
-                .font: IMEFont.font(ofSize: heading ? 14 : 13, weight: heading ? .semibold : .regular),
-                .foregroundColor: theme.textPrimary, .paragraphStyle: paragraph
-            ]))
+        let normalized = notes.prefix(40_000).replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalized.components(separatedBy: "\n")
+        for (index, raw) in lines.enumerated() {
+            let trimmed = raw.trimmingCharacters(in: .whitespaces)
+            let newline = index < lines.count - 1 ? "\n" : ""
+            let paragraph = NSMutableParagraphStyle(); paragraph.paragraphSpacing = 4
+            if trimmed.isEmpty {
+                paragraph.paragraphSpacing = 0
+                result.append(NSAttributedString(string: newline, attributes: [.font: IMEFont.font(ofSize: 6, weight: .regular), .paragraphStyle: paragraph]))
+                continue
+            }
+            var size: CGFloat = 13, weight: NSFont.Weight = .regular, content = trimmed, prefix = ""
+            let hashes = trimmed.prefix(while: { $0 == "#" }).count
+            if (1...3).contains(hashes), trimmed.dropFirst(hashes).hasPrefix(" ") {
+                content = String(trimmed.dropFirst(hashes)).trimmingCharacters(in: .whitespaces)
+                size = [16, 14.5, 13.5][hashes - 1]; weight = .semibold
+                paragraph.paragraphSpacing = 6; paragraph.paragraphSpacingBefore = index == 0 ? 0 : 6
+            } else if let bullet = trimmed.first, "-*+".contains(bullet), trimmed.dropFirst().hasPrefix(" ") {
+                content = String(trimmed.dropFirst(2)); prefix = "•  "
+                paragraph.firstLineHeadIndent = 0; paragraph.headIndent = 14
+            } else if let dot = trimmed.firstIndex(of: "."), dot != trimmed.startIndex, trimmed[..<dot].allSatisfy(\.isNumber), trimmed[trimmed.index(after: dot)...].hasPrefix(" ") {
+                prefix = String(trimmed[...dot]) + " "; content = String(trimmed[trimmed.index(after: dot)...]).trimmingCharacters(in: .whitespaces)
+                paragraph.headIndent = 18
+            }
+            let line = NSMutableAttributedString(string: prefix, attributes: [.font: IMEFont.font(ofSize: size, weight: weight), .foregroundColor: theme.textSecondary])
+            line.append(inline(content, size: size, weight: weight))
+            line.append(NSAttributedString(string: newline))
+            line.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: line.length))
+            result.append(line)
         }
         text.textStorage?.setAttributedString(result)
         text.setAccessibilityLabel(L10n.updateNotesTitle)
         needsLayout = true
+    }
+    /// Inline spans: **bold**, `code` and [label](url).
+    private func inline(_ source: String, size: CGFloat, weight: NSFont.Weight) -> NSAttributedString {
+        let out = NSMutableAttributedString()
+        let base: [NSAttributedString.Key: Any] = [.font: IMEFont.font(ofSize: size, weight: weight), .foregroundColor: theme.textPrimary]
+        let chars = Array(source)
+        var i = 0, plain = ""
+        func flush() { if !plain.isEmpty { out.append(NSAttributedString(string: plain, attributes: base)); plain = "" } }
+        func find(_ token: [Character], from: Int) -> Int? {
+            guard from + token.count <= chars.count else { return nil }
+            for k in from...(chars.count - token.count) where Array(chars[k..<k + token.count]) == token { return k }
+            return nil
+        }
+        while i < chars.count {
+            if chars[i] == "*", i + 1 < chars.count, chars[i + 1] == "*", let end = find(["*", "*"], from: i + 2), end > i + 2 {
+                flush()
+                var attributes = base; attributes[.font] = IMEFont.font(ofSize: size, weight: .semibold)
+                out.append(NSAttributedString(string: String(chars[i + 2..<end]), attributes: attributes)); i = end + 2
+            } else if chars[i] == "`", let end = find(["`"], from: i + 1), end > i + 1 {
+                flush()
+                var attributes = base
+                attributes[.font] = NSFont.monospacedSystemFont(ofSize: max(11.5, size - 1), weight: .regular)
+                attributes[.backgroundColor] = theme.subtleFillSecondary
+                out.append(NSAttributedString(string: String(chars[i + 1..<end]), attributes: attributes)); i = end + 1
+            } else if chars[i] == "[", let mid = find(["]", "("], from: i + 1), let end = find([")"], from: mid + 2) {
+                flush()
+                var attributes = base
+                attributes[.foregroundColor] = theme.accent
+                if let url = URL(string: String(chars[mid + 2..<end])) { attributes[.link] = url }
+                out.append(NSAttributedString(string: String(chars[i + 1..<mid]), attributes: attributes)); i = end + 1
+            } else { plain.append(chars[i]); i += 1 }
+        }
+        flush()
+        return out
     }
     override func layout() {
         super.layout()
@@ -256,7 +308,7 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     }
     override func layout() {
         super.layout()
-        let width = max(1, bounds.width), actionWidth = max(152, primary.intrinsicContentSize.width)
+        let width = max(1, bounds.width), actionWidth = max(152, primary.intrinsicContentSize.width + 12)
         let textX: CGFloat = 104
         let textWidth = max(1, width - textX - actionWidth - 20)
         // Download progress sits at the right end of the status line, above the bar's end.
@@ -355,11 +407,13 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         super.layout()
         let width = bounds.width
         hint.frame = NSRect(x: 0, y: 0, width: width - 164, height: 44)
-        allReleases.frame = NSRect(x: width - 148, y: 0, width: 148, height: 32)
+        let allWidth = max(148, allReleases.intrinsicContentSize.width + 12)
+        allReleases.frame = NSRect(x: width - allWidth, y: 0, width: allWidth, height: 32)
         progress.frame = NSRect(x: 0, y: 50, width: width, height: 4)
         var y: CGFloat = 66
         status.frame = NSRect(x: 0, y: y, width: width - 132, height: 70)
-        retry.frame = NSRect(x: width - 118, y: y, width: 118, height: 32)
+        let retryWidth = max(118, retry.intrinsicContentSize.width + 12)
+        retry.frame = NSRect(x: width - retryWidth, y: y, width: retryWidth, height: 32)
         if !status.stringValue.isEmpty { y += 86 }
         for (card, title, subtitle, toggle, body, link, tag) in rows {
             let open = expanded.contains(tag)

@@ -49,6 +49,7 @@ public struct InputOptions {
 /// Shared by the real IMK controller and the interactive local test area.
 public final class InputSession {
     public let rime: RimeSession
+    private let grammarAvailable: Bool
     public private(set) var mode: InputMode = .simplifiedChinese
     public var isChinese: Bool { mode.isChinese }
     public let keyboard: InputKeyboard
@@ -64,6 +65,8 @@ public final class InputSession {
     private let languageOptions: ((InputMode) -> InputOptions)?
     private func options() -> InputOptions {
         var result = languageOptions?(mode) ?? baseOptions(); result.keyboard = keyboard
+        // A model-less install has no grammar file to load.
+        if result.wanxiangGrammar && !grammarAvailable { result.wanxiangGrammar = false }
         return result
     }
     private var appliedOptions: InputOptions
@@ -76,6 +79,8 @@ public final class InputSession {
     private var numberedRowStart = 0
     private var expandedColumns = 6
     private var pinyinPreedit = PinyinPreedit()
+    /// Positions in Rime's (lowercased) raw input typed with Shift, mapped to the key.
+    private var typedCase: [Int: Int32] = [:]
     private let rankingClock: () -> TimeInterval
     private let ranker: CandidateReranking?
     private var rankingTicket: RankingTicket?
@@ -113,6 +118,20 @@ public final class InputSession {
         var result = rime.composition
         guard keyboard == .pinyin else { return result }
         pinyinPreedit.format(&result, caret: rime.caretPosition)
+        if !typedCase.isEmpty, result.isComposing {
+            let cased = casedRaw(result.rawInput)
+            if cased.lowercased() == result.rawInput.lowercased(), !result.isContinuous {
+                if let existing = result.candidates.firstIndex(where: { $0.text == cased }) {
+                    // The dictionary already knows the word: put it first.
+                    result.candidates.insert(result.candidates.remove(at: existing), at: 0)
+                    result.candidateIndices.insert(result.candidateIndices.remove(at: existing), at: 0)
+                } else {
+                    result.candidates.insert(Candidate(cased), at: 0); result.candidateIndices.insert(-1, at: 0)
+                    if result.candidates.count > result.pageSize { result.candidates.removeLast(); result.candidateIndices.removeLast() }
+                }
+                result.highlighted = 0
+            }
+        }
         if result.isComposing && result.candidates.isEmpty {
             result.candidates = [Candidate(result.rawInput)]
             result.candidateIndices = [-1] // Explicit raw-input fallback, not a Rime index.
@@ -134,6 +153,13 @@ public final class InputSession {
         return result
     }
 
+    /// Rime's raw input is lowercase; restore the letters typed with Shift.
+    private func casedRaw(_ raw: String) -> String {
+        guard !typedCase.isEmpty else { return raw }
+        var letters = Array(raw)
+        for (position, key) in typedCase where letters.indices.contains(position) { letters[position] = Character(UnicodeScalar(UInt32(key))!) }
+        return String(letters)
+    }
     private func appendCandidates() {
         let batch = rime.candidates(from: expandedItems.count)
         expandedItems += batch.items; expandedHasMore = batch.hasMore && !batch.items.isEmpty
@@ -166,7 +192,7 @@ public final class InputSession {
     }
 
     public init(engine: RimeEngine, keyboard: InputKeyboard = .pinyin, options: @escaping () -> InputOptions = { InputOptions() }, ranker: CandidateReranking? = nil, languageOptions: ((InputMode) -> InputOptions)? = nil, rankingClock: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) throws {
-        rime = try engine.makeSession()
+        rime = try engine.makeSession(); grammarAvailable = engine.grammarAvailable
         self.ranker = ranker; self.rankingClock = rankingClock
         self.baseOptions = options; self.languageOptions = languageOptions; self.keyboard = keyboard
         var initial = options(); initial.keyboard = keyboard
@@ -313,15 +339,24 @@ public final class InputSession {
             }
         }
         if key == RimeKey.enter, composition.isComposing {
-            let raw = composition.rawInput
-            rime.clear()
+            let raw = casedRaw(composition.rawInput)
+            rime.clear(); typedCase = [:]
             resetContext()
             onCommit?(outputText(raw))
             publish()
             return true
         }
         if ![RimeKey.pageUp, RimeKey.pageDown, 91, 93, 45, 61].contains(key) { invalidateRanking(); rankingLocked = false }
-        let handled = rime.process(key: key, modifiers: flags.contains(.shift) ? 1 : 0)
+        // Rime's alphabet is lowercase only: feed Shift+letter as lowercase and keep
+        // the typed case so the exact word is offered as a candidate.
+        let upper = keyboard == .pinyin && (65...90).contains(key) && flags.subtracting([.shift, .numericPad, .function]).isEmpty
+        let handled = upper ? rime.process(key: key + 32, modifiers: 0) : rime.process(key: key, modifiers: flags.contains(.shift) ? 1 : 0)
+        let raw = rime.composition.rawInput
+        if !raw.isEmpty {
+            if upper && handled && raw.count > current.rawInput.count && raw.hasPrefix(current.rawInput) { typedCase[raw.count - 1] = key }
+            else if raw.count < current.rawInput.count { typedCase = typedCase.filter { $0.key < raw.count } }
+            else if raw.count == current.rawInput.count && raw != current.rawInput { typedCase = [:] }
+        } else { typedCase = [:] }
         publish(selectFirst: handled && current.rawInput != rime.composition.rawInput)
         if !handled, !options().halfWidth, (0x20...0x7e).contains(key), !composition.isComposing {
             onCommit?(outputText(String(UnicodeScalar(UInt32(key))!)))
@@ -446,8 +481,8 @@ public final class InputSession {
         shift.cancel()
         resetContext()
         if composition.isComposing {
-            let raw = composition.rawInput
-            rime.clear()
+            let raw = casedRaw(composition.rawInput)
+            rime.clear(); typedCase = [:]
             onCommit?(raw)
         }
         publish()
@@ -475,6 +510,7 @@ public final class InputSession {
         if ended && options().expandedCandidates { onExpansionChange?(false) }
         if selectFirst, composition.highlighted != 0, let first = composition.candidateIndices.first, first >= 0 {
             _ = rime.highlightAbsolute(first)
+            pinyinPreedit = PinyinPreedit()
         }
         onUpdate?(composition)
         requestRanking()

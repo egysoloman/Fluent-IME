@@ -205,6 +205,7 @@
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "source": "https://github.com/amzxyz/rime-wanxiang-data/releases/tag/LTS",
     "changes": "Model binary unmodified; grammar configuration adapted.",
+    "present_if": "Rime/wanxiang-lts-zh-hans.gram",
     "notices": [
       "Licenses/Wanxiang-CC-BY-4.0.txt",
       "Rime/wanxiang-model.json"
