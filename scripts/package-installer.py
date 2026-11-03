@@ -32,6 +32,12 @@ run('codesign','--verify','--deep','--strict',setup)
 # A ZIP is useful on writable volumes: the extracted installer itself can go to Trash.
 archive = output/(installer_asset(name, info["CFBundleShortVersionString"], info.get('FluentIMEEdition', 'lite'))[:-4] + '.zip')
 if os.environ.get('FLUENTIME_SKIP_ZIP') != '1': run('ditto','-c','-k','--sequesterRsrc','--keepParent',setup,archive)
-import cairosvg
-cairosvg.svg2png(url=str(root/'Resources/Icons/InstallerBackground.svg'), write_to=str(root/'.build/installer-background.png'))
+dest_bg = root / '.build/installer-background.png'
+dest_bg.parent.mkdir(parents=True, exist_ok=True)
+gen_bg = root / 'Resources/Icons/Generated/InstallerBackground.png'
+if gen_bg.exists():
+    shutil.copy2(gen_bg, dest_bg)
+else:
+    import cairosvg
+    cairosvg.svg2png(url=str(root/'Resources/Icons/InstallerBackground.svg'), write_to=str(dest_bg))
 print('Installer:', setup)
