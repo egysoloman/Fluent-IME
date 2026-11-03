@@ -75,7 +75,7 @@ public enum SymbolCatalog {
     private struct Annotation: Decodable { let text: String; let name: String; let keywords: String }
     private static func identity(_ text: String) -> String { text.replacingOccurrences(of: "\u{FE0F}", with: "") }
     public static let entries: [SymbolEntry] = {
-        guard let url = Bundle.module.url(forResource: "emoji-search", withExtension: "json"),
+        guard let url = FluentIMEResources.bundle.url(forResource: "emoji-search", withExtension: "json"),
               let data = try? Data(contentsOf: url), let annotations = try? JSONDecoder().decode([Annotation].self, from: data) else { return favorites }
         let byGlyph = Dictionary(annotations.map { (identity($0.text), $0) }, uniquingKeysWith: { first, _ in first })
         var result = favorites.map { entry -> SymbolEntry in

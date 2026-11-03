@@ -4,7 +4,7 @@ import Foundation
 /// SwiftPM owns this bundle; Bundle.main may be the IMK host or a test executable.
 public enum L10n {
     static let supportedLanguages = ["zh-Hans", "zh-Hant", "en"]
-    private static let resourceBundle = Bundle.module
+    private static let resourceBundle = FluentIMEResources.bundle
     private static let bundles = localizedBundles(in: resourceBundle)
 
     static func localizedBundles(in resource: Bundle) -> [String: Bundle] {

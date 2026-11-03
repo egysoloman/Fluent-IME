@@ -10,6 +10,6 @@ public enum UpdateArtwork: String, CaseIterable {
     case history = "update-history"
     case preview = "update-preview"
     public var url: URL? {
-        Bundle.module.url(forResource: rawValue, withExtension: self == .sync || self == .history || self == .preview ? "pdf" : "png")
+        FluentIMEResources.bundle.url(forResource: rawValue, withExtension: self == .sync || self == .history || self == .preview ? "pdf" : "png")
     }
 }
