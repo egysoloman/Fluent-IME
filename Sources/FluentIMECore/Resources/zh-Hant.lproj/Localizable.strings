@@ -450,6 +450,8 @@
 "update.notChecked" = "尚未檢查更新";
 "update.releaseLabel" = "Fluent IME %1$@";
 "update.moreOptions" = "更多選項";
+"update.preferIncremental" = "優先下載增量安裝包";
+"update.preferIncrementalHint" = "體積更小（約 80 MB），更新時自動保留本地已有語言模型。";
 "update.receivePrerelease" = "接收測試版更新";
 "update.receivePrereleaseHint" = "接收 GitHub 上標記為 Pre-release 的版本。";
 "update.automaticChecks" = "自動檢查更新";

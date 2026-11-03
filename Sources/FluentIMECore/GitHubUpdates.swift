@@ -2,7 +2,7 @@ import Foundation
 import CryptoKit
 
 public enum ReleaseEdition: String, Codable {
-    case lite, full
+    case lite, full, update
     public static var current: Self {
         if let value = Bundle.main.object(forInfoDictionaryKey: "FluentIMEEdition") as? String, let edition = Self(rawValue: value) { return edition }
         return Bundle.main.resourceURL.map { FileManager.default.fileExists(atPath: $0.appendingPathComponent("Models/ChineseContextScorer.mlmodelc").path) } == true ? .full : .lite
@@ -186,21 +186,28 @@ public final class GitHubUpdateService {
     public static let repository = "egysoloman/Fluent-IME"
     public static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
     private let transport = UpdateTransport()
-    private let edition: ReleaseEdition
+    private let editionProvider: () -> ReleaseEdition
+    public var edition: ReleaseEdition { editionProvider() }
     private let configuration: URLSessionConfiguration
     private let cache: URL?
     private lazy var session: URLSession = {
         URLSession(configuration: configuration, delegate: transport, delegateQueue: nil)
     }()
     public convenience init(edition: ReleaseEdition = .current) {
+        self.init(editionProvider: { edition })
+    }
+    public convenience init(editionProvider: @escaping () -> ReleaseEdition) {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 30; config.timeoutIntervalForResource = 1800
         config.httpAdditionalHeaders = ["User-Agent": "Fluent-IME-Updater", "Accept": "application/vnd.github+json"]
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-        self.init(edition: edition, configuration: config, cache: caches?.appendingPathComponent(FluentProduct.current.bundleID + "/release-history.json"))
+        self.init(editionProvider: editionProvider, configuration: config, cache: caches?.appendingPathComponent(FluentProduct.current.bundleID + "/release-history.json"))
+    }
+    init(editionProvider: @escaping () -> ReleaseEdition, configuration: URLSessionConfiguration, cache: URL? = nil) {
+        self.editionProvider = editionProvider; self.configuration = configuration; self.cache = cache
     }
     init(edition: ReleaseEdition, configuration: URLSessionConfiguration, cache: URL? = nil) {
-        self.edition = edition; self.configuration = configuration; self.cache = cache
+        self.editionProvider = { edition }; self.configuration = configuration; self.cache = cache
     }
     public static func trustedAsset(_ url: URL) -> Bool {
         url.scheme == "https" && url.host == "github.com" && url.user == nil && url.password == nil && url.port == nil && url.path.hasPrefix("/\(repository)/releases/download/")
@@ -339,13 +346,15 @@ public final class GitHubUpdateService {
         return ReleaseVersion(tag) == nil ? nil : tag
     }
     public func download(_ release: GitHubRelease, to directory: URL, progress: (@Sendable (UpdateDownloadProgress) -> Void)? = nil) async throws -> URL {
-        guard let asset = release.installer(for: edition), let manifest = release.manifest(for: edition),
+        var requestedEdition = edition
+        if requestedEdition == .update && release.installer(for: .update) == nil { requestedEdition = .current }
+        guard let asset = release.installer(for: requestedEdition), let manifest = release.manifest(for: requestedEdition),
               Self.trustedAsset(asset.browser_download_url), Self.trustedAsset(manifest.browser_download_url),
               (1...2_000_000_000).contains(asset.size), manifest.size < 100_000 else { throw UpdateError.invalidRelease }
         let (metadata, response) = try await session.data(from: manifest.browser_download_url)
         guard (response as? HTTPURLResponse)?.statusCode == 200, metadata.count < 100_000 else { throw UpdateError.invalidRelease }
         let info = try JSONDecoder().decode(UpdateManifest.self, from: metadata)
-        guard info.edition == edition else { throw UpdateError.invalidRelease }
+        guard info.edition == requestedEdition else { throw UpdateError.invalidRelease }
         try info.validate(release: release)
         progress?(.downloading(received: 0, total: asset.size))
         let transfer = UpdateFileTransfer(limit: asset.size, progress: progress)
@@ -360,7 +369,7 @@ public final class GitHubUpdateService {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let target = directory.appendingPathComponent(asset.name)
         try FileManager.default.moveItem(at: temporary, to: target)
-        do { try VerifiedUpdateReceipt(version: release.version, edition: edition, size: asset.size, sha256: info.installer.dmg_sha256).save(beside: target) }
+        do { try VerifiedUpdateReceipt(version: release.version, edition: requestedEdition, size: asset.size, sha256: info.installer.dmg_sha256).save(beside: target) }
         catch { try? FileManager.default.removeItem(at: target); throw error }
         return target
     }

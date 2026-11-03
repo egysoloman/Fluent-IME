@@ -450,6 +450,8 @@
 "update.notChecked" = "Not checked yet";
 "update.releaseLabel" = "Fluent IME %1$@";
 "update.moreOptions" = "More options";
+"update.preferIncremental" = "Download lightweight update package";
+"update.preferIncrementalHint" = "Smaller download (~80 MB) that preserves existing local language models.";
 "update.receivePrerelease" = "Receive pre-release updates";
 "update.receivePrereleaseHint" = "Include versions marked as Pre-release on GitHub.";
 "update.automaticChecks" = "Check for updates automatically";

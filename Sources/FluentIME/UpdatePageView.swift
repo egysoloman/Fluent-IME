@@ -221,6 +221,7 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     private let releaseTitle = NSTextField(labelWithString: "")
     private let notes = UpdateNotes()
     private let more = NSTextField(labelWithString: L10n.updateMoreOptions)
+    private let incremental = UpdateOptionCell(title: L10n.updatePreferIncremental, hint: L10n.updatePreferIncrementalHint, glyph: .advanced)
     private let preview = UpdateOptionCell(title: L10n.updateReceivePrerelease, hint: L10n.updateReceivePrereleaseHint, glyph: .updatePreview)
     private let automatic = UpdateOptionCell(title: L10n.updateAutomaticChecks, hint: L10n.updateAutomaticChecksHint, glyph: .updates)
     private let history = UpdateOptionCell(title: L10n.updateHistoryTitle, hint: L10n.updateHistoryCellHint, glyph: .updateHistory, navigation: true)
@@ -234,10 +235,11 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
     init(coordinator: UpdateCoordinator) {
         self.coordinator = coordinator; super.init(frame: .zero)
         progress.translatesAutoresizingMaskIntoConstraints = true
-        for view in [icon, version, status, detail, progress, lastCheck, primary, cancel, notesCard, more, preview, automatic, history] { addSubview(view) }
+        for view in [icon, version, status, detail, progress, lastCheck, primary, cancel, notesCard, more, incremental, preview, automatic, history] { addSubview(view) }
         for view in [releaseTitle, notesTitle, notes] { notesCard.addSubview(view) }
         primary.onClick = { [weak coordinator] in guard let coordinator else { return }; if coordinator.canInstall { coordinator.install() } else { coordinator.check() } }
         cancel.onClick = { [weak coordinator] in coordinator?.cancel() }
+        incremental.toggle.onValueChanged = { [weak coordinator] value in coordinator?.preferIncremental = value }
         preview.toggle.onValueChanged = { [weak coordinator] value in coordinator?.selectChannel(value ? .preview : .stable) }
         automatic.toggle.onValueChanged = { [weak coordinator] value in coordinator?.automaticChecks = value }
         history.onClick = { [weak self] in self?.onOpenHistory?() }
@@ -297,12 +299,14 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         let body = errorMessage ?? release.map(releaseNotes) ?? L10n.updateNotesPending
         if notesStamp != body { notesStamp = body; notes.notes = body }
         if notes.theme != theme { notes.theme = theme }
-        for cell in [preview, automatic, history] { cell.refresh() }
+        incremental.isHidden = FluentProduct.current != .pinyin
+        for cell in [incremental, preview, automatic, history] { cell.refresh() }
         // Programmatic synchronization must not trigger a new check or write preferences.
-        let previewChanged = preview.toggle.onValueChanged, autoChanged = automatic.toggle.onValueChanged
-        preview.toggle.onValueChanged = nil; automatic.toggle.onValueChanged = nil
+        let previewChanged = preview.toggle.onValueChanged, autoChanged = automatic.toggle.onValueChanged, incChanged = incremental.toggle.onValueChanged
+        preview.toggle.onValueChanged = nil; automatic.toggle.onValueChanged = nil; incremental.toggle.onValueChanged = nil
         preview.toggle.isOn = coordinator.channel == .preview; automatic.toggle.isOn = coordinator.automaticChecks
-        preview.toggle.onValueChanged = previewChanged; automatic.toggle.onValueChanged = autoChanged
+        incremental.toggle.isOn = coordinator.preferIncremental
+        preview.toggle.onValueChanged = previewChanged; automatic.toggle.onValueChanged = autoChanged; incremental.toggle.onValueChanged = incChanged
         preview.toggle.isEnabled = coordinator.canChangeChannel
         needsLayout = true
     }
@@ -334,7 +338,8 @@ private func releaseCaption(_ release: GitHubRelease) -> String {
         notesCard.frame = NSRect(x: 0, y: headerHeight + 24, width: width, height: notes.frame.maxY + 16)
         more.frame = NSRect(x: 0, y: notesCard.frame.maxY + 24, width: width, height: 28)
         y = more.frame.maxY + 16
-        for cell in [preview, automatic, history] {
+        let cells = FluentProduct.current == .pinyin ? [incremental, preview, automatic, history] : [preview, automatic, history]
+        for cell in cells {
             cell.frame = NSRect(x: 0, y: y, width: width, height: cell.fittingHeight(for: width))
             y = cell.frame.maxY + 8
         }

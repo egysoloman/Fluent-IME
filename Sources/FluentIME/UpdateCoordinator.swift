@@ -53,6 +53,12 @@ extension GitHubUpdateService: IMEUpdateService {}
             if newValue { checkAutomaticallyIfDue() }
         }
     }
+    var preferIncremental: Bool {
+        get { defaults.object(forKey: "updatePreferIncremental") as? Bool ?? false }
+        set {
+            defaults.set(newValue, forKey: "updatePreferIncremental"); notify()
+        }
+    }
     func startAutomaticChecks() {
         guard automaticTimer == nil else { return }
         // A check that came due while offline runs once the network is back.
@@ -117,13 +123,20 @@ extension GitHubUpdateService: IMEUpdateService {}
         }
     }
     private let service: any IMEUpdateService
-    init(service: any IMEUpdateService = GitHubUpdateService(), defaults: UserDefaults? = nil) {
-        self.service = service; self.defaults = defaults ?? (InstallerLifecycle.isMaintenance ? UserDefaults(suiteName: FluentProduct.current.bundleID)! : .standard)
-        channel = UpdateChannel(rawValue: self.defaults.string(forKey: "updateChannel") ?? "") ?? .stable
-        lastChecked = self.defaults.object(forKey: "updateLastChecked") as? Date
+    init(service: (any IMEUpdateService)? = nil, defaults: UserDefaults? = nil) {
+        let def = defaults ?? (InstallerLifecycle.isMaintenance ? UserDefaults(suiteName: FluentProduct.current.bundleID)! : .standard)
+        self.defaults = def
+        self.service = service ?? GitHubUpdateService(editionProvider: {
+            if FluentProduct.current == .pinyin && def.bool(forKey: "updatePreferIncremental") {
+                return .update
+            }
+            return .current
+        })
+        channel = UpdateChannel(rawValue: def.string(forKey: "updateChannel") ?? "") ?? .stable
+        lastChecked = def.object(forKey: "updateLastChecked") as? Date
         // Until this session checks, show the result of the last check for the same channel.
-        if lastChecked != nil, self.defaults.string(forKey: "updateLatestChannel") == channel.rawValue,
-           let data = self.defaults.data(forKey: "updateLatestRelease"), let cached = try? JSONDecoder().decode(GitHubRelease.self, from: data) {
+        if lastChecked != nil, def.string(forKey: "updateLatestChannel") == channel.rawValue,
+           let data = def.data(forKey: "updateLatestRelease"), let cached = try? JSONDecoder().decode(GitHubRelease.self, from: data) {
             latestRelease = cached
             if cached.isNewer(than: currentVersion, channel: channel) { release = cached; state = .available(cached.version) } else { state = .current }
         }
@@ -161,7 +174,8 @@ extension GitHubUpdateService: IMEUpdateService {}
     func install() {
         guard let release, !busy else { return }
         generation += 1; let request = generation
-        state = .downloading(0, release.installer(for: .current)?.size ?? 0)
+        let targetEdition: ReleaseEdition = (preferIncremental && release.installer(for: .update) != nil) ? .update : .current
+        state = .downloading(0, release.installer(for: targetEdition)?.size ?? 0)
         let previous = InstallerLifecycle.isInstaller ? [Bundle.main.bundleURL.path] + InstallerLifecycle.previousInstallers : []
         let waitForParent = InstallerLifecycle.isMaintenance
         task = Task { [weak self] in

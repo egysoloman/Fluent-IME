@@ -690,6 +690,10 @@ public extension L10n {
     static var updatePageDetail: String { text("update.pageDetail") }
     /// 更新
     static var updatePageTitle: String { text("update.pageTitle") }
+    /// 优先下载增量安装包
+    static var updatePreferIncremental: String { text("update.preferIncremental") }
+    /// 体积更小（约 80 MB），更新时自动保留本地已有语言模型。
+    static var updatePreferIncrementalHint: String { text("update.preferIncrementalHint") }
     /// 有可用更新
     static var updateReady: String { text("update.ready") }
     /// 接收测试版更新

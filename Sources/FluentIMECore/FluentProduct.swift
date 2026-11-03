@@ -35,12 +35,12 @@ public struct FluentProduct: Equatable {
 
     public static let current: FluentProduct = (Bundle.main.object(forInfoDictionaryKey: "FluentIMEProduct") as? String) == Kind.zhuyin.rawValue ? zhuyin : pinyin
 
-    /// Zhuyin ships one edition; Pinyin has Lite and Full.
+    /// Zhuyin ships one edition; Pinyin has Lite, Full and Update.
     public func installerAsset(version: String, edition: ReleaseEdition) -> String {
-        kind == .zhuyin ? "\(assetPrefix)-\(version)-Setup.dmg" : "\(assetPrefix)-\(version)\(edition == .full ? "-Full" : "")-Setup.dmg"
+        kind == .zhuyin ? "\(assetPrefix)-\(version)-Setup.dmg" : "\(assetPrefix)-\(version)\(edition == .full ? "-Full" : edition == .update ? "-Update" : "")-Setup.dmg"
     }
     public func manifestAsset(edition: ReleaseEdition) -> String {
-        kind == .zhuyin ? "release-zhuyin.json" : edition == .full ? "release-full.json" : "release.json"
+        kind == .zhuyin ? "release-zhuyin.json" : edition == .full ? "release-full.json" : edition == .update ? "release-update.json" : "release.json"
     }
     public func support(in home: URL) -> URL { home.appendingPathComponent("Library/Application Support/" + supportFolder) }
     public var supportDirectory: URL { FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent(supportFolder) }
