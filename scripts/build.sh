@@ -7,6 +7,7 @@ python3 scripts/localize.py --check
 bash scripts/bootstrap.sh
 python3 scripts/fetch-wanxiang.py
 python3 scripts/fetch-wanxiang-dictionary.py
+python3 scripts/fetch-transformer.py
 python3 scripts/fetch-symbol-search.py
 python3 scripts/generate-emoji-opencc.py
 python3 scripts/generate-schemas.py

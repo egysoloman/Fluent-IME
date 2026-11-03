@@ -57,6 +57,12 @@ if (models / "ChineseContextScorer.mlpackage").exists():
     run("xcrun", "coremlcompiler", "compile", models / "ChineseContextScorer.mlpackage", target)
     for name in ("chinese-context-vocab.txt", "chinese-context-model.json", "CHINESE-CONTEXT-MODEL-CARD.md", "CHINESE-CONTEXT-LICENSE.txt"):
         shutil.copy2(models / name, target / name)
+elif (models / "ChineseContextScorer.mlmodelc").exists():
+    target = RESOURCES / "Models"
+    target.mkdir()
+    shutil.copytree(models / "ChineseContextScorer.mlmodelc", target / "ChineseContextScorer.mlmodelc")
+    for name in ("chinese-context-vocab.txt", "chinese-context-model.json", "CHINESE-CONTEXT-MODEL-CARD.md", "CHINESE-CONTEXT-LICENSE.txt"):
+        shutil.copy2(models / name, target / name)
 
 shutil.copy2(ROOT / "Vendor/wanxiang/wanxiang-lts-zh-hans.gram", RESOURCES / "Rime/wanxiang-lts-zh-hans.gram")
 shutil.copy2(ROOT / "Vendor/wanxiang/model.json", RESOURCES / "Rime/wanxiang-model.json")
